@@ -48,7 +48,7 @@ class ViewGraph;
 // rotation obtained from the two view match (i.e. TwoViewInfo.rotation_2)
 // differs from the relative rotation formed by the orientation estimates by
 // more than the threshold then the view pair is deemed "bad" and is removed.
-// The view id pairs asssumes the view with the lower id be the first entry in
+// The view id pairs assumes the view with the lower id be the first entry in
 // the ViewIdPair.
 //
 // Concretely, we only keep R_{i,j} if: ||R_{i,j} - R_j * R_i^t|| < tau, where

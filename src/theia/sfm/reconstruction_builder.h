@@ -117,6 +117,13 @@ class ReconstructionBuilder {
   explicit ReconstructionBuilder(const ReconstructionBuilderOptions& options);
   ~ReconstructionBuilder();
 
+  const Reconstruction* GetReconstruction() const {
+    return reconstruction_.get(); }
+  const ViewGraph* GetViewGraph() const {
+    return view_graph_.get(); }
+  const std::vector<std::string>& GetImageFilepaths() const {
+    return image_filepaths_; }
+
   // Add an image to the reconstruction.
   bool AddImage(const std::string& image_filepath);
   // Same as above, but with the camera intrinsics group specified to enable
@@ -147,7 +154,7 @@ class ReconstructionBuilder {
   // Initializes the reconstruction and view graph explicitly. This method
   // should be used as an alternative to the Add* methods.
   //
-  // NOTE: The ReconstructionBuilder takses ownership of the reconstruction and
+  // NOTE: The ReconstructionBuilder takes ownership of the reconstruction and
   // view graph.
   void InitializeReconstructionAndViewGraph(Reconstruction* reconstruction,
                                             ViewGraph* view_graph);

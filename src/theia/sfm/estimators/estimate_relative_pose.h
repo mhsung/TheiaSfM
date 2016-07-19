@@ -54,7 +54,7 @@ struct RelativePose {
 
 // Estimates the relative pose using the ransac variant of choice (e.g. Ransac,
 // Prosac, etc.). Correspondences must be normalized by the camera
-// intrinsics. Returns true if a pose could be succesfully estimated, and false
+// intrinsics. Returns true if a pose could be successfully estimated, and false
 // otherwise. The quality of the result depends on the quality of the input
 // data.
 bool EstimateRelativePose(

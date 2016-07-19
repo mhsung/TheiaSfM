@@ -68,8 +68,7 @@ class Reconstruction {
   ~Reconstruction();
 
   // Returns the unique ViewId of the view name, or kInvalidViewId if the view
-  // does not
-  // exist.
+  // does not exist.
   ViewId ViewIdFromName(const std::string& view_name) const;
 
   // Creates a new view and returns the view id.
