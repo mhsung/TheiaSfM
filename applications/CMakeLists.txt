@@ -90,8 +90,13 @@ target_link_libraries(create_calibration_file_from_exif theia ${GFLAGS_LIBRARIES
 add_executable(create_reconstruction_from_strecha_dataset create_reconstruction_from_strecha_dataset.cc)
 target_link_libraries(create_reconstruction_from_strecha_dataset theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(test_compare_camera_poses_to_gt test_compare_camera_poses_to_gt.cc)
-target_link_libraries(test_compare_camera_poses_to_gt theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(test_export_to_opengl_matrices test_export_to_opengl_matrices.cc)
-target_link_libraries(test_export_to_opengl_matrices theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# Added.
+add_executable(
+  exp_compare_camera_poses
+  exp_compare_camera_poses.cc
+  exp_camera_param_utils.h
+  exp_camera_param_utils.cc
+  exp_camera_param_io.h
+  exp_camera_param_io.cc)
+target_link_libraries(exp_compare_camera_poses theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
