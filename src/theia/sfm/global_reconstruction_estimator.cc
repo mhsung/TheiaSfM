@@ -62,6 +62,8 @@
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/random.h"
 #include "theia/util/timer.h"
+// @mhsung
+#include "theia/sfm/global_pose_estimation/constrained_robust_rotation_estimator.h"
 
 namespace theia {
 
@@ -302,6 +304,38 @@ void GlobalReconstructionEstimator::CalibrateCameras() {
 
 bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
   const auto& view_pairs = view_graph_->GetAllEdges();
+
+  // @mhsung
+  if (options_.global_rotation_estimator_type ==
+      GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
+
+    std::unordered_map<ViewId, Eigen::Vector3d> constrained_views;
+    constrained_views.reserve(view_graph_->NumViews());
+    for (const ViewId view_id : reconstruction_->ViewIds()) {
+      // Add a constrained view if it exists in the graph and it has initial
+      // orientation.
+      const View* view = reconstruction_->View(view_id);
+      if (view_graph_->HasView(view_id) && view->IsOrientationInitialized()) {
+        constrained_views[view_id] = view->GetInitialOrientation();
+      }
+    }
+    CHECK(!constrained_views.empty())
+    << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
+
+    // Initialize the orientation estimations by walking along the maximum
+    // spanning tree.
+    OrientationsFromMaximumSpanningTree(
+        *view_graph_, &orientations_, &constrained_views);
+
+    RobustRotationEstimator::Options robust_rotation_estimator_options;
+    std::unique_ptr<ConstrainedRobustRotationEstimator>
+        constrained_rotation_estimator(new ConstrainedRobustRotationEstimator(
+        robust_rotation_estimator_options,
+        options_.rotation_estimation_constraint_weight));
+
+    return constrained_rotation_estimator->EstimateRotations(
+        view_pairs, constrained_views, &orientations_);
+  }
 
   // Choose the global rotation estimation type.
   std::unique_ptr<RotationEstimator> rotation_estimator;

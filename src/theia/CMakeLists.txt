@@ -111,8 +111,11 @@ set(THEIA_SRC
   sfm/global_pose_estimation/pairwise_translation_and_scale_error.cc
   sfm/global_pose_estimation/pairwise_translation_error.cc
   sfm/global_pose_estimation/robust_rotation_estimator.cc
+  sfm/global_pose_estimation/constrained_robust_rotation_estimator.cc
   sfm/global_reconstruction_estimator.cc
   sfm/incremental_reconstruction_estimator.cc
+  # @mhsung
+  sfm/exp_global_reconstruction_estimator.cc
   sfm/localize_view_to_reconstruction.cc
   sfm/pose/dls_impl.cc
   sfm/pose/dls_pnp.cc

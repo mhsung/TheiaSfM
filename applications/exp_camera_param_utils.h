@@ -1,21 +1,36 @@
+// Author: Minhyuk Sung (mhsung@cs.stanford.edu)
+
 #include <Eigen/Core>
 #include <theia/theia.h>
 #include <Eigen/Geometry>
 #include <vector>
 
 
-// NOTE:
-// Camera orientation is modelview rotation.
+// 'Modelview': OpenGL modelview matrix.
+// 'CameraParams': Azimuth, elevation, and theta.
+//    Used in RenderForCNN (ICCV 2015')
 
 
-// Theia camera -> OpenGL modelview.
+// Modelview <-> Theia camera.
 Eigen::Affine3d ComputeModelviewFromTheiaCamera(
     const theia::Camera& camera);
+Eigen::Matrix3d ComputeModelviewRotationFromTheiaCamera(
+    const Eigen::Matrix3d& theia_camera_rotation);
+Eigen::Matrix3d ComputeTheiaCameraRotationFromModelview(
+    const Eigen::Matrix3d& modelview_rotation);
 
 // Camera parameter <-> Modelview.
-Eigen::Vector3d ComputeCameraParamsFromModelview(
+Eigen::Vector3d ComputeCameraParamsFromModelviewRotation(
     const Eigen::Matrix3d& modelview_rotation);
 Eigen::Affine3d ComputeModelviewFromCameraParams(
+    const Eigen::Vector3d& camera_params);
+
+// Camera parameter <-> Theia camera.
+Eigen::Vector3d ComputeCameraParamsFromTheiaCamera(
+    const theia::Camera& camera);
+Eigen::Vector3d ComputeCameraParamsFromTheiaCameraRotation(
+    const Eigen::Matrix3d& theia_camera_rotation);
+Eigen::Matrix3d ComputeTheiaCameraRotationFromCameraParams(
     const Eigen::Vector3d& camera_params);
 
 // Single rotation averaging.

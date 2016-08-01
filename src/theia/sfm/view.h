@@ -84,6 +84,12 @@ class View {
 
   bool RemoveFeature(const TrackId track_id);
 
+  // @mhsung
+  void SetInitialOrientation(const Eigen::Vector3d& orientation);
+  Eigen::Vector3d GetInitialOrientation() const;
+  bool IsOrientationInitialized() const { return is_orientation_initialized_; }
+  void RemoveInitialOrientation();
+
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.
@@ -98,6 +104,11 @@ class View {
   class Camera camera_;
   struct CameraIntrinsicsPrior camera_intrinsics_prior_;
   std::unordered_map<TrackId, Feature> features_;
+
+  // @mhsung
+  // Initial orientation given from external methods.
+  bool is_orientation_initialized_;
+  Eigen::Vector3d init_orientation_;
 };
 
 }  // namespace theia

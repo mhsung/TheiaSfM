@@ -1,3 +1,5 @@
+// Author: Minhyuk Sung (mhsung@cs.stanford.edu)
+
 #include "exp_camera_param_utils.h"
 
 #include <glog/logging.h>
@@ -12,16 +14,42 @@ Eigen::Affine3d ComputeModelviewFromTheiaCamera(
   theia_modelview.prerotate(camera.GetOrientationAsRotationMatrix());
 
   // (X, Y, Z) -> (X, -Y, -Z).
-  Eigen::Matrix3d open_axes_converter = Eigen::Matrix3d::Identity();
-  open_axes_converter(0, 0) = 1.0;
-  open_axes_converter(1, 1) = -1.0;
-  open_axes_converter(2, 2) = -1.0;
+  Eigen::Matrix3d axes_converter = Eigen::Matrix3d::Identity();
+  axes_converter(0, 0) = 1.0;
+  axes_converter(1, 1) = -1.0;
+  axes_converter(2, 2) = -1.0;
 
-  const Eigen::Affine3d modelview = open_axes_converter * theia_modelview;
+  const Eigen::Affine3d modelview = axes_converter * theia_modelview;
   return modelview;
 }
 
-Eigen::Vector3d ComputeCameraParamsFromModelview(
+Eigen::Matrix3d ComputeModelviewRotationFromTheiaCamera(
+    const Eigen::Matrix3d& theia_camera_rotation) {
+  // (X, Y, Z) -> (X, -Y, -Z).
+  Eigen::Matrix3d axes_converter = Eigen::Matrix3d::Identity();
+  axes_converter(0, 0) = 1.0;
+  axes_converter(1, 1) = -1.0;
+  axes_converter(2, 2) = -1.0;
+
+  const Eigen::Matrix3d modelview_rotation =
+      axes_converter * theia_camera_rotation;
+  return modelview_rotation;
+}
+
+Eigen::Matrix3d ComputeTheiaCameraRotationFromModelview(
+    const Eigen::Matrix3d& modelview_rotation) {
+  // (X, Y, Z) -> (X, -Y, -Z).
+  Eigen::Matrix3d inverse_axes_converter = Eigen::Matrix3d::Identity();
+  inverse_axes_converter(0, 0) = 1.0;
+  inverse_axes_converter(1, 1) = -1.0;
+  inverse_axes_converter(2, 2) = -1.0;
+
+  const Eigen::Matrix3d theia_camera_rotation =
+      inverse_axes_converter * modelview_rotation;
+  return theia_camera_rotation;
+}
+
+Eigen::Vector3d ComputeCameraParamsFromModelviewRotation(
     const Eigen::Matrix3d& modelview_rotation) {
 
   // Default rotation R_d.
@@ -110,8 +138,29 @@ Eigen::Affine3d ComputeModelviewFromCameraParams(
   return modelview;
 }
 
+Eigen::Vector3d ComputeCameraParamsFromTheiaCamera(
+    const theia::Camera& camera) {
+  return ComputeCameraParamsFromModelviewRotation(
+      ComputeModelviewFromTheiaCamera(camera).rotation());
+}
+
+Eigen::Vector3d ComputeCameraParamsFromTheiaCameraRotation(
+    const Eigen::Matrix3d& theia_camera_rotation) {
+  return ComputeCameraParamsFromModelviewRotation(
+      ComputeModelviewRotationFromTheiaCamera(theia_camera_rotation));
+}
+
+Eigen::Matrix3d ComputeTheiaCameraRotationFromCameraParams(
+    const Eigen::Vector3d& camera_params) {
+  return ComputeTheiaCameraRotationFromModelview(
+      ComputeModelviewFromCameraParams(camera_params).rotation());
+}
+
 Eigen::Matrix3d ComputeAverageRotation(
     const std::vector<Eigen::Matrix3d>& R_list) {
+  const double kErrorThreshold = 1.0E-8;
+  const int kMaxIter = 30;
+
   const int num_Rs = R_list.size();
   CHECK_GT(num_Rs, 0);
 
@@ -121,7 +170,6 @@ Eigen::Matrix3d ComputeAverageRotation(
   // Hartley et al., L1 rotation averaging using the Weiszfeld algorithm,
   // CVPR 2011.
   // Algorithm 1.
-  const int kMaxIter = 10;
   for (int iter = 0; iter < kMaxIter; ++iter) {
     Eigen::Matrix3d r = Eigen::Matrix3d::Zero();
     for (const Eigen::Matrix3d diff_R : R_list) {
@@ -132,6 +180,7 @@ Eigen::Matrix3d ComputeAverageRotation(
 
     const double error = r.norm();
     VLOG(3) << "[" << iter << "] error = " << error;
+    if (error < kErrorThreshold) break;
   }
 
   VLOG(3) << "Done.";

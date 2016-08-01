@@ -46,7 +46,9 @@ namespace theia {
 // is less scalable but often more robust.
 enum class ReconstructionEstimatorType {
   GLOBAL = 0,
-  INCREMENTAL = 1
+  INCREMENTAL = 1,
+  // @mhsung
+  EXP_GLOBAL = 2,
 };
 
 // The recommended type of rotations solver is the Robust L1-L2 method. This
@@ -55,7 +57,10 @@ enum class ReconstructionEstimatorType {
 enum class GlobalRotationEstimatorType {
   ROBUST_L1L2 = 0,
   NONLINEAR = 1,
-  LINEAR = 2
+  LINEAR = 2,
+
+  // @mhsung
+  CONSTRAINED_ROBUST_L1L2 = 3
 };
 
 // Global position estimation methods.
@@ -152,6 +157,15 @@ struct ReconstructionEstimatorOptions {
 
   // Robust loss function scales for nonlinear estimation.
   double rotation_estimation_robust_loss_scale = 0.1;
+
+  // @mhsung
+  // Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
+  bool exp_global_run_bundle_adjustment = true;
+
+  // @mhsung
+  // Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is chosen
+  // for global rotation estimator type.
+  double rotation_estimation_constraint_weight = 1.0;
 
   // --------------- Global Position Estimation Options --------------- //
   NonlinearPositionEstimator::Options nonlinear_position_estimator_options;

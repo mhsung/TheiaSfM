@@ -108,7 +108,8 @@ void AddEdgesToHeap(
 
 bool OrientationsFromMaximumSpanningTree(
     const ViewGraph& view_graph,
-    std::unordered_map<ViewId, Eigen::Vector3d>* orientations) {
+    std::unordered_map<ViewId, Eigen::Vector3d>* orientations,
+    const std::unordered_map<ViewId, Eigen::Vector3d>* fixed_views) {
   CHECK_NOTNULL(orientations);
 
   // Compute maximum spanning tree.
@@ -141,9 +142,20 @@ bool OrientationsFromMaximumSpanningTree(
   std::vector<HeapElement> heap;
 
   // Set the root value.
-  const ViewId root_view_id = mst.begin()->first;
-  (*orientations)[root_view_id] = Eigen::Vector3d::Zero();
-  AddEdgesToHeap(mst_view_graph, *orientations, root_view_id, &heap);
+  // @mhsung
+  if (fixed_views == nullptr || fixed_views->empty()) {
+    const ViewId root_view_id = mst.begin()->first;
+    (*orientations)[root_view_id] = Eigen::Vector3d::Zero();
+    AddEdgesToHeap(mst_view_graph, *orientations, root_view_id, &heap);
+  } else {
+    for (const auto& fixed_view : *fixed_views) {
+      const ViewId view_id = fixed_view.first;
+      const Eigen::Vector3d& orientation = fixed_view.second;
+      CHECK(view_graph.HasView(view_id));
+      (*orientations)[view_id] = orientation;
+      AddEdgesToHeap(mst_view_graph, *orientations, fixed_view.first, &heap);
+    }
+  }
 
   while (!heap.empty()) {
     const HeapElement next_edge = heap.front();

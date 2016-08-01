@@ -77,7 +77,10 @@ class GlobalReconstructionEstimator : public ReconstructionEstimator {
   ReconstructionEstimatorSummary Estimate(ViewGraph* view_graph,
                                           Reconstruction* reconstruction);
 
- private:
+ // @mhsung:
+ // private -> projected.
+ //private:
+ protected:
   bool FilterInitialViewGraph();
   void CalibrateCameras();
   bool EstimateGlobalRotations();

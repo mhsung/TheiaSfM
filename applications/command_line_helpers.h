@@ -97,6 +97,10 @@ inline ReconstructionEstimatorType StringToReconstructionEstimatorType(
     return ReconstructionEstimatorType::GLOBAL;
   } else if (reconstruction_estimator == "INCREMENTAL") {
     return ReconstructionEstimatorType::INCREMENTAL;
+  }
+  // @mhsung
+  else if (reconstruction_estimator == "EXP_GLOBAL") {
+    return ReconstructionEstimatorType::EXP_GLOBAL;
   } else {
     LOG(FATAL)
         << "Invalid reconstruction estimator type. Using GLOBAL instead.";
@@ -112,6 +116,10 @@ inline GlobalRotationEstimatorType StringToRotationEstimatorType(
     return GlobalRotationEstimatorType::NONLINEAR;
   } else if (rotation_estimator == "LINEAR") {
     return GlobalRotationEstimatorType::LINEAR;
+  }
+  // @mhsung
+  else if (rotation_estimator == "CONSTRAINED_ROBUST_L1L2") {
+    return GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2;
   } else {
     LOG(FATAL)
         << "Invalid rotation estimator type. Using ROBUST_L1L2 instead.";

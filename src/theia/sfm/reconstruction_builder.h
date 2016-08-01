@@ -117,12 +117,13 @@ class ReconstructionBuilder {
   explicit ReconstructionBuilder(const ReconstructionBuilderOptions& options);
   ~ReconstructionBuilder();
 
-  const Reconstruction* GetReconstruction() const {
+  // @mhsung
+  // FIXME:
+  // These ad-hoc getters must be removed after all.
+  const class Reconstruction* GetReconstruction() const {
     return reconstruction_.get(); }
-  const ViewGraph* GetViewGraph() const {
-    return view_graph_.get(); }
-  const std::vector<std::string>& GetImageFilepaths() const {
-    return image_filepaths_; }
+  class Reconstruction* GetMutableReconstruction() {
+    return reconstruction_.get(); }
 
   // Add an image to the reconstruction.
   bool AddImage(const std::string& image_filepath);

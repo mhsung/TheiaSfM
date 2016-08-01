@@ -32,15 +32,20 @@
 // Please contact the author of this library if you have any questions.
 // Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
 
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include <time.h>
 #include <theia/theia.h>
 #include <chrono>  // NOLINT
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "applications/command_line_helpers.h"
+#include "applications/exp_camera_param_io.h"
+#include "applications/exp_camera_param_utils.h"
 
 // Input/output files.
 DEFINE_string(images, "", "Wildcard of images to reconstruct.");
@@ -192,6 +197,18 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
               "where the robust loss begins with respect to reprojection error "
               "in pixels.");
 
+// @mhsung
+DEFINE_string(init_orientation_data_type, "", "");
+DEFINE_string(init_orientation_filepath, "", "");
+
+// Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
+DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
+
+// Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is selected
+// as global rotation estimator type.
+DEFINE_double(rotation_estimation_constraint_weight, 1.0, "");
+
+
 using theia::Reconstruction;
 using theia::ReconstructionBuilder;
 using theia::ReconstructionBuilderOptions;
@@ -304,6 +321,13 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
       StringToLossFunction(FLAGS_bundle_adjustment_robust_loss_function);
   reconstruction_estimator_options.bundle_adjustment_robust_loss_width =
       FLAGS_bundle_adjustment_robust_loss_width;
+
+  // @mhsung
+  reconstruction_estimator_options.exp_global_run_bundle_adjustment =
+      FLAGS_exp_global_run_bundle_adjustment;
+  reconstruction_estimator_options.rotation_estimation_constraint_weight =
+      FLAGS_rotation_estimation_constraint_weight;
+
   return options;
 }
 
@@ -408,13 +432,62 @@ int main(int argc, char *argv[]) {
         << "You must specify either images to reconstruct or a match file.";
   }
 
+  // @mhsung
+  // Read orientation.
+  std::unordered_map<std::string, Eigen::Matrix3d> init_orientations_with_names;
+  CHECK(ReadOrientations(
+      FLAGS_init_orientation_data_type, FLAGS_init_orientation_filepath,
+      &init_orientations_with_names));
+
+  std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
+  MapOrientationsToViewIds(*reconstruction_builder.GetReconstruction(),
+                           init_orientations_with_names, &init_orientations);
+
+
+  // Set initial orientation in reconstruction.
+  // FIXME:
+  // This part must be moved to 'ReconstructionBuilder'.
+  for (const auto& init_orientation : init_orientations) {
+    theia::View* view = reconstruction_builder.GetMutableReconstruction()
+        ->MutableView(init_orientation.first);
+    CHECK_NOTNULL(view);
+    Eigen::Vector3d angle_axis;
+    ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
+        angle_axis.data());
+    view->SetInitialOrientation(angle_axis);
+  }
+
   std::vector<Reconstruction*> reconstructions;
   CHECK(reconstruction_builder.BuildReconstruction(&reconstructions))
       << "Could not create a reconstruction.";
 
   for (int i = 0; i < reconstructions.size(); i++) {
+    // @mhsung
+    std::stringstream output_prefix;
+    output_prefix << FLAGS_output_reconstruction;
+
+    if (options.reconstruction_estimator_options
+            .reconstruction_estimator_type ==
+        ReconstructionEstimatorType::EXP_GLOBAL) {
+
+      if (!options.reconstruction_estimator_options
+          .exp_global_run_bundle_adjustment) {
+        output_prefix << "_no_bundle";
+      }
+
+      if (options.reconstruction_estimator_options
+              .global_rotation_estimator_type ==
+          GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
+        output_prefix << "_init_";
+        output_prefix << std::fixed << std::setprecision(1)
+                      << options .reconstruction_estimator_options
+                          .rotation_estimation_constraint_weight;
+      }
+    }
+
     const std::string output_file =
-        theia::StringPrintf("%s-%d", FLAGS_output_reconstruction.c_str(), i);
+        theia::StringPrintf("%s-%d", output_prefix.str().c_str(), i);
     LOG(INFO) << "Writing reconstruction " << i << " to " << output_file;
     CHECK(theia::WriteReconstruction(*reconstructions[i], output_file))
         << "Could not write reconstruction to file.";

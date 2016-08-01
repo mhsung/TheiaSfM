@@ -46,10 +46,12 @@
 
 namespace theia {
 
-View::View() : name_(""), is_estimated_(false) {}
+View::View() : name_(""), is_estimated_(false),
+               is_orientation_initialized_(false) {}
 
 View::View(const std::string& name)
-    : name_(name), is_estimated_(false) {}
+    : name_(name), is_estimated_(false),
+      is_orientation_initialized_(false) {}
 
 const std::string& View::Name() const {
   return name_;
@@ -102,6 +104,24 @@ void View::AddFeature(const TrackId track_id, const Feature& feature) {
 
 bool View::RemoveFeature(const TrackId track_id) {
   return features_.erase(track_id) > 0;
+}
+
+// @mhsung
+void View::SetInitialOrientation(const Eigen::Vector3d& orientation) {
+  init_orientation_ = orientation;
+  is_orientation_initialized_ = true;
+}
+
+// @mhsung
+Eigen::Vector3d View::GetInitialOrientation() const {
+  CHECK(is_orientation_initialized_);
+  return init_orientation_;
+}
+
+// @mhsung
+void View::RemoveInitialOrientation() {
+  init_orientation_.setZero();
+  is_orientation_initialized_ = false;
 }
 
 }  // namespace theia

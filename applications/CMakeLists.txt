@@ -90,13 +90,29 @@ target_link_libraries(create_calibration_file_from_exif theia ${GFLAGS_LIBRARIES
 add_executable(create_reconstruction_from_strecha_dataset create_reconstruction_from_strecha_dataset.cc)
 target_link_libraries(create_reconstruction_from_strecha_dataset theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-
-# Added.
+# @mhsung
 add_executable(
-  exp_compare_camera_poses
-  exp_compare_camera_poses.cc
+  exp_export_cameras
+  exp_export_cameras.cc
   exp_camera_param_utils.h
   exp_camera_param_utils.cc
   exp_camera_param_io.h
   exp_camera_param_io.cc)
-target_link_libraries(exp_compare_camera_poses theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+target_link_libraries(exp_export_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(
+  exp_compare_cameras
+  exp_compare_cameras.cc
+  exp_camera_param_utils.h
+  exp_camera_param_utils.cc
+  exp_camera_param_io.h
+  exp_camera_param_io.cc)
+target_link_libraries(exp_compare_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(exp_build_reconstruction
+  exp_build_reconstruction.cc
+  exp_camera_param_utils.h
+  exp_camera_param_utils.cc
+  exp_camera_param_io.h
+  exp_camera_param_io.cc)
+target_link_libraries(exp_build_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})

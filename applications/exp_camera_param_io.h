@@ -1,43 +1,70 @@
+// Author: Minhyuk Sung (mhsung@cs.stanford.edu)
+
 #include <Eigen/Core>
 #include <theia/theia.h>
+#include <string>
+#include <unordered_map>
 #include <vector>
+
+using namespace theia;
 
 
 // Read Cameras.
-void ReadRotationsFromCameraParams(
+// The output 'orientations' are Theia camera rotations.
+// Data types: 'param', 'modelview', or 'reconstruction'.
+bool ReadOrientations(
+    const std::string& data_type, const std::string& filepath,
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations);
+
+void ReadOrientationsFromCameraParams(
     const std::string& camera_param_dir,
-    const std::vector<std::string>& image_names,
-    const theia::Reconstruction& ref_reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations);
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations);
 
-void ReadRotationsFromModelviews(
+void ReadOrientationsFromModelviews(
     const std::string& modelview_dir,
-    const std::vector<std::string>& image_names,
-    const theia::Reconstruction& ref_reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations);
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations);
 
-void ReadRotationsFromReconstruction(
-    const std::string& target_reconstruction_filepath,
-    const std::vector<std::string>& image_names,
-    const theia::Reconstruction& ref_reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations);
+void ReadOrientationsFromReconstruction(
+    const std::string& reconstruction_filepath,
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations);
 
-void GetRotationsFromReconstruction(
-    const theia::Reconstruction& reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations);
 
-void ComputeRelativeRotationFromFirstFrame(
-    const std::unordered_map<theia::ViewId, Eigen::Matrix3d>& ref_rotations,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* relative_rotations);
+// Write Cameras.
+void WriteOrientationsAsCameraParams(
+    const std::string& camera_param_dir,
+    const std::unordered_map<std::string, Eigen::Matrix3d>& orientations);
 
-void SyncRotationLists(
-    const std::unordered_map<theia::ViewId, Eigen::Matrix3d>& ref_rotations,
-    const std::unordered_map<theia::ViewId, Eigen::Matrix3d>& est_rotations,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* synced_est_rotations);
-
-// Write camera information.
-void WriteFovy(const theia::Reconstruction& reconstruction);
+void WriteOrientationsAsCameraParams(
+    const std::string& camera_param_dir, const Reconstruction& reconstruction);
 
 void WriteModelviews(
-    const theia::Reconstruction& reconstruction,
-    const std::string& output_dir);
+    const std::string& modelview_dir, const Reconstruction& reconstruction);
+
+void PrintFovy(const int image_height, const Reconstruction& reconstruction);
+
+
+void GetOrientationsFromReconstruction(
+    const Reconstruction& reconstruction,
+    std::unordered_map<ViewId, Eigen::Matrix3d>* orientations);
+
+void MapOrientationsToViewIds(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<std::string, Eigen::Matrix3d>& name_orientations,
+    std::unordered_map<ViewId, Eigen::Matrix3d>* id_orientations);
+
+void MapOrientationsToViewNames(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<ViewId, Eigen::Matrix3d>& id_orientations,
+    std::unordered_map<std::string, Eigen::Matrix3d>* name_orientations);
+
+void ComputeRelativeOrientationsFromFirstFrame(
+    const std::unordered_map<ViewId, Eigen::Matrix3d>& orientations,
+    std::unordered_map<ViewId, Eigen::Matrix3d>* relative_orientations);
+
+void SyncOrientationSequences(
+    const std::unordered_map<ViewId, Eigen::Matrix3d>&
+    reference_orientations,
+    const std::unordered_map<ViewId, Eigen::Matrix3d>&
+    estimated_orientations,
+    std::unordered_map<ViewId, Eigen::Matrix3d>*
+    synced_estimated_orientations);

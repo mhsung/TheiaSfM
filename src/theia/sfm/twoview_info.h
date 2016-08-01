@@ -63,7 +63,7 @@ class TwoViewInfo {
   Eigen::Vector3d position_2;
   Eigen::Vector3d rotation_2;
 
-  // Number of features that were matched and geometrically verified betwen the
+  // Number of features that were matched and geometrically verified between the
   // images.
   int num_verified_matches;
 

@@ -83,11 +83,13 @@ class RobustRotationEstimator : public RotationEstimator {
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the
   // first-order approximation of the angle-axis rotations. This should only be
   // called once.
-  void SetupLinearSystem();
+  // @mhsung: Changed to virtual function.
+  virtual void SetupLinearSystem();
 
   // Computes the relative rotation error based on the current global
   // orientation estimates.
-  void ComputeRotationError();
+  // @mhsung: Changed to virtual function.
+  virtual void ComputeRotationError();
 
   // Performs the L1 robust loss minimization.
   bool SolveL1Regression();

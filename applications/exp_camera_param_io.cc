@@ -1,3 +1,5 @@
+// Author: Minhyuk Sung (mhsung@cs.stanford.edu)
+
 #include "exp_camera_param_io.h"
 
 #include <fstream>
@@ -10,193 +12,218 @@
 #include "unsupported/Eigen/MatrixFunctions"
 
 
-void ReadRotationsFromCameraParams(
+bool ReadOrientations(
+    const std::string& data_type, const std::string& filepath,
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
+  if (data_type == "param") {
+    ReadOrientationsFromCameraParams(filepath, orientations);
+  }
+  else if (data_type == "modelview") {
+    ReadOrientationsFromModelviews(filepath, orientations);
+  }
+  else if (data_type == "reconstruction") {
+    ReadOrientationsFromReconstruction(filepath, orientations);
+  }
+  else {
+    LOG(WARNING) << "Data type must be either 'param', 'modelview', or "
+                 << "'reconstruction' (Current: " << data_type << ")";
+    return false;
+  }
+  return true;
+}
+
+void ReadOrientationsFromCameraParams(
     const std::string& camera_param_dir,
-    const std::vector<std::string>& image_names,
-    const theia::Reconstruction& ref_reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations) {
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
   CHECK_NE(camera_param_dir, "");
-  CHECK_NOTNULL(modelview_rotations);
+  CHECK_NOTNULL(orientations);
+  orientations->clear();
 
-  for (const std::string& image_name : image_names) {
-    const std::string basename = stlplus::basename_part(image_name);
-
-    std::string camera_file = camera_param_dir + "/" + basename + ".txt";
-    if (!theia::FileExists(camera_file)) {
-      LOG(WARNING) << "File does not exist: '" << basename << "'";
+  for(const auto& filename : stlplus::folder_files(camera_param_dir)) {
+    const std::string basename = stlplus::basename_part(filename);
+    const std::string filepath = camera_param_dir + "/" + filename;
+    if (!FileExists(filepath)) {
+      LOG(WARNING) << "File does not exist: '" << filepath << "'";
       continue;
     }
 
-    // Read camera pose parameters.
-    std::ifstream file(camera_file);
+    // Read camera parameters.
+    std::ifstream file(filepath);
     Eigen::Vector3i camera_params;
     for(int i = 0; i < 3; ++i) file >> camera_params[i];
     file.close();
 
-    const Eigen::Affine3d modelview =
-        ComputeModelviewFromCameraParams(camera_params.cast<double>());
+    const Eigen::Matrix3d orientation =
+        ComputeTheiaCameraRotationFromCameraParams(
+            camera_params.cast<double>());
 
-    // DEBUG.
-    /*
-    const Eigen::Vector3d test_camera_param =
-        ComputeCameraParamsFromModelview(modelview.rotation());
-    for (int i = 0; i < 3; i++) {
-      CHECK_EQ(camera_params[i], static_cast<int>(std::round
-          (test_camera_param[i])) % 360);
-    }
-    */
+//    // DEBUG.
+//    const Eigen::Vector3d test_camera_param =
+//        ComputeCameraParamsFromTheiaCameraRotation(orientation);
+//    for (int i = 0; i < 3; i++) {
+//      CHECK_EQ(camera_params[i], static_cast<int>(std::round
+//          (test_camera_param[i])) % 360);
+//    }
+//    //
 
-    const theia::ViewId view_id =
-        ref_reconstruction.ViewIdFromName(image_name);
-    if (view_id != theia::kInvalidViewId) {
-      modelview_rotations->emplace(view_id, modelview.rotation());
-    }
+    (*orientations)[basename] = orientation;
+    VLOG(3) << "Loaded '" << filepath << "'.";
   }
 }
 
-void ReadRotationsFromModelviews(
+void ReadOrientationsFromModelviews(
     const std::string& modelview_dir,
-    const std::vector<std::string>& image_names,
-    const theia::Reconstruction& ref_reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations) {
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
   CHECK_NE(modelview_dir, "");
-  CHECK_NOTNULL(modelview_rotations);
+  CHECK_NOTNULL(orientations);
+  orientations->clear();
 
-  for (const std::string& image_name : image_names) {
-    const std::string basename = stlplus::basename_part(image_name);
-
-    std::string modelview_file = modelview_dir + "/" + basename + ".txt";
-    if (!theia::FileExists(modelview_file)) {
-      LOG(WARNING) << "File does not exist: '" << basename << "'";
+  for(const auto& filename : stlplus::folder_files(modelview_dir)) {
+    const std::string basename = stlplus::basename_part(filename);
+    const std::string filepath = modelview_dir + "/" + filename;
+    if (!FileExists(filepath)) {
+      LOG(WARNING) << "File does not exist: '" << filepath << "'";
       continue;
     }
 
-    // Read camera pose parameters.
-    std::ifstream file(modelview_file);
+    // Read modelview matrix.
+    std::ifstream file(filepath);
     double values[16];
     for(int i = 0; i < 16; ++i) file >> values[i];
     file.close();
 
     const Eigen::Affine3d modelview =
         Eigen::Affine3d(Eigen::Matrix4d::Map(values));
-
-    const theia::ViewId view_id =
-        ref_reconstruction.ViewIdFromName(image_name);
-    if (view_id != theia::kInvalidViewId) {
-      modelview_rotations->emplace(view_id, modelview.rotation());
-    }
+    const Eigen::Matrix3d orientation =
+        ComputeTheiaCameraRotationFromModelview(modelview.rotation());
+    (*orientations)[basename] = orientation;
+    VLOG(3) << "Loaded '" << filepath << "'.";
   }
 }
 
-void ReadRotationsFromReconstruction(
-    const std::string& target_reconstruction_filepath,
-    const std::vector<std::string>& image_names,
-    const theia::Reconstruction& ref_reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations) {
-  CHECK_NOTNULL(modelview_rotations);
+void ReadOrientationsFromReconstruction(
+    const std::string& reconstruction_filepath,
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
+  CHECK_NE(reconstruction_filepath, "");
+  CHECK_NOTNULL(orientations);
+  orientations->clear();
 
-  theia::Reconstruction target_reconstruction;
-  CHECK(theia::ReadReconstruction(
-      target_reconstruction_filepath, &target_reconstruction))
+  Reconstruction reconstruction;
+  CHECK(ReadReconstruction(reconstruction_filepath, &reconstruction))
   << "Could not read reconstruction file: '"
-  << target_reconstruction_filepath << "'.";
+  << reconstruction_filepath << "'.";
 
-  for (const std::string& image_name : image_names) {
-    const theia::ViewId target_view_id =
-        target_reconstruction.ViewIdFromName(image_name);
-    if (target_view_id == theia::kInvalidViewId) {
-      continue;
-    }
+  for (const auto& view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    const std::string basename = stlplus::basename_part(view->Name());
+    const Camera& camera = view->Camera();
+    const Eigen::Matrix3d orientation =
+        camera.GetOrientationAsRotationMatrix();
+    (*orientations)[basename] = orientation;
+    VLOG(3) << "Loaded '" << basename << "'.";
+  }
+}
 
-    const theia::View* view = target_reconstruction.View(target_view_id);
-    const theia::Camera& camera = view->Camera();
+void WriteOrientationsAsCameraParams(
+    const std::string& camera_param_dir,
+    const std::unordered_map<std::string, Eigen::Matrix3d>& orientations) {
+  CHECK_NE(camera_param_dir, "");
+
+  // Empty directory.
+  if (stlplus::folder_exists(camera_param_dir)) {
+    CHECK(stlplus::folder_delete(camera_param_dir, true));
+  }
+  CHECK(stlplus::folder_create(camera_param_dir));
+  CHECK(stlplus::folder_writable(camera_param_dir));
+
+  for (const auto& orientation : orientations) {
+    const Eigen::Vector3d camera_params =
+        ComputeCameraParamsFromTheiaCameraRotation(orientation.second);
+
+//    // DEBUG.
+//    const double kErrorThreshold = 1.E-3;
+//    const Eigen::Matrix3d test_theia_rotation_matrix =
+//        ComputeTheiaCameraRotationFromCameraParams(camera_params);
+//    CHECK(test_theia_rotation_matrix.isApprox(
+//        orientation.second, kErrorThreshold));
+//    //
+
+    const std::string basename = orientation.first;
+    const std::string filepath = camera_param_dir + "/" + basename + ".txt";
+
+    // Write camera parameters.
+    std::ofstream file(filepath);
+    const double* values = camera_params.data();
+    for(int i = 0; i < 3; ++i) file << values[i] << " ";
+    file.close();
+    VLOG(3) << "Saved '" << filepath << "'.";
+  }
+}
+
+void WriteOrientationsAsCameraParams(
+    const std::string& camera_param_dir, const Reconstruction& reconstruction) {
+  CHECK_NE(camera_param_dir, "");
+
+  // Empty directory.
+  if (stlplus::folder_exists(camera_param_dir)) {
+    CHECK(stlplus::folder_delete(camera_param_dir, true));
+  }
+  CHECK(stlplus::folder_create(camera_param_dir));
+  CHECK(stlplus::folder_writable(camera_param_dir));
+
+  for (const ViewId view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    const Camera& camera = view->Camera();
+    const Eigen::Vector3d camera_params =
+        ComputeCameraParamsFromTheiaCamera(camera);
+
+    const std::string basename = stlplus::basename_part(view->Name());
+    const std::string filepath = camera_param_dir + "/" + basename + ".txt";
+
+    // Write camera parameters.
+    std::ofstream file(filepath);
+    const double* values = camera_params.data();
+    for(int i = 0; i < 3; ++i) file << values[i] << " ";
+    file.close();
+    VLOG(3) << "Saved '" << filepath << "'.";
+  }
+}
+
+void WriteModelviews(
+    const std::string& modelview_dir, const Reconstruction& reconstruction) {
+  CHECK_NE(modelview_dir, "");
+
+  // Empty directory.
+  if (stlplus::folder_exists(modelview_dir)) {
+    CHECK(stlplus::folder_delete(modelview_dir, true));
+  }
+  CHECK(stlplus::folder_create(modelview_dir));
+  CHECK(stlplus::folder_writable(modelview_dir));
+
+  for (const ViewId view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    const Camera& camera = view->Camera();
     const Eigen::Affine3d modelview = ComputeModelviewFromTheiaCamera(camera);
 
-    // NOTE:
-    // Use reference reconstruction for view ID.
-    const theia::ViewId ref_view_id =
-        ref_reconstruction.ViewIdFromName(image_name);
-    if (ref_view_id != theia::kInvalidViewId) {
-      modelview_rotations->emplace(ref_view_id, modelview.rotation());
-    }
+    const std::string basename = stlplus::basename_part(view->Name());
+    const std::string filepath = modelview_dir + "/" + basename + ".txt";
+
+    // Write modelview matrix.
+    std::ofstream file(filepath);
+    const double* values = modelview.matrix().data();
+    for(int i = 0; i < 16; ++i) file << values[i] << std::endl;
+    file.close();
+    VLOG(3) << "Saved '" << filepath << "'.";
   }
 }
 
-void GetRotationsFromReconstruction(
-    const theia::Reconstruction& reconstruction,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* modelview_rotations) {
-  CHECK_NOTNULL(modelview_rotations);
-
-  for (const theia::ViewId view_id : reconstruction.ViewIds()) {
-    const theia::View* view = reconstruction.View(view_id);
-    const theia::Camera& camera = view->Camera();
-    const Eigen::Affine3d modelview = ComputeModelviewFromTheiaCamera(camera);
-    modelview_rotations->emplace(view_id, modelview.rotation());
-  }
-}
-
-void ComputeRelativeRotationFromFirstFrame(
-    const std::unordered_map<theia::ViewId, Eigen::Matrix3d>& rotations,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* relative_rotations) {
-  CHECK_NOTNULL(relative_rotations);
-
-  const theia::ViewId kIdZero = 0;
-  if (rotations.find(kIdZero) == rotations.end()) {
-    CHECK(false) << "The first frame does not exist.";
-  }
-  const Eigen::Matrix3d first_R = rotations.at(kIdZero);
-
-  relative_rotations->clear();
-  for (auto& R_pair : rotations) {
-    const theia::ViewId view_id = R_pair.first;
-    const Eigen::Matrix3d R = R_pair.second;
-    relative_rotations->emplace(view_id, R * first_R.transpose());
-  }
-}
-
-void SyncRotationLists(
-    const std::unordered_map<theia::ViewId, Eigen::Matrix3d>& ref_rotations,
-    const std::unordered_map<theia::ViewId, Eigen::Matrix3d>& est_rotations,
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d>* synced_est_rotations) {
-  CHECK_NOTNULL(synced_est_rotations);
-
-  // Find global_R that makes ref_R_i = est_R_i global_R.
-  std::vector<Eigen::Matrix3d> diff_R_list;
-  diff_R_list.reserve(est_rotations.size());
-
-  for (const auto& est_R_pair : est_rotations) {
-    const theia::ViewId view_id = est_R_pair.first;
-    const Eigen::Matrix3d est_R = est_R_pair.second;
-
-    if (ref_rotations.find(view_id) != ref_rotations.end()) {
-      const Eigen::Matrix3d ref_R = ref_rotations.at(view_id);
-      const Eigen::Matrix3d diff_R = est_R.transpose() * ref_R;
-      diff_R_list.push_back(diff_R);
-    }
-  }
-
-  CHECK(!diff_R_list.empty());
-  const Eigen::Matrix3d global_R = ComputeAverageRotation(diff_R_list);
-
-  // Post-multiply transpose of global_R.
-  synced_est_rotations->clear();
-  for (auto& est_R_pair : est_rotations) {
-    const theia::ViewId view_id = est_R_pair.first;
-    const Eigen::Matrix3d est_R = est_R_pair.second;
-    synced_est_rotations->emplace(view_id, est_R * global_R);
-  }
-}
-
-void WriteFovy(const theia::Reconstruction& reconstruction) {
+void PrintFovy(const int image_height, const Reconstruction& reconstruction) {
   // Compute fovy for each view.
-  for (const theia::ViewId view_id : reconstruction.ViewIds()) {
-    const theia::View* view = reconstruction.View(view_id);
-    const theia::Camera& camera = view->Camera();
+  for (const ViewId view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    const Camera& camera = view->Camera();
 
-    // fovy.
-    const int kImageHeight = 1080;
-
-    const double f = 2.0 * camera.FocalLength() / (double) kImageHeight;
+    const double f = 2.0 * camera.FocalLength() / (double) image_height;
     std::cout << "f: " << f << std::endl;
 
     // f = 1 / tan(fovx / 2).
@@ -207,34 +234,138 @@ void WriteFovy(const theia::Reconstruction& reconstruction) {
   }
 }
 
-void WriteModelviews(
-    const theia::Reconstruction& reconstruction,
-    const std::string& output_dir) {
-  CHECK_NE(output_dir, "");
-  if (!stlplus::folder_exists(output_dir)) {
-    CHECK(stlplus::folder_create(output_dir));
+void GetOrientationsFromReconstruction(
+    const Reconstruction& reconstruction,
+    std::unordered_map<ViewId, Eigen::Matrix3d>* orientations) {
+  CHECK_NOTNULL(orientations);
+
+  for (const ViewId view_id : reconstruction.ViewIds()) {
+    const Camera& camera = reconstruction.View(view_id)->Camera();
+    (*orientations)[view_id] = camera.GetOrientationAsRotationMatrix();
   }
-  CHECK(stlplus::folder_writable(output_dir));
+}
 
-  // Save OpenGL modelview matrix for each view.
-  for (const theia::ViewId view_id : reconstruction.ViewIds()) {
-    const theia::View* view = reconstruction.View(view_id);
-    const theia::Camera& camera = view->Camera();
+void MapOrientationsToViewIds(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<std::string, Eigen::Matrix3d>& name_orientations,
+    std::unordered_map<ViewId, Eigen::Matrix3d>* id_orientations) {
+  CHECK_NOTNULL(id_orientations);
+  id_orientations->clear();
+  id_orientations->reserve(name_orientations.size());
 
-    // Save OpenGL modelview matrix.
-    const Eigen::Affine3d modelview =
-        ComputeModelviewFromTheiaCamera(camera);
-
-    const std::string basename = stlplus::basename_part(view->Name());
-    const std::string modelview_filename = output_dir + "/" + basename + ".txt";
-    std::cout << "Saving '" << modelview_filename << "'... ";
-
-    std::ofstream file(modelview_filename);
-    // Column-wise
-    for (int i = 0; i < 4; ++i)
-      for (int j = 0; j < 4; ++j)
-        file << modelview.matrix()(j, i) << std::endl;
-    file.close();
-    std::cout << "Done." << std::endl;
+  for(const auto& name_orientation : name_orientations) {
+    // FIXME:
+    // Now we simply assume that all view name has '.png' extension.
+    const auto& view_name = name_orientation.first + ".png";
+    const ViewId view_id = reconstruction.ViewIdFromName(view_name);
+    if (view_id == kInvalidViewId) {
+      LOG(WARNING) << "Invalid view name: '" << view_name << "'";
+    } else {
+      const auto& orientation = name_orientation.second;
+      (*id_orientations)[view_id] = orientation;
+    }
   }
+}
+
+void MapOrientationsToViewNames(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<ViewId, Eigen::Matrix3d>& id_orientations,
+    std::unordered_map<std::string, Eigen::Matrix3d>* name_orientations) {
+  CHECK_NOTNULL(name_orientations);
+  name_orientations->clear();
+  name_orientations->reserve(id_orientations.size());
+
+  for(const auto& id_orientation : id_orientations) {
+    const ViewId view_id = id_orientation.first;
+    const View* view = reconstruction.View(view_id);
+    if (view == nullptr) {
+      LOG(WARNING) << "Invalid view ID: '" << view_id << "'";
+    } else {
+      const std::string basename = stlplus::basename_part(view->Name());
+      const auto& orientation = id_orientation.second;
+      (*name_orientations)[basename] = orientation;
+    }
+  }
+}
+
+void ComputeRelativeOrientationsFromFirstFrame(
+    const std::unordered_map<ViewId, Eigen::Matrix3d>& orientations,
+    std::unordered_map<ViewId, Eigen::Matrix3d>* relative_orientations) {
+  CHECK_NOTNULL(relative_orientations);
+
+  const ViewId kIdZero = 0;
+  if (orientations.find(kIdZero) == orientations.end()) {
+    CHECK(false) << "The first frame does not exist.";
+  }
+  const Eigen::Matrix3d first_R = orientations.at(kIdZero);
+
+  relative_orientations->clear();
+  relative_orientations->reserve(orientations.size());
+  for (auto& R_pair : orientations) {
+    const ViewId view_id = R_pair.first;
+    const Eigen::Matrix3d R = R_pair.second;
+    (*relative_orientations)[view_id] = R * first_R.transpose();
+  }
+}
+
+void SyncOrientationSequences(
+    const std::unordered_map<ViewId, Eigen::Matrix3d>&
+    reference_orientations,
+    const std::unordered_map<ViewId, Eigen::Matrix3d>&
+    estimated_orientations,
+    std::unordered_map<ViewId, Eigen::Matrix3d>*
+    synced_estimated_orientations) {
+  CHECK_NOTNULL(synced_estimated_orientations);
+
+  synced_estimated_orientations->clear();
+  if (estimated_orientations.empty()) return;
+  synced_estimated_orientations->reserve(estimated_orientations.size());
+
+  // Find global_R that makes ref_R_i = est_R_i global_R.
+  // => est_R_i^T ref_R_i = global_R.
+  // => Find global_R that minimizes d(est_R_i^T ref_R_i, global_R),
+  // where d(*,*) is a distance metric of rotation matrices.
+  std::vector<Eigen::Matrix3d> diff_R_list;
+  diff_R_list.reserve(estimated_orientations.size());
+
+  for (const auto& est_R_pair : estimated_orientations) {
+    const ViewId view_id = est_R_pair.first;
+    const Eigen::Matrix3d est_R = est_R_pair.second;
+
+    if (reference_orientations.find(view_id) != reference_orientations.end()) {
+      const Eigen::Matrix3d ref_R = reference_orientations.at(view_id);
+      const Eigen::Matrix3d diff_R = est_R.transpose() * ref_R;
+      diff_R_list.push_back(diff_R);
+    }
+  }
+
+  CHECK(!diff_R_list.empty());
+  const Eigen::Matrix3d global_R = ComputeAverageRotation(diff_R_list);
+
+  // Post-multiply transpose of global_R.
+  for (auto& est_R_pair : estimated_orientations) {
+    const ViewId view_id = est_R_pair.first;
+    const Eigen::Matrix3d est_R = est_R_pair.second;
+    (*synced_estimated_orientations)[view_id] = est_R * global_R;
+  }
+
+  // (Optional) Report angle difference before/after sync.
+  double sum_before_angles = 0.0, sum_after_angles = 0.0;
+  for (auto& est_R_pair : estimated_orientations) {
+    const ViewId view_id = est_R_pair.first;
+    const Eigen::Matrix3d est_R = est_R_pair.second;
+
+    if (reference_orientations.find(view_id) != reference_orientations.end()) {
+      const Eigen::Matrix3d ref_R = reference_orientations.at(view_id);
+      const Eigen::AngleAxisd R1(ref_R.transpose() * est_R);
+      const Eigen::AngleAxisd R2(ref_R.transpose() * est_R * global_R);
+      sum_before_angles += (R1.angle() / M_PI * 180.0);
+      sum_after_angles += (R2.angle() / M_PI * 180.0);
+    }
+  }
+
+  VLOG(3) << "Angle difference (before): "
+          << sum_before_angles / estimated_orientations.size();
+  VLOG(3) << "Angle difference (after): "
+          << sum_after_angles / estimated_orientations.size();
 }
