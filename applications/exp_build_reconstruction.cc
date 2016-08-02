@@ -478,29 +478,31 @@ int main(int argc, char *argv[]) {
   }
 
   // @mhsung
-  // Read orientation.
-  std::unordered_map<std::string, Eigen::Matrix3d> init_orientations_with_names;
-  CHECK(ReadOrientations(
-      FLAGS_init_orientation_data_type, FLAGS_init_orientation_filepath,
-      &init_orientations_with_names));
+  if (FLAGS_init_orientation_filepath != "") {
+    // Read orientation.
+    std::unordered_map<std::string, Eigen::Matrix3d> init_orientations_with_names;
+    CHECK(ReadOrientations(
+        FLAGS_init_orientation_data_type, FLAGS_init_orientation_filepath,
+        &init_orientations_with_names));
 
-  std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
-  MapOrientationsToViewIds(*reconstruction_builder.GetReconstruction(),
-                           init_orientations_with_names, &init_orientations);
+    std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
+    MapOrientationsToViewIds(*reconstruction_builder.GetReconstruction(),
+                             init_orientations_with_names, &init_orientations);
 
 
-  // Set initial orientation in reconstruction.
-  // FIXME:
-  // This part must be moved to 'ReconstructionBuilder'.
-  for (const auto& init_orientation : init_orientations) {
-    theia::View* view = reconstruction_builder.GetMutableReconstruction()
-        ->MutableView(init_orientation.first);
-    CHECK_NOTNULL(view);
-    Eigen::Vector3d angle_axis;
-    ceres::RotationMatrixToAngleAxis(
-        ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
-        angle_axis.data());
-    view->SetInitialOrientation(angle_axis);
+    // Set initial orientation in reconstruction.
+    // FIXME:
+    // This part must be moved to 'ReconstructionBuilder'.
+    for (const auto& init_orientation : init_orientations) {
+      theia::View* view = reconstruction_builder.GetMutableReconstruction()
+          ->MutableView(init_orientation.first);
+      CHECK_NOTNULL(view);
+      Eigen::Vector3d angle_axis;
+      ceres::RotationMatrixToAngleAxis(
+          ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
+          angle_axis.data());
+      view->SetInitialOrientation(angle_axis);
+    }
   }
 
   std::vector<Reconstruction*> reconstructions;
