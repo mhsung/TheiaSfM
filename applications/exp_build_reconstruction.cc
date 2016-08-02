@@ -201,9 +201,9 @@ DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 // as global rotation estimator type.
 DEFINE_double(rotation_estimation_constraint_weight, 1.0, "");
 
-DEFINE_bool(match_only_consecutive_pairs, true,
+DEFINE_bool(match_only_consecutive_pairs, false,
             "Set to true to match only consecutive pairs.");
-DEFINE_int32(consecutive_pair_frame_range, 30,
+DEFINE_int32(consecutive_pair_frame_range, 10,
              "Frame range of consecutive image pairs to be matched.");
 
 
