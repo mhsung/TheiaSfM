@@ -435,11 +435,15 @@ void AddImagesToReconstructionBuilder(
     for (const auto& frame : frame_indices) {
       const int i = frame.first;
       const std::string& image_file_i = frame.second;
+      std::string image_name_i;
+      GetFilenameFromFilepath(image_file_i, true, &image_name_i);
 
       for (int j = i + 1; j < i + FLAGS_consecutive_pair_frame_range; j++) {
         if (frame_indices.find(j) != frame_indices.end()) {
           const std::string& image_file_j = frame_indices[j];
-          pairs_to_match.emplace_back(image_file_i, image_file_j);
+          std::string image_name_j;
+          GetFilenameFromFilepath(image_file_j, true, &image_name_j);
+          pairs_to_match.emplace_back(image_name_i, image_name_j);
         }
       }
     }
