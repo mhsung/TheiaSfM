@@ -149,6 +149,10 @@ class ReconstructionBuilder {
                        const std::string& image2,
                        const ImagePairMatch& matches);
 
+  // @mhsung
+  void SetImagePairsToMatch(
+      const std::vector<std::pair<std::string, std::string> >& pairs_to_match);
+
   // Extracts features and performs matching with geometric verification.
   bool ExtractAndMatchFeatures();
 

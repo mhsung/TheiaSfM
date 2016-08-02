@@ -124,6 +124,13 @@ bool FeatureExtractorAndMatcher::AddImage(
   return true;
 }
 
+// @mhsung
+void FeatureExtractorAndMatcher::SetImagePairsToMatch(
+    const std::vector<std::pair<std::string, std::string> >& pairs_to_match) {
+  CHECK_NOTNULL(matcher_.get());
+  matcher_->SetImagePairsToMatch(pairs_to_match);
+}
+
 // Performs feature matching between all images provided by the image
 // filepaths. Features are extracted and matched between the images according to
 // the options passed in. Only matches that have passed geometric verification

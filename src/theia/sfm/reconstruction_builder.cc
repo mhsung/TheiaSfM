@@ -224,6 +224,12 @@ void ReconstructionBuilder::RemoveUncalibratedViews() {
   }
 }
 
+// @mhsung
+void ReconstructionBuilder::SetImagePairsToMatch(
+    const std::vector<std::pair<std::string, std::string> >& pairs_to_match) {
+  feature_extractor_and_matcher_->SetImagePairsToMatch(pairs_to_match);
+}
+
 bool ReconstructionBuilder::ExtractAndMatchFeatures() {
   CHECK_EQ(view_graph_->NumViews(), 0) << "Cannot call ExtractAndMatchFeatures "
                                           "after TwoViewMatches has been "

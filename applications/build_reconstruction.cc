@@ -96,13 +96,6 @@ DEFINE_bool(bundle_adjust_two_view_geometry, true,
 DEFINE_bool(keep_only_symmetric_matches, true,
             "Performs two-way matching and keeps symmetric matches.");
 
-// @mhsung
-DEFINE_bool(match_only_pairs_in_frame_range, true,
-            "Set to true to match only pairs in the input sequence frame range"
-                ".");
-DEFINE_int32(match_pairs_frame_range, 30,
-             "Frame range of image pairs to be matched.");
-
 // Reconstruction building options.
 DEFINE_string(reconstruction_estimator, "GLOBAL",
               "Type of SfM reconstruction estimation to use.");
@@ -230,11 +223,6 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
       .min_triangulation_angle_degrees = FLAGS_min_triangulation_angle_degrees;
   options.matching_options.geometric_verification_options
       .final_max_reprojection_error = FLAGS_max_reprojection_error_pixels;
-
-  options.matching_options.match_only_pairs_in_frame_range =
-      FLAGS_match_only_pairs_in_frame_range;
-  options.matching_options.match_pairs_frame_range =
-      FLAGS_match_pairs_frame_range;
 
   options.min_track_length = FLAGS_min_track_length;
   options.max_track_length = FLAGS_max_track_length;

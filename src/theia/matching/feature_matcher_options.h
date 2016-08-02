@@ -85,10 +85,6 @@ struct FeatureMatcherOptions {
   // Only images that contain more feature matches than this number will be
   // returned.
   int min_num_feature_matches = 30;
-
-  // Match only pairs in the input sequence frame range.
-  bool match_only_pairs_in_frame_range = false;
-  int match_pairs_frame_range = 30;
 };
 
 }  // namespace theia

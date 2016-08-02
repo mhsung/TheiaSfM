@@ -188,41 +188,17 @@ void FeatureMatcher::MatchImages(std::vector<ImagePairMatch>* matches) {
   // If SetImagePairsToMatch has not been called, match all image-to-image
   // pairs.
   if (pairs_to_match_.size() == 0) {
-    if (options_.match_only_pairs_in_frame_range) {
-      VLOG(1) << "Match only pairs in the input sequence frame range."
-              << std::endl;
-      CHECK_GE(options_.match_pairs_frame_range, 1);
+    // Match all pairs.
+    // Compute the total number of potential matches.
+    const int num_pairs_to_match =
+        image_names_.size() * (image_names_.size() - 1) / 2;
+    matches->reserve(num_pairs_to_match);
 
-      // Compute the total number of potential matches.
-      const int num_pairs_to_match = image_names_.size() - 1;
-      matches->reserve(num_pairs_to_match);
-
-      pairs_to_match_.reserve(num_pairs_to_match);
-      // Create a list of all possible image pairs.
-      for (int i = 0; i < image_names_.size() - 1; i++) {
-        const int max_j = std::min(
-            static_cast<int>(i + options_.match_pairs_frame_range),
-            static_cast<int>(image_names_.size() - 1));
-        for (int j = i + 1; j <= max_j; j++) {
-          pairs_to_match_.emplace_back(image_names_[i], image_names_[j]);
-        }
-      }
-    }
-    else {
-      VLOG(1) << "Match all pairs." << std::endl;
-
-      // Match all pairs.
-      // Compute the total number of potential matches.
-      const int num_pairs_to_match =
-          image_names_.size() * (image_names_.size() - 1) / 2;
-      matches->reserve(num_pairs_to_match);
-
-      pairs_to_match_.reserve(num_pairs_to_match);
-      // Create a list of all possible image pairs.
-      for (int i = 0; i < image_names_.size(); i++) {
-        for (int j = i + 1; j < image_names_.size(); j++) {
-          pairs_to_match_.emplace_back(image_names_[i], image_names_[j]);
-        }
+    pairs_to_match_.reserve(num_pairs_to_match);
+    // Create a list of all possible image pairs.
+    for (int i = 0; i < image_names_.size(); i++) {
+      for (int j = i + 1; j < image_names_.size(); j++) {
+        pairs_to_match_.emplace_back(image_names_[i], image_names_[j]);
       }
     }
   }

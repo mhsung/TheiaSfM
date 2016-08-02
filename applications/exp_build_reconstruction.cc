@@ -101,13 +101,6 @@ DEFINE_bool(bundle_adjust_two_view_geometry, true,
 DEFINE_bool(keep_only_symmetric_matches, true,
             "Performs two-way matching and keeps symmetric matches.");
 
-// @mhsung
-DEFINE_bool(match_only_pairs_in_frame_range, true,
-            "Set to true to match only pairs in the input sequence frame range"
-                ".");
-DEFINE_int32(match_pairs_frame_range, 30,
-             "Frame range of image pairs to be matched.");
-
 // Reconstruction building options.
 DEFINE_string(reconstruction_estimator, "GLOBAL",
               "Type of SfM reconstruction estimation to use.");
@@ -208,6 +201,11 @@ DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 // as global rotation estimator type.
 DEFINE_double(rotation_estimation_constraint_weight, 1.0, "");
 
+DEFINE_bool(match_only_consecutive_pairs, true,
+            "Set to true to match only consecutive pairs.");
+DEFINE_int32(consecutive_pair_frame_range, 30,
+             "Frame range of consecutive image pairs to be matched.");
+
 
 using theia::Reconstruction;
 using theia::ReconstructionBuilder;
@@ -247,11 +245,6 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
       .min_triangulation_angle_degrees = FLAGS_min_triangulation_angle_degrees;
   options.matching_options.geometric_verification_options
       .final_max_reprojection_error = FLAGS_max_reprojection_error_pixels;
-
-  options.matching_options.match_only_pairs_in_frame_range =
-      FLAGS_match_only_pairs_in_frame_range;
-  options.matching_options.match_pairs_frame_range =
-      FLAGS_match_pairs_frame_range;
 
   options.min_track_length = FLAGS_min_track_length;
   options.max_track_length = FLAGS_max_track_length;
@@ -331,6 +324,28 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
   return options;
 }
 
+// @mhsung
+void ExtractFrameIndicesFromImages(
+    const std::vector<std::string>& image_files,
+    std::map<int, std::string>* frame_indices) {
+  CHECK_NOTNULL(frame_indices);
+  frame_indices->clear();
+
+  for (const auto& image_file : image_files) {
+    std::string filename;
+    CHECK(GetFilenameFromFilepath(image_file, false, &filename));
+
+    // NOTE:
+    // Frame index is number after the last '_'.
+    const std::string frame_index_str =
+        filename.substr(filename.rfind('_') + 1);
+    CHECK(!frame_index_str.empty());
+    const int frame_index = std::stoi(frame_index_str);
+
+    frame_indices->emplace(frame_index, image_file);
+  }
+}
+
 void AddMatchesToReconstructionBuilder(
     ReconstructionBuilder* reconstruction_builder) {
   // Load matches from file.
@@ -405,6 +420,32 @@ void AddImagesToReconstructionBuilder(
     } else {
       CHECK(reconstruction_builder->AddImage(image_file, intrinsics_group_id));
     }
+  }
+
+  // @mhsung
+  if (FLAGS_match_only_consecutive_pairs &&
+      FLAGS_consecutive_pair_frame_range > 0) {
+    std::map<int, std::string> frame_indices;
+    ExtractFrameIndicesFromImages(image_files, &frame_indices);
+
+    std::vector<std::pair<std::string, std::string> > pairs_to_match;
+    pairs_to_match.reserve(
+        FLAGS_consecutive_pair_frame_range * frame_indices.size());
+
+    for (const auto& frame : frame_indices) {
+      const int i = frame.first;
+      const std::string& image_file_i = frame.second;
+
+      for (int j = i + 1; j < i + FLAGS_consecutive_pair_frame_range; j++) {
+        if (frame_indices.find(j) != frame_indices.end()) {
+          const std::string& image_file_j = frame_indices[j];
+          pairs_to_match.emplace_back(image_file_i, image_file_j);
+        }
+      }
+    }
+
+    CHECK(!pairs_to_match.empty()) << "No image pair to match.";
+    reconstruction_builder->SetImagePairsToMatch(pairs_to_match);
   }
 
   // Extract and match features.

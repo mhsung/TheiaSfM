@@ -92,6 +92,10 @@ class FeatureExtractorAndMatcher {
   bool AddImage(const std::string& image_filepath,
                 const CameraIntrinsicsPrior& intrinsics);
 
+  // @mhsung
+  void SetImagePairsToMatch(
+      const std::vector<std::pair<std::string, std::string> >& pairs_to_match);
+
   // Performs feature matching between all images provided by the image
   // filepaths. Features are extracted and matched between the images according
   // to the options passed in. Only matches that have passed geometric
