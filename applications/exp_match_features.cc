@@ -131,7 +131,7 @@ void GetConsecutivePairsToMatch(
     std::string image_name_i;
     theia::GetFilenameFromFilepath(image_file_i, true, &image_name_i);
 
-    for (int j = i + 1; j < i + FLAGS_consecutive_pair_frame_range; j++) {
+    for (int j = i + 1; j <= i + FLAGS_consecutive_pair_frame_range; j++) {
       if (frame_indices.find(j) != frame_indices.end()) {
         const std::string& image_file_j = frame_indices[j];
         std::string image_name_j;
@@ -142,6 +142,7 @@ void GetConsecutivePairsToMatch(
   }
 
   CHECK(!pairs_to_match->empty()) << "No image pair to match.";
+  LOG(INFO) << "# of consecutive pairs: " << pairs_to_match->size();
 }
 
 void SetMatchingOptions(theia::FeatureMatcherOptions* matching_options) {

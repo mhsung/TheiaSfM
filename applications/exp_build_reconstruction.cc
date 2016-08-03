@@ -367,7 +367,7 @@ void GetConsecutivePairsToMatch(
     std::string image_name_i;
     theia::GetFilenameFromFilepath(image_file_i, true, &image_name_i);
 
-    for (int j = i + 1; j < i + FLAGS_consecutive_pair_frame_range; j++) {
+    for (int j = i + 1; j <= i + FLAGS_consecutive_pair_frame_range; j++) {
       if (frame_indices.find(j) != frame_indices.end()) {
         const std::string& image_file_j = frame_indices[j];
         std::string image_name_j;
@@ -378,6 +378,7 @@ void GetConsecutivePairsToMatch(
   }
 
   CHECK(!pairs_to_match->empty()) << "No image pair to match.";
+  LOG(INFO) << "# of consecutive pairs: " << pairs_to_match->size();
 }
 
 // @mhsung
@@ -522,13 +523,13 @@ int main(int argc, char *argv[]) {
 
   std::vector<Reconstruction*> reconstructions;
   CHECK(reconstruction_builder.BuildReconstruction(&reconstructions))
-  << "Could not create a reconstruction.";
+      << "Could not create a reconstruction.";
 
   for (int i = 0; i < reconstructions.size(); i++) {
     const std::string output_file =
         theia::StringPrintf("%s-%d", FLAGS_output_reconstruction.c_str(), i);
     LOG(INFO) << "Writing reconstruction " << i << " to " << output_file;
     CHECK(theia::WriteReconstruction(*reconstructions[i], output_file))
-    << "Could not write reconstruction to file.";
+        << "Could not write reconstruction to file.";
   }
 }
