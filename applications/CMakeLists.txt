@@ -109,6 +109,9 @@ add_executable(
   exp_camera_param_io.cc)
 target_link_libraries(exp_compare_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_match_features exp_match_features.cc)
+target_link_libraries(exp_match_features theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
 add_executable(exp_build_reconstruction
   exp_build_reconstruction.cc
   exp_camera_param_utils.h

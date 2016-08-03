@@ -333,7 +333,7 @@ void ExtractFrameIndicesFromImages(
 
   for (const auto& image_file : image_files) {
     std::string filename;
-    CHECK(GetFilenameFromFilepath(image_file, false, &filename));
+    CHECK(theia::GetFilenameFromFilepath(image_file, false, &filename));
 
     // NOTE:
     // Frame index is number after the last '_'.
@@ -343,6 +343,66 @@ void ExtractFrameIndicesFromImages(
     const int frame_index = std::stoi(frame_index_str);
 
     frame_indices->emplace(frame_index, image_file);
+  }
+}
+
+// @mhsung
+void GetConsecutivePairsToMatch(
+    const int frame_range,
+    const std::vector<std::string>& image_files,
+    std::vector<std::pair<std::string, std::string> >* pairs_to_match) {
+  CHECK_NOTNULL(pairs_to_match);
+  CHECK_GT(frame_range, 0);
+
+  std::map<int, std::string> frame_indices;
+  ExtractFrameIndicesFromImages(image_files, &frame_indices);
+
+  pairs_to_match->clear();
+  pairs_to_match->reserve(
+      FLAGS_consecutive_pair_frame_range * frame_indices.size());
+
+  for (const auto& frame : frame_indices) {
+    const int i = frame.first;
+    const std::string& image_file_i = frame.second;
+    std::string image_name_i;
+    theia::GetFilenameFromFilepath(image_file_i, true, &image_name_i);
+
+    for (int j = i + 1; j < i + FLAGS_consecutive_pair_frame_range; j++) {
+      if (frame_indices.find(j) != frame_indices.end()) {
+        const std::string& image_file_j = frame_indices[j];
+        std::string image_name_j;
+        theia::GetFilenameFromFilepath(image_file_j, true, &image_name_j);
+        pairs_to_match->emplace_back(image_name_i, image_name_j);
+      }
+    }
+  }
+
+  CHECK(!pairs_to_match->empty()) << "No image pair to match.";
+}
+
+// @mhsung
+void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
+  // Read orientation.
+  std::unordered_map<std::string, Eigen::Matrix3d> init_orientations_with_names;
+  CHECK(ReadOrientations(
+      FLAGS_init_orientation_data_type, FLAGS_init_orientation_filepath,
+      &init_orientations_with_names));
+
+  std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
+  MapOrientationsToViewIds(*reconstruction_builder->GetReconstruction(),
+                           init_orientations_with_names, &init_orientations);
+
+  // FIXME:
+  // This part must be moved to 'ReconstructionBuilder'.
+  for (const auto& init_orientation : init_orientations) {
+    theia::View* view = reconstruction_builder->GetMutableReconstruction()
+        ->MutableView(init_orientation.first);
+    CHECK_NOTNULL(view);
+    Eigen::Vector3d angle_axis;
+    ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
+        angle_axis.data());
+    view->SetInitialOrientation(angle_axis);
   }
 }
 
@@ -423,32 +483,10 @@ void AddImagesToReconstructionBuilder(
   }
 
   // @mhsung
-  if (FLAGS_match_only_consecutive_pairs &&
-      FLAGS_consecutive_pair_frame_range > 0) {
-    std::map<int, std::string> frame_indices;
-    ExtractFrameIndicesFromImages(image_files, &frame_indices);
-
+  if (FLAGS_match_only_consecutive_pairs) {
     std::vector<std::pair<std::string, std::string> > pairs_to_match;
-    pairs_to_match.reserve(
-        FLAGS_consecutive_pair_frame_range * frame_indices.size());
-
-    for (const auto& frame : frame_indices) {
-      const int i = frame.first;
-      const std::string& image_file_i = frame.second;
-      std::string image_name_i;
-      GetFilenameFromFilepath(image_file_i, true, &image_name_i);
-
-      for (int j = i + 1; j < i + FLAGS_consecutive_pair_frame_range; j++) {
-        if (frame_indices.find(j) != frame_indices.end()) {
-          const std::string& image_file_j = frame_indices[j];
-          std::string image_name_j;
-          GetFilenameFromFilepath(image_file_j, true, &image_name_j);
-          pairs_to_match.emplace_back(image_name_i, image_name_j);
-        }
-      }
-    }
-
-    CHECK(!pairs_to_match.empty()) << "No image pair to match.";
+    GetConsecutivePairsToMatch(FLAGS_consecutive_pair_frame_range,
+                               image_files, &pairs_to_match);
     reconstruction_builder->SetImagePairsToMatch(pairs_to_match);
   }
 
@@ -479,64 +517,18 @@ int main(int argc, char *argv[]) {
 
   // @mhsung
   if (FLAGS_init_orientation_filepath != "") {
-    // Read orientation.
-    std::unordered_map<std::string, Eigen::Matrix3d> init_orientations_with_names;
-    CHECK(ReadOrientations(
-        FLAGS_init_orientation_data_type, FLAGS_init_orientation_filepath,
-        &init_orientations_with_names));
-
-    std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
-    MapOrientationsToViewIds(*reconstruction_builder.GetReconstruction(),
-                             init_orientations_with_names, &init_orientations);
-
-
-    // Set initial orientation in reconstruction.
-    // FIXME:
-    // This part must be moved to 'ReconstructionBuilder'.
-    for (const auto& init_orientation : init_orientations) {
-      theia::View* view = reconstruction_builder.GetMutableReconstruction()
-          ->MutableView(init_orientation.first);
-      CHECK_NOTNULL(view);
-      Eigen::Vector3d angle_axis;
-      ceres::RotationMatrixToAngleAxis(
-          ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
-          angle_axis.data());
-      view->SetInitialOrientation(angle_axis);
-    }
+    SetInitialOrientations(&reconstruction_builder);
   }
 
   std::vector<Reconstruction*> reconstructions;
   CHECK(reconstruction_builder.BuildReconstruction(&reconstructions))
-      << "Could not create a reconstruction.";
+  << "Could not create a reconstruction.";
 
   for (int i = 0; i < reconstructions.size(); i++) {
-    // @mhsung
-    std::stringstream output_prefix;
-    output_prefix << FLAGS_output_reconstruction;
-
-    if (options.reconstruction_estimator_options
-            .reconstruction_estimator_type ==
-        ReconstructionEstimatorType::EXP_GLOBAL) {
-
-      if (!options.reconstruction_estimator_options
-          .exp_global_run_bundle_adjustment) {
-        output_prefix << "_no_bundle";
-      }
-
-      if (options.reconstruction_estimator_options
-              .global_rotation_estimator_type ==
-          GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
-        output_prefix << "_init_";
-        output_prefix << std::fixed << std::setprecision(1)
-                      << options .reconstruction_estimator_options
-                          .rotation_estimation_constraint_weight;
-      }
-    }
-
     const std::string output_file =
-        theia::StringPrintf("%s-%d", output_prefix.str().c_str(), i);
+        theia::StringPrintf("%s-%d", FLAGS_output_reconstruction.c_str(), i);
     LOG(INFO) << "Writing reconstruction " << i << " to " << output_file;
     CHECK(theia::WriteReconstruction(*reconstructions[i], output_file))
-        << "Could not write reconstruction to file.";
+    << "Could not write reconstruction to file.";
   }
 }
