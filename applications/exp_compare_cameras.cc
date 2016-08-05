@@ -15,52 +15,33 @@
 
 
 // Input/output files.
-DEFINE_string(reference_reconstruction_file, "",
-              "Reference reconstruction file in binary format.");
-DEFINE_string(target_data_type, "", "");
-DEFINE_string(target_filepath, "", "");
-DEFINE_string(output_relative_target_camera_param_dir, "", "");
+DEFINE_string(reference_data_type, "", "");
+DEFINE_string(reference_filepath, "", "");
+DEFINE_string(estimate_data_type, "", "");
+DEFINE_string(estimate_filepath, "", "");
+DEFINE_string(output_filepath, "", "");
+
 
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
 
-  // Load the reference reconstruction.
-  theia::Reconstruction ref_reconstruction;
-  CHECK(theia::ReadReconstruction(
-      FLAGS_reference_reconstruction_file, &ref_reconstruction))
-      << "Could not read reconstruction file: '"
-      << FLAGS_reference_reconstruction_file << "'.";
+  // Load estimated data.
+  std::unordered_map<std::string, Eigen::Matrix3d> reference_orientations;
+  CHECK(ReadOrientations(FLAGS_reference_data_type, FLAGS_reference_filepath,
+                         &reference_orientations));
 
-  std::unordered_map<theia::ViewId, Eigen::Matrix3d> ref_orientations;
-  GetOrientationsFromReconstruction(ref_reconstruction, &ref_orientations);
+  // Load estimated data.
+  std::unordered_map<std::string, Eigen::Matrix3d> estimated_orientations;
+  CHECK(ReadOrientations(FLAGS_estimate_data_type, FLAGS_estimate_filepath,
+                         &estimated_orientations));
 
-
-  // Load target data.
+  // Sync estimated orientations with reference.
   std::unordered_map<std::string, Eigen::Matrix3d>
-      est_orientations_with_names;
-  CHECK(ReadOrientations(FLAGS_target_data_type, FLAGS_target_filepath,
-                         &est_orientations_with_names));
+      relative_estimated_orientations;
+  SyncOrientationSequences(reference_orientations, estimated_orientations,
+                           &relative_estimated_orientations);
 
-  std::unordered_map<theia::ViewId, Eigen::Matrix3d> est_orientations;
-  MapOrientationsToViewIds(
-      ref_reconstruction, est_orientations_with_names, &est_orientations);
-
-
-  // Sync target (estimated) modelviews with reference.
-  std::unordered_map<theia::ViewId, Eigen::Matrix3d> rel_est_orientations;
-  SyncOrientationSequences(
-      ref_orientations, est_orientations, &rel_est_orientations);
-
-//  std::unordered_map<theia::ViewId, Eigen::Matrix3d> rel_est_orientations;
-//  ComputeRelativeOrientationsFromFirstFrame(
-//      est_orientations, &rel_est_orientations);
-
-  std::unordered_map<std::string, Eigen::Matrix3d>
-      rel_est_modelviews_with_names;
-  MapOrientationsToViewNames(
-      ref_reconstruction, rel_est_orientations, &rel_est_modelviews_with_names);
   WriteOrientationsAsCameraParams(
-      FLAGS_output_relative_target_camera_param_dir,
-      rel_est_modelviews_with_names);
+      FLAGS_output_filepath, relative_estimated_orientations);
 }

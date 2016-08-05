@@ -5,10 +5,9 @@
 #include <Eigen/Geometry>
 #include <vector>
 
-
-// 'Modelview': OpenGL modelview matrix.
 // 'CameraParams': Azimuth, elevation, and theta.
 //    Used in RenderForCNN (ICCV 2015')
+// 'Modelview': OpenGL modelview (world-to-camera) matrix.
 
 
 // Modelview <-> Theia camera.

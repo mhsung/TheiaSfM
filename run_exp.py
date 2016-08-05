@@ -7,13 +7,16 @@ import sys
 
 
 FLAGS = gflags.FLAGS
+
+# Set input directory.
+gflags.DEFINE_string('data_dir', '', '')
+
 gflags.DEFINE_string('bin_dir', './build/bin/', '')
 gflags.DEFINE_integer('num_threads', 8, '')
 
-# User parameters.
-gflags.DEFINE_string('name', 'MVI_0167', '')
+# Options
 gflags.DEFINE_bool('overwrite', False, '')
-gflags.DEFINE_bool('every_10', True, '')
+gflags.DEFINE_bool('every_10', False, '')
 gflags.DEFINE_integer('seq_range', 0, '') # '<= 0' indicates all pair matches.
 
 
@@ -34,18 +37,14 @@ def save_and_run_cmd(cmd, filepath):
 if __name__ == '__main__':
     FLAGS(sys.argv)
 
-    # Change the root directory if it is needed.
-    data_root_path = os.path.normpath(
-        os.path.join(os.getcwd(), '../../data/', FLAGS.name))
-
     # Image path.
-    image_path = os.path.join(data_root_path, 'images')
+    image_path = os.path.join(FLAGS.data_dir, 'images')
     if not os.path.isdir(image_path):
         print('Image directory does not exist: "' + image_path + '"')
         exit(-1)
 
     # Feature path.
-    feature_path = os.path.join(data_root_path, 'features')
+    feature_path = os.path.join(FLAGS.data_dir, 'features')
     if not os.path.isdir(feature_path):
         os.makedirs(feature_path)
 
@@ -63,7 +62,7 @@ if __name__ == '__main__':
     if FLAGS.seq_range > 0:
         output_dirname += ('_seq_' + str(FLAGS.seq_range))
 
-    output_path = os.path.join(data_root_path, output_dirname)
+    output_path = os.path.join(FLAGS.data_dir, output_dirname)
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
 
@@ -72,7 +71,7 @@ if __name__ == '__main__':
         os.makedirs(log_path)
 
     # Output files.
-    calibration_file = os.path.join(data_root_path, 'calibration.txt')
+    calibration_file = os.path.join(FLAGS.data_dir, 'calibration.txt')
     matches_file = os.path.join(output_path, 'matches.bin')
     output_file = os.path.join(output_path, 'output')
 
@@ -189,4 +188,4 @@ if __name__ == '__main__':
     cmd = ''
     cmd += FLAGS.bin_dir + '/view_reconstruction '
     cmd += '--reconstruction=' + output_file + '-0 '
-    os.system(cmd)
+    #os.system(cmd)

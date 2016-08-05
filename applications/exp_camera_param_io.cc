@@ -18,6 +18,9 @@ bool ReadOrientations(
   if (data_type == "param") {
     ReadOrientationsFromCameraParams(filepath, orientations);
   }
+  else if (data_type == "pose") {
+    ReadOrientationsFromCameraMatrices(filepath, orientations);
+  }
   else if (data_type == "modelview") {
     ReadOrientationsFromModelviews(filepath, orientations);
   }
@@ -71,6 +74,31 @@ void ReadOrientationsFromCameraParams(
   }
 }
 
+void ReadOrientationsFromCameraMatrices(
+    const std::string& camera_matrix_dir,
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
+  CHECK_NE(camera_matrix_dir, "");
+  CHECK_NOTNULL(orientations);
+  orientations->clear();
+
+  for(const auto& filename : stlplus::folder_files(camera_matrix_dir)) {
+    const std::string basename = stlplus::basename_part(filename);
+    const std::string filepath = camera_matrix_dir + "/" + filename;
+    if (!FileExists(filepath)) {
+      LOG(WARNING) << "File does not exist: '" << filepath << "'";
+      continue;
+    }
+
+    // Read modelview matrix.
+    Eigen::Matrix4d camera_matrix;
+    CHECK(ReadEigenMatrixFromCSV(filepath, &camera_matrix));
+    const Eigen::Affine3d camera_pose(camera_matrix);
+    const Eigen::Matrix3d orientation = camera_pose.inverse().rotation();
+    (*orientations)[basename] = orientation;
+    VLOG(3) << "Loaded '" << filepath << "'.";
+  }
+}
+
 void ReadOrientationsFromModelviews(
     const std::string& modelview_dir,
     std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
@@ -87,13 +115,9 @@ void ReadOrientationsFromModelviews(
     }
 
     // Read modelview matrix.
-    std::ifstream file(filepath);
-    double values[16];
-    for(int i = 0; i < 16; ++i) file >> values[i];
-    file.close();
-
-    const Eigen::Affine3d modelview =
-        Eigen::Affine3d(Eigen::Matrix4d::Map(values));
+    Eigen::Matrix4d modelview_matrix;
+    CHECK(ReadEigenMatrixFromCSV(filepath, &modelview_matrix));
+    const Eigen::Affine3d modelview(modelview_matrix);
     const Eigen::Matrix3d orientation =
         ComputeTheiaCameraRotationFromModelview(modelview.rotation());
     (*orientations)[basename] = orientation;
@@ -209,10 +233,7 @@ void WriteModelviews(
     const std::string filepath = modelview_dir + "/" + basename + ".txt";
 
     // Write modelview matrix.
-    std::ofstream file(filepath);
-    const double* values = modelview.matrix().data();
-    for(int i = 0; i < 16; ++i) file << values[i] << std::endl;
-    file.close();
+    CHECK(WriteEigenMatrixToCSV(filepath, modelview.matrix()));
     VLOG(3) << "Saved '" << filepath << "'.";
   }
 }
@@ -240,8 +261,22 @@ void GetOrientationsFromReconstruction(
   CHECK_NOTNULL(orientations);
 
   for (const ViewId view_id : reconstruction.ViewIds()) {
-    const Camera& camera = reconstruction.View(view_id)->Camera();
+    const View* view = reconstruction.View(view_id);
+    const Camera& camera = view->Camera();
     (*orientations)[view_id] = camera.GetOrientationAsRotationMatrix();
+  }
+}
+
+void GetOrientationsFromReconstruction(
+    const Reconstruction& reconstruction,
+    std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
+  CHECK_NOTNULL(orientations);
+
+  for (const ViewId view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    const Camera& camera = view->Camera();
+    const std::string basename = stlplus::basename_part(view->Name());
+    (*orientations)[basename] = camera.GetOrientationAsRotationMatrix();
   }
 }
 
@@ -309,11 +344,11 @@ void ComputeRelativeOrientationsFromFirstFrame(
 }
 
 void SyncOrientationSequences(
-    const std::unordered_map<ViewId, Eigen::Matrix3d>&
+    const std::unordered_map<std::string, Eigen::Matrix3d>&
     reference_orientations,
-    const std::unordered_map<ViewId, Eigen::Matrix3d>&
+    const std::unordered_map<std::string, Eigen::Matrix3d>&
     estimated_orientations,
-    std::unordered_map<ViewId, Eigen::Matrix3d>*
+    std::unordered_map<std::string, Eigen::Matrix3d>*
     synced_estimated_orientations) {
   CHECK_NOTNULL(synced_estimated_orientations);
 
@@ -329,11 +364,12 @@ void SyncOrientationSequences(
   diff_R_list.reserve(estimated_orientations.size());
 
   for (const auto& est_R_pair : estimated_orientations) {
-    const ViewId view_id = est_R_pair.first;
+    const std::string view_name = est_R_pair.first;
     const Eigen::Matrix3d est_R = est_R_pair.second;
 
-    if (reference_orientations.find(view_id) != reference_orientations.end()) {
-      const Eigen::Matrix3d ref_R = reference_orientations.at(view_id);
+    if (reference_orientations.find(view_name) !=
+        reference_orientations.end()) {
+      const Eigen::Matrix3d ref_R = reference_orientations.at(view_name);
       const Eigen::Matrix3d diff_R = est_R.transpose() * ref_R;
       diff_R_list.push_back(diff_R);
     }
@@ -344,19 +380,20 @@ void SyncOrientationSequences(
 
   // Post-multiply transpose of global_R.
   for (auto& est_R_pair : estimated_orientations) {
-    const ViewId view_id = est_R_pair.first;
+    const std::string view_name = est_R_pair.first;
     const Eigen::Matrix3d est_R = est_R_pair.second;
-    (*synced_estimated_orientations)[view_id] = est_R * global_R;
+    (*synced_estimated_orientations)[view_name] = est_R * global_R;
   }
 
   // (Optional) Report angle difference before/after sync.
   double sum_before_angles = 0.0, sum_after_angles = 0.0;
   for (auto& est_R_pair : estimated_orientations) {
-    const ViewId view_id = est_R_pair.first;
+    const std::string view_name = est_R_pair.first;
     const Eigen::Matrix3d est_R = est_R_pair.second;
 
-    if (reference_orientations.find(view_id) != reference_orientations.end()) {
-      const Eigen::Matrix3d ref_R = reference_orientations.at(view_id);
+    if (reference_orientations.find(view_name) !=
+        reference_orientations.end()) {
+      const Eigen::Matrix3d ref_R = reference_orientations.at(view_name);
       const Eigen::AngleAxisd R1(ref_R.transpose() * est_R);
       const Eigen::AngleAxisd R2(ref_R.transpose() * est_R * global_R);
       sum_before_angles += (R1.angle() / M_PI * 180.0);
