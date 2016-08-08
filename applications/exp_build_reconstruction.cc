@@ -365,6 +365,11 @@ bool ReadMatchPairs(
 
   std::string line;
   while (std::getline(file, line)) {
+
+    // FIXME:
+    // Remove '\r' in 'std::getline' function.
+    line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+
     std::stringstream sstr(line);
     std::string name1, name2;
     if (!std::getline(sstr, name1, ',') || !std::getline(sstr, name2, ',')) {

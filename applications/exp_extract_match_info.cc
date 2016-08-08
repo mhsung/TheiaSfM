@@ -284,6 +284,15 @@ void CompareRelativePosesWithGroundTruth(
 
   double max_relative_rotation_angle_error = 0.0;
 
+  // TEST.
+  const int kErrorTol = 30.0;
+  std::unordered_map<std::string, bool> is_image_visited;
+  is_image_visited.reserve(ground_truth_orientations.size());
+  for (const auto& image : ground_truth_orientations) {
+    is_image_visited[image.first] = false;
+  }
+  //
+
   for (const auto& match : image_matches) {
     const std::string basename_1 = stlplus::basename_part(match.image1);
     const std::string basename_2 = stlplus::basename_part(match.image2);
@@ -310,12 +319,35 @@ void CompareRelativePosesWithGroundTruth(
 
     file << basename_1 << "," << basename_2 << ","
          << relative_rotation_angle_error << std::endl;
+
+    // TEST.
+    if (relative_rotation_angle_error <
+        static_cast<double>(kErrorTol)) {
+      is_image_visited[basename_1] = true;
+      is_image_visited[basename_2] = true;
+    }
+    //
   }
 
   file.close();
   LOG(INFO) << "Saved '" << output_filepath << "'.";
   LOG(INFO) << "Max relative rotation angle error: "
             << max_relative_rotation_angle_error;
+
+  // TEST.
+  const std::string test_output_filepath =
+      FLAGS_output_dir + "/" + "disconnected_images_tol_"
+      + std::to_string(kErrorTol) + ".txt";
+  std::ofstream test_file(test_output_filepath);
+  CHECK(test_file.good());
+  for (const auto& image : is_image_visited) {
+    if (!image.second) {
+      test_file << image.first << std::endl;
+    }
+  }
+  test_file.close();
+  LOG(INFO) << "Saved '" << test_output_filepath << "'.";
+  //
 }
 
 int main(int argc, char *argv[]) {
@@ -345,11 +377,9 @@ int main(int argc, char *argv[]) {
       image_names, matched_image_pairs, &all_matched_images);
 
   // Empty directory.
-  if (stlplus::folder_exists(FLAGS_output_dir)) {
-    CHECK(stlplus::folder_delete(FLAGS_output_dir, true));
+  if (!stlplus::folder_exists(FLAGS_output_dir)) {
+    CHECK(stlplus::folder_create(FLAGS_output_dir));
   }
-  CHECK(stlplus::folder_create(FLAGS_output_dir));
-  CHECK(stlplus::folder_writable(FLAGS_output_dir));
 
   WriteAllImageNames(image_names);
   WriteAllMatchedPairImageNames(matched_image_pairs);

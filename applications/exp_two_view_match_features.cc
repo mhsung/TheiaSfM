@@ -42,10 +42,9 @@
 
 #include "applications/command_line_helpers.h"
 
-DEFINE_string(input_features, "",
-              "Filepath of the features that you want to perform matching "
-              "against. This should be a wildcard that encapsulates all "
-              "features files");
+DEFINE_string(input_feature_dir, "", "");
+DEFINE_string(input_feature_name1, "", "");
+DEFINE_string(input_feature_name2, "", "");
 DEFINE_string(matching_strategy, "CASCADE_HASHING",
               "Strategy used to match features. Must be BRUTE_FORCE "
               " or CASCADE_HASHING");
@@ -81,75 +80,10 @@ DEFINE_int32(num_threads, 1,
 DEFINE_string(output_matches_file, "",
               "Filepath that the matches file should be written to.");
 
-// @mhsung
-DEFINE_bool(match_only_consecutive_pairs, false,
-            "Set to true to match only consecutive pairs.");
-DEFINE_int32(consecutive_pair_frame_range, 10,
-             "Frame range of consecutive image pairs to be matched.");
-
-
-// @mhsung
-void ExtractFrameIndicesFromImages(
-    const std::vector<std::string>& image_files,
-    std::map<int, std::string>* frame_indices) {
-  CHECK_NOTNULL(frame_indices);
-  frame_indices->clear();
-
-  for (const auto& image_file : image_files) {
-    std::string filename;
-    CHECK(theia::GetFilenameFromFilepath(image_file, false, &filename));
-
-    // NOTE:
-    // Frame index is number after the last '_'.
-    const std::string frame_index_str =
-        filename.substr(filename.rfind('_') + 1);
-    CHECK(!frame_index_str.empty());
-    const int frame_index = std::stoi(frame_index_str);
-
-    frame_indices->emplace(frame_index, image_file);
-  }
-}
-
-// @mhsung
-void GetConsecutivePairsToMatch(
-    const int frame_range,
-    const std::vector<std::string>& image_files,
-    std::vector<std::pair<std::string, std::string> >* pairs_to_match) {
-  CHECK_NOTNULL(pairs_to_match);
-  CHECK_GT(frame_range, 0);
-
-  std::map<int, std::string> frame_indices;
-  ExtractFrameIndicesFromImages(image_files, &frame_indices);
-
-  pairs_to_match->clear();
-  pairs_to_match->reserve(
-      FLAGS_consecutive_pair_frame_range * frame_indices.size());
-
-  for (const auto& frame : frame_indices) {
-    const int i = frame.first;
-    const std::string& image_file_i = frame.second;
-    std::string image_name_i;
-    theia::GetFilenameFromFilepath(image_file_i, true, &image_name_i);
-
-    for (int j = i + 1; j <= i + FLAGS_consecutive_pair_frame_range; j++) {
-      if (frame_indices.find(j) != frame_indices.end()) {
-        const std::string& image_file_j = frame_indices[j];
-        std::string image_name_j;
-        theia::GetFilenameFromFilepath(image_file_j, true, &image_name_j);
-        pairs_to_match->emplace_back(image_name_i, image_name_j);
-      }
-    }
-  }
-
-  CHECK(!pairs_to_match->empty()) << "No image pair to match.";
-  LOG(INFO) << "# of consecutive pairs: " << pairs_to_match->size();
-}
-
 void SetMatchingOptions(theia::FeatureMatcherOptions* matching_options) {
   matching_options->match_out_of_core = FLAGS_match_out_of_core;
-  theia::GetDirectoryFromFilepath(
-      FLAGS_input_features,
-      &matching_options->keypoints_and_descriptors_output_dir);
+  matching_options->keypoints_and_descriptors_output_dir =
+      FLAGS_input_feature_dir;
   matching_options->cache_capacity = FLAGS_matching_max_num_images_in_cache;
   matching_options->lowes_ratio = FLAGS_lowes_ratio;
   matching_options->keep_only_symmetric_matches =
@@ -208,10 +142,10 @@ int main(int argc, char *argv[]) {
 
   // Get the filepaths of the features files.
   std::vector<std::string> features_filepaths;
-  CHECK(theia::GetFilepathsFromWildcard(FLAGS_input_features,
-                                        &features_filepaths));
-  CHECK_GT(features_filepaths.size(), 0)
-      << "No images found in: " << FLAGS_input_features;
+  features_filepaths.push_back(
+      FLAGS_input_feature_dir + "/" + FLAGS_input_feature_name1);
+  features_filepaths.push_back(
+      FLAGS_input_feature_dir + "/" + FLAGS_input_feature_name2);
 
   // Get the image files and image filenames.
   std::vector<std::string> image_filenames;
@@ -231,14 +165,6 @@ int main(int argc, char *argv[]) {
 
   // Add all the features to the matcher.
   matcher->AddImages(image_filenames, intrinsics);
-
-  // @mhsung
-  if (FLAGS_match_only_consecutive_pairs) {
-    std::vector<std::pair<std::string, std::string> > pairs_to_match;
-    GetConsecutivePairsToMatch(FLAGS_consecutive_pair_frame_range,
-                               image_filenames, &pairs_to_match);
-    matcher->SetImagePairsToMatch(pairs_to_match);
-  }
 
   // Match the images with optional geometric verification.
   std::vector<theia::ImagePairMatch> matches;
