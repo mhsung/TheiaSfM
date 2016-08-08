@@ -49,7 +49,7 @@ DEFINE_string(input_features, "",
 DEFINE_string(matching_strategy, "CASCADE_HASHING",
               "Strategy used to match features. Must be BRUTE_FORCE "
               " or CASCADE_HASHING");
-DEFINE_bool(geometrically_verifiy_matches, true,
+DEFINE_bool(geometrically_verify_matches, true,
             "Set to true to perform geometric verification on the matches.");
 DEFINE_string(calibration_file, "",
               "Optional calibration file specifying camera calibration for the "
@@ -94,7 +94,7 @@ void SetMatchingOptions(theia::FeatureMatcherOptions* matching_options) {
   matching_options->min_num_feature_matches =
       FLAGS_min_num_inliers_for_valid_match;
   matching_options->perform_geometric_verification =
-      FLAGS_geometrically_verifiy_matches;
+      FLAGS_geometrically_verify_matches;
   matching_options->geometric_verification_options.estimate_twoview_info_options
       .max_sampson_error_pixels = FLAGS_max_sampson_error_for_verified_match;
   matching_options->geometric_verification_options.bundle_adjustment =

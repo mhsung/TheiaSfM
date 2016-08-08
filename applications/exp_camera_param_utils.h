@@ -10,6 +10,9 @@
 // 'Modelview': OpenGL modelview (world-to-camera) matrix.
 
 
+// Theia camera -> Modelview axes converter.
+Eigen::Matrix3d GetVisionToOpenGLAxesConverter();
+
 // Modelview <-> Theia camera.
 Eigen::Affine3d ComputeModelviewFromTheiaCamera(
     const theia::Camera& camera);
@@ -36,3 +39,5 @@ Eigen::Matrix3d ComputeTheiaCameraRotationFromCameraParams(
 // Compute avg_R that minimizes \sum_i \log (avg_R^T R_i).
 Eigen::Matrix3d ComputeAverageRotation(
     const std::vector<Eigen::Matrix3d>& R_list);
+Eigen::Vector3d ComputeAverageTranslation(
+    const std::vector<Eigen::Vector3d>& t_list);

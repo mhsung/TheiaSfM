@@ -91,31 +91,33 @@ add_executable(create_reconstruction_from_strecha_dataset create_reconstruction_
 target_link_libraries(create_reconstruction_from_strecha_dataset theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 # @mhsung
-add_executable(
-  exp_export_cameras
-  exp_export_cameras.cc
-  exp_camera_param_utils.h
-  exp_camera_param_utils.cc
-  exp_camera_param_io.h
-  exp_camera_param_io.cc)
-target_link_libraries(exp_export_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+add_executable(exp_export_modelviews exp_export_modelviews.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_export_modelviews theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(
-  exp_compare_cameras
-  exp_compare_cameras.cc
-  exp_camera_param_utils.h
-  exp_camera_param_utils.cc
-  exp_camera_param_io.h
-  exp_camera_param_io.cc)
-target_link_libraries(exp_compare_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+add_executable(exp_compare_modelviews exp_compare_modelviews.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_compare_modelviews theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(exp_export_orientations exp_export_orientations.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_export_orientations theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(exp_compare_orientations exp_compare_orientations.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_compare_orientations theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(exp_match_features exp_match_features.cc)
 target_link_libraries(exp_match_features theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(exp_build_reconstruction
-  exp_build_reconstruction.cc
-  exp_camera_param_utils.h
-  exp_camera_param_utils.cc
-  exp_camera_param_io.h
-  exp_camera_param_io.cc)
+add_executable(exp_build_reconstruction exp_build_reconstruction.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_build_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(exp_extract_match_info exp_extract_match_info.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_extract_match_info theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(exp_draw_matches exp_draw_matches.cc)
+target_link_libraries(exp_draw_matches theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+

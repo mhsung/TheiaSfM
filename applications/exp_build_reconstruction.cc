@@ -191,6 +191,7 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
               "in pixels.");
 
 // @mhsung
+// ---- //
 DEFINE_string(init_orientation_data_type, "", "");
 DEFINE_string(init_orientation_filepath, "", "");
 
@@ -201,10 +202,14 @@ DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 // as global rotation estimator type.
 DEFINE_double(rotation_estimation_constraint_weight, 1.0, "");
 
+DEFINE_string(match_pairs_file, "",
+              "Filename of match pair list. Each line has 'name1,name2' "
+                  "format. Override 'match_only_consecutive_pairs'.");
 DEFINE_bool(match_only_consecutive_pairs, false,
             "Set to true to match only consecutive pairs.");
 DEFINE_int32(consecutive_pair_frame_range, 10,
              "Frame range of consecutive image pairs to be matched.");
+// ---- //
 
 
 using theia::Reconstruction;
@@ -347,6 +352,39 @@ void ExtractFrameIndicesFromImages(
 }
 
 // @mhsung
+bool ReadMatchPairs(
+    const std::string& filename,
+    std::vector<std::pair<std::string, std::string> >* pairs_to_match) {
+  CHECK_NOTNULL(pairs_to_match);
+
+  std::ifstream file(filename);
+  if (!file.good()) {
+    LOG(WARNING) << "Can't read file: '" << filename << "'.";
+    return false;
+  }
+
+  std::string line;
+  while (std::getline(file, line)) {
+    std::stringstream sstr(line);
+    std::string name1, name2;
+    if (!std::getline(sstr, name1, ',') || !std::getline(sstr, name2, ',')) {
+      LOG(WARNING) << "Wrong format: '" << line << "'.";
+      return false;
+    }
+
+    // NOTE:
+    // Add extension '.png'.
+    name1 += ".png";
+    name2 += ".png";
+    pairs_to_match->emplace_back(name1, name2);
+  }
+
+  CHECK(!pairs_to_match->empty()) << "No image pair to match.";
+  LOG(INFO) << "# of pairs: " << pairs_to_match->size();
+  return true;
+}
+
+// @mhsung
 void GetConsecutivePairsToMatch(
     const int frame_range,
     const std::vector<std::string>& image_files,
@@ -484,7 +522,12 @@ void AddImagesToReconstructionBuilder(
   }
 
   // @mhsung
-  if (FLAGS_match_only_consecutive_pairs) {
+  if (FLAGS_match_pairs_file != "") {
+    std::vector<std::pair<std::string, std::string> > pairs_to_match;
+    CHECK(ReadMatchPairs(FLAGS_match_pairs_file, &pairs_to_match));
+    reconstruction_builder->SetImagePairsToMatch(pairs_to_match);
+  }
+  else if (FLAGS_match_only_consecutive_pairs) {
     std::vector<std::pair<std::string, std::string> > pairs_to_match;
     GetConsecutivePairsToMatch(FLAGS_consecutive_pair_frame_range,
                                image_files, &pairs_to_match);

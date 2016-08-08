@@ -7,30 +7,29 @@
 #include "unsupported/Eigen/MatrixFunctions"
 
 
+Eigen::Matrix3d GetVisionToOpenGLAxesConverter() {
+  // (X, Y, Z) -> (X, -Y, -Z).
+  Eigen::Matrix3d axes_converter = Eigen::Matrix3d::Identity();
+  axes_converter(0, 0) = 1.0;
+  axes_converter(1, 1) = -1.0;
+  axes_converter(2, 2) = -1.0;
+  return axes_converter;
+}
+
 Eigen::Affine3d ComputeModelviewFromTheiaCamera(
     const theia::Camera& camera) {
   Eigen::Affine3d theia_modelview = Eigen::Affine3d::Identity();
   theia_modelview.pretranslate(-camera.GetPosition());
   theia_modelview.prerotate(camera.GetOrientationAsRotationMatrix());
 
-  // (X, Y, Z) -> (X, -Y, -Z).
-  Eigen::Matrix3d axes_converter = Eigen::Matrix3d::Identity();
-  axes_converter(0, 0) = 1.0;
-  axes_converter(1, 1) = -1.0;
-  axes_converter(2, 2) = -1.0;
-
+  const Eigen::Matrix3d axes_converter = GetVisionToOpenGLAxesConverter();
   const Eigen::Affine3d modelview = axes_converter * theia_modelview;
   return modelview;
 }
 
 Eigen::Matrix3d ComputeModelviewRotationFromTheiaCamera(
     const Eigen::Matrix3d& theia_camera_rotation) {
-  // (X, Y, Z) -> (X, -Y, -Z).
-  Eigen::Matrix3d axes_converter = Eigen::Matrix3d::Identity();
-  axes_converter(0, 0) = 1.0;
-  axes_converter(1, 1) = -1.0;
-  axes_converter(2, 2) = -1.0;
-
+  const Eigen::Matrix3d axes_converter = GetVisionToOpenGLAxesConverter();
   const Eigen::Matrix3d modelview_rotation =
       axes_converter * theia_camera_rotation;
   return modelview_rotation;
@@ -38,14 +37,9 @@ Eigen::Matrix3d ComputeModelviewRotationFromTheiaCamera(
 
 Eigen::Matrix3d ComputeTheiaCameraRotationFromModelview(
     const Eigen::Matrix3d& modelview_rotation) {
-  // (X, Y, Z) -> (X, -Y, -Z).
-  Eigen::Matrix3d inverse_axes_converter = Eigen::Matrix3d::Identity();
-  inverse_axes_converter(0, 0) = 1.0;
-  inverse_axes_converter(1, 1) = -1.0;
-  inverse_axes_converter(2, 2) = -1.0;
-
+  const Eigen::Matrix3d axes_converter = GetVisionToOpenGLAxesConverter();
   const Eigen::Matrix3d theia_camera_rotation =
-      inverse_axes_converter * modelview_rotation;
+      axes_converter.inverse() * modelview_rotation;
   return theia_camera_rotation;
 }
 
@@ -185,4 +179,18 @@ Eigen::Matrix3d ComputeAverageRotation(
 
   VLOG(3) << "Done.";
   return avg_R;
+}
+
+Eigen::Vector3d ComputeAverageTranslation(
+    const std::vector<Eigen::Vector3d>& t_list) {
+  // Average.
+  Eigen::Vector3d avg_t = Eigen::Vector3d::Zero();
+  int count = 0;
+  for (const Eigen::Vector3d diff_t : t_list) {
+    avg_t += diff_t;
+    ++count;
+  }
+
+  if (count > 0) avg_t /= static_cast<double>(count);
+  return avg_t;
 }

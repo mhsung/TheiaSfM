@@ -45,7 +45,26 @@ bool WriteEigenMatrixToBinary(
 
 // -- I/O functions -- //
 
-// Read Cameras.
+// Read OpenGL modelviews.
+// Data types: 'pose', 'modelview', 'reconstruction'.
+bool ReadModelviews(
+    const std::string& data_type, const std::string& filepath,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews);
+
+void ReadModelviewsFromCameraMatrices(
+    const std::string& camera_matrix_dir,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews);
+
+void ReadModelviewsFromModelviews(
+    const std::string& modelview_dir,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews);
+
+void ReadModelviewsFromReconstruction(
+    const std::string& reconstruction_filepath,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews);
+
+
+// Read camera orientations.
 // The output 'orientations' are Theia camera rotations.
 // Data types: 'param', 'pose', 'modelview', 'reconstruction'.
 bool ReadOrientations(
@@ -69,13 +88,17 @@ void ReadOrientationsFromReconstruction(
     std::unordered_map<std::string, Eigen::Matrix3d>* orientations);
 
 
-// Write Cameras.
+// Write cameras.
 void WriteOrientationsAsCameraParams(
     const std::string& camera_param_dir,
     const std::unordered_map<std::string, Eigen::Matrix3d>& orientations);
 
 void WriteOrientationsAsCameraParams(
     const std::string& camera_param_dir, const Reconstruction& reconstruction);
+
+void WriteModelviews(
+    const std::string& modelview_dir,
+    const std::unordered_map<std::string, Eigen::Affine3d>& modelviews);
 
 void WriteModelviews(
     const std::string& modelview_dir, const Reconstruction& reconstruction);
@@ -104,10 +127,6 @@ void MapOrientationsToViewNames(
     const std::unordered_map<ViewId, Eigen::Matrix3d>& id_orientations,
     std::unordered_map<std::string, Eigen::Matrix3d>* name_orientations);
 
-void ComputeRelativeOrientationsFromFirstFrame(
-    const std::unordered_map<ViewId, Eigen::Matrix3d>& orientations,
-    std::unordered_map<ViewId, Eigen::Matrix3d>* relative_orientations);
-
 void SyncOrientationSequences(
     const std::unordered_map<std::string, Eigen::Matrix3d>&
     reference_orientations,
@@ -115,6 +134,14 @@ void SyncOrientationSequences(
     estimated_orientations,
     std::unordered_map<std::string, Eigen::Matrix3d>*
     synced_estimated_orientations);
+
+void SyncModelviewSequences(
+    const std::unordered_map<std::string, Eigen::Affine3d>&
+    reference_modelviews,
+    const std::unordered_map<std::string, Eigen::Affine3d>&
+    estimated_modelviews,
+    std::unordered_map<std::string, Eigen::Affine3d>*
+    synced_estimated_modelviews);
 
 
 // -- Template function implementation -- //

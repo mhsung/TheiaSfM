@@ -22,7 +22,9 @@ gflags.DEFINE_integer('seq_range', 0, '') # '<= 0' indicates all pair matches.
 
 def save_and_run_cmd(cmd, filepath):
     print(cmd)
-    with open(filepath, 'w') as f: f.write(cmd)
+    with open(filepath, 'w') as f:
+        f.write(cmd)
+        f.write('\n')
     os.system('chmod +x ' + filepath)
     start = datetime.datetime.now()
     os.system(filepath)

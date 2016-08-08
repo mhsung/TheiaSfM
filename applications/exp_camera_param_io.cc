@@ -12,6 +12,99 @@
 #include "unsupported/Eigen/MatrixFunctions"
 
 
+bool ReadModelviews(
+    const std::string& data_type, const std::string& filepath,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews) {
+  if (data_type == "pose") {
+    ReadModelviewsFromCameraMatrices(filepath, modelviews);
+  }
+  else if (data_type == "modelview") {
+    ReadModelviewsFromModelviews(filepath, modelviews);
+  }
+  else if (data_type == "reconstruction") {
+    ReadModelviewsFromReconstruction(filepath, modelviews);
+  }
+  else {
+    LOG(WARNING) << "Data type must be either 'param', 'modelview', or "
+                 << "'reconstruction' (Current: " << data_type << ")";
+    return false;
+  }
+  return true;
+}
+
+void ReadModelviewsFromCameraMatrices(
+    const std::string& camera_matrix_dir,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews) {
+  CHECK_NE(camera_matrix_dir, "");
+  CHECK_NOTNULL(modelviews);
+  modelviews->clear();
+
+  for(const auto& filename : stlplus::folder_files(camera_matrix_dir)) {
+    const std::string basename = stlplus::basename_part(filename);
+    const std::string filepath = camera_matrix_dir + "/" + filename;
+    if (!FileExists(filepath)) {
+      LOG(WARNING) << "File does not exist: '" << filepath << "'";
+      continue;
+    }
+
+    // Read modelview matrix.
+    Eigen::Matrix4d camera_matrix;
+    CHECK(ReadEigenMatrixFromCSV(filepath, &camera_matrix));
+    const Eigen::Affine3d camera_pose(camera_matrix);
+    const Eigen::Affine3d theia_modelview = camera_pose.inverse();
+    const Eigen::Matrix3d axes_converter = GetVisionToOpenGLAxesConverter();
+    const Eigen::Affine3d modelview = axes_converter * theia_modelview;
+    (*modelviews)[basename] = modelview;
+    VLOG(3) << "Loaded '" << filepath << "'.";
+  }
+}
+
+void ReadModelviewsFromModelviews(
+    const std::string& modelview_dir,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews) {
+  CHECK_NE(modelview_dir, "");
+  CHECK_NOTNULL(modelviews);
+  modelviews->clear();
+
+  for(const auto& filename : stlplus::folder_files(modelview_dir)) {
+    const std::string basename = stlplus::basename_part(filename);
+    const std::string filepath = modelview_dir + "/" + filename;
+    if (!FileExists(filepath)) {
+      LOG(WARNING) << "File does not exist: '" << filepath << "'";
+      continue;
+    }
+
+    // Read modelview matrix.
+    Eigen::Matrix4d modelview_matrix;
+    CHECK(ReadEigenMatrixFromCSV(filepath, &modelview_matrix));
+    const Eigen::Affine3d modelview(modelview_matrix);
+    (*modelviews)[basename] = modelview;
+    VLOG(3) << "Loaded '" << filepath << "'.";
+  }
+}
+
+void ReadModelviewsFromReconstruction(
+    const std::string& reconstruction_filepath,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews) {
+  CHECK_NE(reconstruction_filepath, "");
+  CHECK_NOTNULL(modelviews);
+  modelviews->clear();
+
+  Reconstruction reconstruction;
+  CHECK(ReadReconstruction(reconstruction_filepath, &reconstruction))
+  << "Could not read reconstruction file: '"
+  << reconstruction_filepath << "'.";
+
+  for (const auto& view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    const std::string basename = stlplus::basename_part(view->Name());
+    const Camera& camera = view->Camera();
+    const Eigen::Affine3d modelview = ComputeModelviewFromTheiaCamera(camera);
+    (*modelviews)[basename] = modelview;
+    VLOG(3) << "Loaded '" << basename << "'.";
+  }
+}
+
 bool ReadOrientations(
     const std::string& data_type, const std::string& filepath,
     std::unordered_map<std::string, Eigen::Matrix3d>* orientations) {
@@ -93,7 +186,8 @@ void ReadOrientationsFromCameraMatrices(
     Eigen::Matrix4d camera_matrix;
     CHECK(ReadEigenMatrixFromCSV(filepath, &camera_matrix));
     const Eigen::Affine3d camera_pose(camera_matrix);
-    const Eigen::Matrix3d orientation = camera_pose.inverse().rotation();
+    const Eigen::Affine3d theia_modelview = camera_pose.inverse();
+    const Eigen::Matrix3d orientation = theia_modelview.rotation();
     (*orientations)[basename] = orientation;
     VLOG(3) << "Loaded '" << filepath << "'.";
   }
@@ -214,6 +308,28 @@ void WriteOrientationsAsCameraParams(
 }
 
 void WriteModelviews(
+    const std::string& modelview_dir,
+    const std::unordered_map<std::string, Eigen::Affine3d>& modelviews) {
+  CHECK_NE(modelview_dir, "");
+
+  // Empty directory.
+  if (stlplus::folder_exists(modelview_dir)) {
+    CHECK(stlplus::folder_delete(modelview_dir, true));
+  }
+  CHECK(stlplus::folder_create(modelview_dir));
+  CHECK(stlplus::folder_writable(modelview_dir));
+
+  for (const auto& modelview : modelviews) {
+    const std::string basename = modelview.first;
+    const std::string filepath = modelview_dir + "/" + basename + ".txt";
+
+    // Write modelview matrix.
+    CHECK(WriteEigenMatrixToCSV(filepath, modelview.second.matrix()));
+    VLOG(3) << "Saved '" << filepath << "'.";
+  }
+}
+
+void WriteModelviews(
     const std::string& modelview_dir, const Reconstruction& reconstruction) {
   CHECK_NE(modelview_dir, "");
 
@@ -323,26 +439,6 @@ void MapOrientationsToViewNames(
   }
 }
 
-void ComputeRelativeOrientationsFromFirstFrame(
-    const std::unordered_map<ViewId, Eigen::Matrix3d>& orientations,
-    std::unordered_map<ViewId, Eigen::Matrix3d>* relative_orientations) {
-  CHECK_NOTNULL(relative_orientations);
-
-  const ViewId kIdZero = 0;
-  if (orientations.find(kIdZero) == orientations.end()) {
-    CHECK(false) << "The first frame does not exist.";
-  }
-  const Eigen::Matrix3d first_R = orientations.at(kIdZero);
-
-  relative_orientations->clear();
-  relative_orientations->reserve(orientations.size());
-  for (auto& R_pair : orientations) {
-    const ViewId view_id = R_pair.first;
-    const Eigen::Matrix3d R = R_pair.second;
-    (*relative_orientations)[view_id] = R * first_R.transpose();
-  }
-}
-
 void SyncOrientationSequences(
     const std::unordered_map<std::string, Eigen::Matrix3d>&
     reference_orientations,
@@ -405,4 +501,67 @@ void SyncOrientationSequences(
           << sum_before_angles / estimated_orientations.size();
   VLOG(3) << "Angle difference (after): "
           << sum_after_angles / estimated_orientations.size();
+}
+
+void SyncModelviewSequences(
+    const std::unordered_map<std::string, Eigen::Affine3d>&
+    reference_modelviews,
+    const std::unordered_map<std::string, Eigen::Affine3d>&
+    estimated_modelviews,
+    std::unordered_map<std::string, Eigen::Affine3d>*
+    synced_estimated_modelviews) {
+  CHECK_NOTNULL(synced_estimated_modelviews);
+
+  synced_estimated_modelviews->clear();
+  if (estimated_modelviews.empty()) return;
+  synced_estimated_modelviews->reserve(estimated_modelviews.size());
+
+  // Find global_M that makes ref_M_i = est_M_i global_M.
+  // => [ref_R_i ref_t_i] = [est_R_i est_t_i] [global_R global_t].
+  // => [ref_R_i ref_t_i] =
+  //    [(est_R_i * global_R) (est_R_i * global_t + est_t_i)].
+  // => ref_R_i = est_R_i * global_R and,
+  //    ref_t_i = est_R_i * global_t + est_t_i.
+  // => global_R = est_R_i^T * ref_R_i,
+  //    global_R = est_R_i^T * (ref_t_i - est_t_i).
+  std::vector<Eigen::Matrix3d> diff_R_list;
+  std::vector<Eigen::Vector3d> diff_t_list;
+  diff_R_list.reserve(estimated_modelviews.size());
+  diff_t_list.reserve(estimated_modelviews.size());
+
+  for (const auto& est_M_pair : estimated_modelviews) {
+    const std::string view_name = est_M_pair.first;
+    const Eigen::Affine3d est_M = est_M_pair.second;
+
+    if (reference_modelviews.find(view_name) !=
+        reference_modelviews.end()) {
+      const Eigen::Affine3d ref_M = reference_modelviews.at(view_name);
+
+      const Eigen::Matrix3d diff_R =
+          est_M.rotation().transpose() * ref_M.rotation();
+      diff_R_list.push_back(diff_R);
+
+      const Eigen::Vector3d diff_t = est_M.rotation().transpose() *
+          (ref_M .translation() - est_M.translation());
+      diff_t_list.push_back(diff_t);
+    }
+  }
+
+  CHECK(!diff_R_list.empty());
+  const Eigen::Matrix3d global_R = ComputeAverageRotation(diff_R_list);
+  CHECK(!diff_t_list.empty());
+  const Eigen::Vector3d global_t = ComputeAverageTranslation(diff_t_list);
+  Eigen::Affine3d global_M;
+  global_M.rotate(global_R);
+  global_M.translate(global_t);
+
+  // DEBUG.
+  CHECK_EQ(global_M.translation(), global_t);
+
+  // Post-multiply transpose of global_M.
+  for (auto& est_M_pair : estimated_modelviews) {
+    const std::string view_name = est_M_pair.first;
+    const Eigen::Affine3d est_M = est_M_pair.second;
+    (*synced_estimated_modelviews)[view_name] = est_M * global_M;
+  }
 }
