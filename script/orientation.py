@@ -3,6 +3,14 @@
 
 import run_cmd
 import os
+import shutil
+
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.orientation_path):
+        shutil.rmtree(PATHS.orientation_path)
+        print("Removed '" + PATHS.orientation_path + "'.")
+
 
 def run(FLAGS, PATHS):
     print('== Compare orientation with ground truth ==')

@@ -5,6 +5,7 @@ import gflags
 
 
 def initialize():
+    gflags.DEFINE_bool('clean', False, '') # Override 'overwrite'
     gflags.DEFINE_bool('overwrite', False, '')
     gflags.DEFINE_integer('num_threads', 1, '')
 
@@ -18,7 +19,7 @@ def initialize():
     gflags.DEFINE_bool('use_initial_orientations', False, 'uio')
 
 
-def show(FLAGS):
+def show(FLAGS, PATHS):
     print('== Options ==')
     if FLAGS.overwrite: print('Overwrite: On')
 
@@ -35,7 +36,7 @@ def show(FLAGS):
         print('--keep_only_symmetric_matches=false')
     if FLAGS.use_initial_orientations:
         print('--initial_orientations_data_type=' +
-              FLAGS.ground_truth_data_type)
+              FLAGS.ground_truth_type)
         print('--initial_orientations_filepath=' +
-              PATHS.ground_truth_filepath)
+              PATHS.ground_truth_path)
     print('')

@@ -3,9 +3,20 @@
 
 import run_cmd
 import os
+import shutil
+
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.feature_path):
+        shutil.rmtree(PATHS.feature_path)
+        print("Removed '" + PATHS.feature_path + "'.")
+
 
 def run(FLAGS, PATHS):
     print('== Extract features ==')
+    if not os.path.isdir(PATHS.feature_path):
+        os.makedirs(PATHS.feature_path)
+
     cmd = ''
     cmd += FLAGS.bin_dir + '/extract_features' + ' \\\n'
     cmd += '--num_threads=' + str(FLAGS.num_threads) + ' \\\n'

@@ -193,14 +193,15 @@ bool ReadEigenMatrixFromCSV(
         vec->push_back(value);
       }
       catch (std::exception& e) {
-        LOG(WARNING) << e.what();
+        LOG(WARNING) << "'" << _filepath << "': " << e.what();
         return false;
       }
     }
 
     if (num_cols >= 0 && num_cols != vec->size()) {
-      LOG(WARNING) << "The number of cols does not match: " <<
-                   num_cols << " != " << vec->size();
+      LOG(WARNING) << "'" << _filepath << "': "
+                   << "The number of cols does not match ("
+                   << num_cols << " != " << vec->size() << ")";
       return false;
     }
 

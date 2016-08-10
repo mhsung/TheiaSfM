@@ -4,6 +4,13 @@
 import run_cmd
 import os
 
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.calibration_file):
+        os.remove(PATHS.calibration_file)
+        print("Removed '" + PATHS.calibration_file + "'.")
+
+
 def run(FLAGS, PATHS):
     print('== Create calibration file ==')
     cmd = ''

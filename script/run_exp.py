@@ -4,6 +4,7 @@
 from collections import namedtuple
 import gflags
 import os
+import shutil
 import sys
 
 import calibration
@@ -64,9 +65,6 @@ def set_paths():
 
     # Feature path.
     PATHS.feature_path = os.path.join(FLAGS.data_dir, 'features')
-    if not os.path.isdir(PATHS.feature_path):
-        os.makedirs(PATHS.feature_path)
-
     if FLAGS.every_10:
         PATHS.image_wildcard = os.path.join(PATHS.image_path, '*0.png')
         PATHS.feature_wildcard =\
@@ -121,22 +119,33 @@ if __name__ == '__main__':
 
     set_paths()
     print_paths()
-    options.show(FLAGS)
+    options.show(FLAGS, PATHS)
 
-    exist_calibration = os.path.exists(PATHS.calibration_file)
-    if FLAGS.overwrite or (not exist_calibration):
+    # Clean files if desired.
+    if FLAGS.clean or FLAGS.overwrite:
+        calibration.clean(FLAGS, PATHS)
+        feature.clean(FLAGS, PATHS)
+        match.clean(FLAGS, PATHS)
+        reconstruction.clean(FLAGS, PATHS)
+        match_info.clean(FLAGS, PATHS)
+        orientation.clean(FLAGS, PATHS)
+
+    if FLAGS.clean:
+        shutil.rmtree(PATHS.output_path)
+        print("Removed '" + PATHS.output_path + "'.")
+        sys.exit(0)
+
+    # Run.
+    if not os.path.exists(PATHS.calibration_file):
         calibration.run(FLAGS, PATHS)
 
-    exist_features = os.listdir(PATHS.feature_path)
-    if FLAGS.overwrite or (not exist_features):
+    if not os.path.exists(PATHS.feature_path):
         feature.run(FLAGS, PATHS)
 
-    exist_matches = os.path.exists(PATHS.matches_file)
-    if FLAGS.overwrite or (not exist_matches):
+    if not os.path.exists(PATHS.matches_file):
         match.run(FLAGS, PATHS)
 
-    exist_reconstruction = os.path.exists(PATHS.reconstruction_file + '-0')
-    if FLAGS.overwrite or (not exist_reconstruction):
+    if not os.path.exists(PATHS.reconstruction_file + '-0'):
         reconstruction.run(FLAGS, PATHS)
 
     if not PATHS.ground_truth_path.isspace():

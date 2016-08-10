@@ -4,6 +4,13 @@
 import run_cmd
 import os
 
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.matches_file):
+        os.remove(PATHS.matches_file)
+        print("Removed '" + PATHS.matches_file + "'.")
+
+
 def run(FLAGS, PATHS):
     print('== Match features ==')
     cmd = ''
@@ -29,9 +36,9 @@ def run(FLAGS, PATHS):
         cmd += '--keep_only_symmetric_matches=false' + ' \\\n'
     if FLAGS.use_initial_orientations:
         cmd += '--initial_orientations_data_type=' + \
-               FLAGS.ground_truth_data_type + ' \\\n'
+               FLAGS.ground_truth_type + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
-               FLAGS.ground_truth_filepath + ' \\\n'
+               PATHS.ground_truth_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(PATHS.script_path, 'match.sh'))

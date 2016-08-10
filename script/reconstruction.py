@@ -4,6 +4,13 @@
 import run_cmd
 import os
 
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.reconstruction_file + '-0'):
+        os.remove(PATHS.reconstruction_file + '-0')
+        print("Removed '" + PATHS.reconstruction_file + '-0' + "'.")
+
+
 def run(FLAGS, PATHS):
     print('== Build reconstruction ==')
     cmd = ''

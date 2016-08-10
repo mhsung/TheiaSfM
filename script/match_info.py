@@ -3,6 +3,14 @@
 
 import run_cmd
 import os
+import shutil
+
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.matches_info_path):
+        shutil.rmtree(PATHS.matches_info_path)
+        print("Removed '" + PATHS.matches_info_path + "'.")
+
 
 def run(FLAGS, PATHS):
     print('== Extract match information ==')
