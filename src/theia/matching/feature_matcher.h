@@ -115,6 +115,12 @@ class FeatureMatcher {
   virtual void AddImages(const std::vector<std::string>& image_names,
                          const std::vector<CameraIntrinsicsPrior>& intrinsics);
 
+  // @mhsung
+  virtual void AddImages(const std::vector<std::string>& image_names,
+                         const std::vector<CameraIntrinsicsPrior>& intrinsics,
+                         const std::vector<Eigen::Matrix3d>&
+                         initial_orientations);
+
   // Matches features between all images. No geometric verification is
   // performed. Only the matches which pass the have greater than
   // min_num_feature_matches are returned.
@@ -171,7 +177,10 @@ class FeatureMatcher {
   std::vector<std::pair<std::string, std::string> > pairs_to_match_;
   std::mutex mutex_;
 
- private:
+  // @mhsung
+  std::unordered_map<std::string, Eigen::Matrix3d> initial_orientations_;
+
+private:
   DISALLOW_COPY_AND_ASSIGN(FeatureMatcher);
 };
 

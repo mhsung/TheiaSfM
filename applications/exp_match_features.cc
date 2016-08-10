@@ -37,10 +37,14 @@
 #include <time.h>
 #include <theia/theia.h>
 #include <chrono>
+#include <stlplus3/file_system.hpp>
 #include <string>
 #include <vector>
 
 #include "applications/command_line_helpers.h"
+#include "exp_camera_param_utils.h"
+#include "exp_camera_param_io.h"
+
 
 DEFINE_string(input_features, "",
               "Filepath of the features that you want to perform matching "
@@ -86,6 +90,8 @@ DEFINE_bool(match_only_consecutive_pairs, false,
             "Set to true to match only consecutive pairs.");
 DEFINE_int32(consecutive_pair_frame_range, 10,
              "Frame range of consecutive image pairs to be matched.");
+DEFINE_string(initial_orientations_data_type, "", "");
+DEFINE_string(initial_orientations_filepath, "", "");
 
 
 // @mhsung
@@ -217,9 +223,34 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> image_filenames;
   GetImageFilesAndFilenames(features_filepaths, &image_filenames);
 
-  // Create the feature matcher.
   theia::FeatureMatcherOptions matching_options;
   SetMatchingOptions(&matching_options);
+
+
+  // @mhsung
+  std::vector<Eigen::Matrix3d> initial_orientations;
+  if (FLAGS_initial_orientations_filepath != "") {
+    std::unordered_map<std::string, Eigen::Matrix3d>
+        initial_orientations_with_names;
+    CHECK(ReadOrientations(FLAGS_initial_orientations_data_type,
+                           FLAGS_initial_orientations_filepath,
+                           &initial_orientations_with_names));
+
+    initial_orientations.reserve(initial_orientations_with_names.size());
+    for (const auto& image_name : image_filenames) {
+      const std::string basename = stlplus::basename_part(image_name);
+      const Eigen::Matrix3d& orientation =
+          FindOrDie(initial_orientations_with_names, basename);
+      initial_orientations.push_back(orientation);
+    }
+  }
+
+  if (!initial_orientations.empty()) {
+    matching_options.use_initial_orientation_constraints = true;
+  }
+
+
+  // Create the feature matcher.
   const theia::MatchingStrategy matching_strategy =
       StringToMatchingStrategyType(FLAGS_matching_strategy);
   std::unique_ptr<theia::FeatureMatcher> matcher =
@@ -229,8 +260,16 @@ int main(int argc, char *argv[]) {
   std::vector<theia::CameraIntrinsicsPrior> intrinsics;
   ReadIntrinsicsFromCalibrationFile(image_filenames, &intrinsics);
 
-  // Add all the features to the matcher.
-  matcher->AddImages(image_filenames, intrinsics);
+
+  // @mhsung
+  if (!initial_orientations.empty()) {
+    // Set initial orientations to be used as constraints.
+    matcher->AddImages(image_filenames, intrinsics, initial_orientations);
+  } else {
+    // Add all the features to the matcher.
+    matcher->AddImages(image_filenames, intrinsics);
+  }
+
 
   // @mhsung
   if (FLAGS_match_only_consecutive_pairs) {
@@ -239,6 +278,7 @@ int main(int argc, char *argv[]) {
                                image_filenames, &pairs_to_match);
     matcher->SetImagePairsToMatch(pairs_to_match);
   }
+
 
   // Match the images with optional geometric verification.
   std::vector<theia::ImagePairMatch> matches;

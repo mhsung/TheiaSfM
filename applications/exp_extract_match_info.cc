@@ -48,6 +48,7 @@
 
 #include "applications/command_line_helpers.h"
 #include "theia/image/image.h"
+#include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 #include "exp_camera_param_utils.h"
 #include "exp_camera_param_io.h"
 
@@ -121,7 +122,7 @@ void WriteAllImageNames(
   }
   file.close();
 
-  VLOG(1) << "Saved '" << output_filepath << "'.";
+  LOG(INFO) << "Saved '" << output_filepath << "'.";
   VLOG(1) << "Total " << image_names.size() << " images.";
   VLOG(1) << "Total " << image_names.size() * (image_names.size() - 1) / 2
           << " putative pairs.";
@@ -139,7 +140,7 @@ void WriteAllMatchedPairImageNames(
   }
   file.close();
 
-  VLOG(1) << "Saved '" << output_filepath << "'.";
+  LOG(INFO) << "Saved '" << output_filepath << "'.";
   VLOG(1) << "Total " << matched_image_pairs.size() << " pairs.";
 }
 
@@ -285,7 +286,7 @@ void CompareRelativePosesWithGroundTruth(
   double max_relative_rotation_angle_error = 0.0;
 
   // TEST.
-  const int kErrorTol = 30.0;
+  const int kErrorTol = 30;
   std::unordered_map<std::string, bool> is_image_visited;
   is_image_visited.reserve(ground_truth_orientations.size());
   for (const auto& image : ground_truth_orientations) {
@@ -306,14 +307,11 @@ void CompareRelativePosesWithGroundTruth(
     ceres::AngleAxisToRotationMatrix(
         match.twoview_info.rotation_2.data(),
         ceres::ColumnMajorAdapter3x3(est_relative_rotation.data()));
-    const Eigen::Vector3d est_relative_position =
-        match.twoview_info.position_2;
 
     // Compute relative rotation error.
-    const Eigen::Matrix3d relative_rotation_error =
-        gt_rotation2.transpose() * est_relative_rotation * gt_rotation1;
     const double relative_rotation_angle_error =
-        Eigen::AngleAxisd(relative_rotation_error).angle() / M_PI * 180.0;
+        RelativeOrientationAbsAngleError(
+            gt_rotation1, gt_rotation2, est_relative_rotation);
     max_relative_rotation_angle_error = std::max(
         relative_rotation_angle_error, max_relative_rotation_angle_error);
 
@@ -331,8 +329,8 @@ void CompareRelativePosesWithGroundTruth(
 
   file.close();
   LOG(INFO) << "Saved '" << output_filepath << "'.";
-  LOG(INFO) << "Max relative rotation angle error: "
-            << max_relative_rotation_angle_error;
+  VLOG(1) << "Max relative rotation angle error: "
+          << max_relative_rotation_angle_error;
 
   // TEST.
   const std::string test_output_filepath =

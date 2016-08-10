@@ -44,6 +44,8 @@
 #include "theia/sfm/camera/camera.h"
 #include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/estimators/estimate_relative_pose.h"
+// @mhsung
+#include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 #include "theia/sfm/estimators/estimate_uncalibrated_relative_pose.h"
 #include "theia/sfm/pose/util.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
@@ -225,6 +227,70 @@ bool EstimateTwoViewInfo(
                                          correspondences,
                                          twoview_info,
                                          inlier_indices);
+}
+
+// @mhsung
+bool EstimateTwoViewInfoWithInitOrientations(
+    const EstimateTwoViewInfoOptions& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const Eigen::Matrix3d initial_orientation1,
+    const Eigen::Matrix3d initial_orientation2,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    TwoViewInfo* twoview_info,
+    std::vector<int>* inlier_indices) {
+  CHECK_NOTNULL(twoview_info);
+  CHECK_NOTNULL(inlier_indices)->clear();
+
+  // Currently only the calibrated version is implemented.
+  // FIXME:
+  // Implement uncalibrated version.
+  CHECK (intrinsics1.focal_length.is_set && intrinsics2.focal_length.is_set);
+
+
+  // Copied from 'EstimateTwoViewInfoCalibrated()' function.
+
+  // Normalize features w.r.t focal length.
+  std::vector<FeatureCorrespondence> normalized_correspondences;
+  NormalizeFeatures(intrinsics1,
+                    intrinsics2,
+                    correspondences,
+                    &normalized_correspondences);
+
+  // Set the ransac parameters.
+  RansacParameters ransac_options;
+  ransac_options.failure_probability = 1.0 - options.expected_ransac_confidence;
+  ransac_options.min_iterations = options.min_ransac_iterations;
+  ransac_options.max_iterations = options.max_ransac_iterations;
+  ransac_options.error_thresh =
+      options.max_sampson_error_pixels * options.max_sampson_error_pixels /
+      (intrinsics1.focal_length.value * intrinsics2.focal_length.value);
+  ransac_options.use_mle = options.use_mle;
+
+  RelativePose relative_pose;
+  RansacSummary summary;
+  if (!EstimateConstrainedRelativePose(initial_orientation1,
+                                       initial_orientation2,
+                                       ransac_options,
+                                       options.ransac_type,
+                                       normalized_correspondences,
+                                       &relative_pose,
+                                       &summary)) {
+    return false;
+  }
+
+  AngleAxisd rotation(relative_pose.rotation);
+
+  // Set the twoview info.
+  twoview_info->rotation_2 = rotation.angle() * rotation.axis();
+  twoview_info->position_2 = relative_pose.position;
+  twoview_info->focal_length_1 = intrinsics1.focal_length.value;
+  twoview_info->focal_length_2 = intrinsics2.focal_length.value;
+  twoview_info->num_verified_matches = summary.inliers.size();
+
+  *inlier_indices = summary.inliers;
+
+  return true;
 }
 
 }  // namespace theia

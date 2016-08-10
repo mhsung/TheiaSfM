@@ -35,6 +35,8 @@
 #ifndef THEIA_SFM_ESTIMATE_TWOVIEW_INFO_H_
 #define THEIA_SFM_ESTIMATE_TWOVIEW_INFO_H_
 
+// @mhsung
+#include <Eigen/Core>
 #include <vector>
 #include "theia/sfm/create_and_initialize_ransac_variant.h"
 
@@ -78,6 +80,17 @@ bool EstimateTwoViewInfo(
     const EstimateTwoViewInfoOptions& options,
     const CameraIntrinsicsPrior& intrinsics1,
     const CameraIntrinsicsPrior& intrinsics2,
+    const std::vector<FeatureCorrespondence>& correspondences,
+    TwoViewInfo* twoview_info,
+    std::vector<int>* inlier_indices);
+
+// @mhsung
+bool EstimateTwoViewInfoWithInitOrientations(
+    const EstimateTwoViewInfoOptions& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const Eigen::Matrix3d initial_orientation1,
+    const Eigen::Matrix3d initial_orientation2,
     const std::vector<FeatureCorrespondence>& correspondences,
     TwoViewInfo* twoview_info,
     std::vector<int>* inlier_indices);

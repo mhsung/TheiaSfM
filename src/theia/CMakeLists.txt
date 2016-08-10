@@ -88,6 +88,8 @@ set(THEIA_SRC
   sfm/estimators/estimate_fundamental_matrix.cc
   sfm/estimators/estimate_homography.cc
   sfm/estimators/estimate_relative_pose.cc
+  # @mhsung
+  sfm/estimators/estimate_constrained_relative_pose.cc
   sfm/estimators/estimate_similarity_transformation_2d_3d.cc
   sfm/estimators/estimate_triangulation.cc
   sfm/estimators/estimate_uncalibrated_absolute_pose.cc

@@ -34,6 +34,8 @@
 
 #include "theia/sfm/two_view_match_geometric_verification.h"
 
+// @mhsung
+#include <ceres/rotation.h>
 #include <glog/logging.h>
 #include <vector>
 
@@ -44,6 +46,8 @@
 #include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/estimate_twoview_info.h"
 #include "theia/sfm/estimators/estimate_homography.h"
+// @mhsung
+#include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/triangulation/triangulation.h"
 #include "theia/sfm/twoview_info.h"
@@ -95,7 +99,29 @@ TwoViewMatchGeometricVerification::TwoViewMatchGeometricVerification(
       intrinsics2_(intrinsics2),
       features1_(features1),
       features2_(features2),
-      matches_(matches) {}
+      matches_(matches),
+      // @mhsung
+      initial_orientation1_(nullptr),
+      initial_orientation2_(nullptr) {}
+
+// @mhsung
+TwoViewMatchGeometricVerification::TwoViewMatchGeometricVerification(
+    const TwoViewMatchGeometricVerification::Options& options,
+    const CameraIntrinsicsPrior& intrinsics1,
+    const CameraIntrinsicsPrior& intrinsics2,
+    const KeypointsAndDescriptors& features1,
+    const KeypointsAndDescriptors& features2,
+    const Eigen::Matrix3d& initial_orientation1,
+    const Eigen::Matrix3d& initial_orientation2,
+    const std::vector<IndexedFeatureMatch>& matches)
+    : options_(options),
+      intrinsics1_(intrinsics1),
+      intrinsics2_(intrinsics2),
+      features1_(features1),
+      features2_(features2),
+      matches_(matches),
+      initial_orientation1_(&initial_orientation1),
+      initial_orientation2_(&initial_orientation2) {}
 
 void TwoViewMatchGeometricVerification::CreateCorrespondencesFromIndexedMatches(
     std::vector<FeatureCorrespondence>* correspondences) {
@@ -124,14 +150,28 @@ bool TwoViewMatchGeometricVerification::VerifyMatches(
 
   // Estimate 2-view geometry from feature matches.
   std::vector<int> inlier_indices;
-  if (!EstimateTwoViewInfo(options_.estimate_twoview_info_options,
-                           intrinsics1_,
-                           intrinsics2_,
-                           correspondences,
-                           twoview_info,
-                           &inlier_indices)) {
-    return false;
-  }
+  // @mhsung
+  // FIXME:
+  // Try to use initial orientation in RANSAC.
+//  if (initial_orientation1_ != nullptr && initial_orientation2_ != nullptr) {
+//    if (!EstimateTwoViewInfoWithInitOrientations(
+//        options_.estimate_twoview_info_options,
+//        intrinsics1_, intrinsics2_,
+//        *initial_orientation1_, *initial_orientation2_,
+//        correspondences, twoview_info, &inlier_indices)) {
+//      return false;
+//    }
+//  }
+//  else {
+    if (!EstimateTwoViewInfo(options_.estimate_twoview_info_options,
+                             intrinsics1_,
+                             intrinsics2_,
+                             correspondences,
+                             twoview_info,
+                             &inlier_indices)) {
+      return false;
+    }
+//  }
   VLOG(2) << inlier_indices.size()
           << " matches passed initial geometric verification out of "
           << matches_.size() << " putative matches.";
@@ -173,6 +213,24 @@ bool TwoViewMatchGeometricVerification::VerifyMatches(
   if (options_.bundle_adjustment &&
       matches_.size() > options_.min_num_inlier_matches) {
     if (!BundleAdjustRelativePose(twoview_info)) {
+      return false;
+    }
+  }
+
+  // @mhsung
+  if (initial_orientation1_ != nullptr && initial_orientation2_ != nullptr) {
+    Eigen::Matrix3d relative_rotation_matrix;
+    ceres::AngleAxisToRotationMatrix(
+        twoview_info->rotation_2.data(),
+        ceres::ColumnMajorAdapter3x3(relative_rotation_matrix.data()));
+
+    // FIXME:
+    const double kErrorTol = 30.0;
+    const double relative_rotation_angle_error =
+        RelativeOrientationAbsAngleError(
+            *initial_orientation1_, *initial_orientation2_,
+            relative_rotation_matrix);
+    if (relative_rotation_angle_error > kErrorTol) {
       return false;
     }
   }

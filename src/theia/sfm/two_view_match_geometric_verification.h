@@ -99,6 +99,17 @@ class TwoViewMatchGeometricVerification {
       const KeypointsAndDescriptors& features2,
       const std::vector<IndexedFeatureMatch>& matches);
 
+  // @mhsung
+  TwoViewMatchGeometricVerification(
+      const Options& options,
+      const CameraIntrinsicsPrior& intrinsics1,
+      const CameraIntrinsicsPrior& intrinsics2,
+      const KeypointsAndDescriptors& features1,
+      const KeypointsAndDescriptors& features2,
+      const Eigen::Matrix3d& initial_orientation1,
+      const Eigen::Matrix3d& initial_orientation2,
+      const std::vector<IndexedFeatureMatch>& matches);
+
   // Perform 2-view geometric verification for the input. The verified matches
   // are returned along with the 2-view info. If the verification fails, false
   // is returned and the outputs are undefined.
@@ -127,6 +138,11 @@ class TwoViewMatchGeometricVerification {
   const Options options_;
   const CameraIntrinsicsPrior& intrinsics1_, intrinsics2_;
   const KeypointsAndDescriptors& features1_, features2_;
+
+  // @mhsung
+  // Optional.
+  const Eigen::Matrix3d* initial_orientation1_;
+  const Eigen::Matrix3d* initial_orientation2_;
 
   Camera camera1_, camera2_;
   // We keep a local copy of the matches so that we may add and remove matches

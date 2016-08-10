@@ -107,7 +107,8 @@ add_executable(exp_compare_orientations exp_compare_orientations.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_compare_orientations theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(exp_match_features exp_match_features.cc)
+add_executable(exp_match_features exp_match_features.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_match_features theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(exp_two_view_match_features exp_two_view_match_features.cc)
