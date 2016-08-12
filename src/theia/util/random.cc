@@ -46,7 +46,10 @@ std::default_random_engine util_generator;
 // Initializes the random generator to be based on the current time. Does not
 // have to be called before calling RandDouble, but it works best if it is.
 void InitRandomGenerator() {
-  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  // @mhsung
+  // Use fixed seed.
+  //unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  unsigned seed = 20160810;
   util_generator.seed(seed);
 }
 

@@ -57,7 +57,10 @@ namespace theia {
 struct RansacParameters {
   RansacParameters()
       : error_thresh(-1),
-        failure_probability(0.01),
+        // @mhsung
+        // Use lower failure probability.
+        //failure_probability(0.01),
+        failure_probability(0.001),
         min_inlier_ratio(0),
         min_iterations(100),
         max_iterations(std::numeric_limits<int>::max()),

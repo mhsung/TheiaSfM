@@ -143,6 +143,10 @@ void SyncModelviewSequences(
     std::unordered_map<std::string, Eigen::Affine3d>*
     synced_estimated_modelviews);
 
+bool ReadSequenceIndices(
+    const std::string filepath,
+    std::unordered_map<std::string, int>* _seq_indices);
+
 
 // -- Template function implementation -- //
 

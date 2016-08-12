@@ -6,6 +6,7 @@
 #include <glog/logging.h>
 #include <gflags/gflags.h>
 #include <iostream>
+#include <sstream>
 #include <stlplus3/file_system.hpp>
 
 #include "exp_camera_param_utils.h"
@@ -564,4 +565,42 @@ void SyncModelviewSequences(
     const Eigen::Affine3d est_M = est_M_pair.second;
     (*synced_estimated_modelviews)[view_name] = est_M * global_M;
   }
+}
+
+bool ReadSequenceIndices(
+    const std::string filepath,
+    std::unordered_map<std::string, int>* _seq_indices) {
+  CHECK_NOTNULL(_seq_indices);
+
+  std::ifstream file(filepath);
+  if (!file.good()) {
+    LOG(WARNING) << "Can't read file: '" << filepath << "'.";
+    return false;
+  }
+
+  _seq_indices->clear();
+
+  std::string line;
+  while(std::getline(file, line)) {
+    if (line == "") break;
+    std::stringstream sstr(line);
+
+    std::string image_name;
+    if (!std::getline(sstr, image_name, ',')) {
+      LOG(WARNING) << "Wrong file format: '" << line << "'.";
+      return false;
+    }
+
+    std::string seq_index_str;
+    if (!std::getline(sstr, seq_index_str)) {
+      LOG(WARNING) << "Wrong file format: '" << line << "'.";
+      return false;
+    }
+    const int seq_index = std::stoi(seq_index_str);
+
+    (*_seq_indices)[image_name] = seq_index;
+  }
+
+  file.close();
+  return true;
 }

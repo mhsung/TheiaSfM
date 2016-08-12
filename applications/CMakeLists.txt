@@ -103,6 +103,10 @@ add_executable(exp_export_orientations exp_export_orientations.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_export_orientations theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_compare_relative_orientations exp_compare_relative_orientations.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_compare_relative_orientations theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
 add_executable(exp_compare_orientations exp_compare_orientations.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_compare_orientations theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
