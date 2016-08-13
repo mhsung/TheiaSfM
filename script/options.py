@@ -12,6 +12,7 @@ def initialize():
     gflags.DEFINE_bool('every_10', False, '')
     gflags.DEFINE_integer('seq_range', 0, '') # '<= 0' indicates all pair matches.
 
+    gflags.DEFINE_bool('track_features', False, 'track')
     gflags.DEFINE_bool('less_num_inliers', False, 'lni')
     gflags.DEFINE_bool('less_sampson_error', False, 'lse')
     gflags.DEFINE_bool('no_two_view_bundle', False, 'ntb')
@@ -25,6 +26,7 @@ def show(FLAGS, PATHS):
 
     if FLAGS.every_10: print('Every 10 frame: On')
     if FLAGS.seq_range > 0: print('Sequence range: ' + str(FLAGS.seq_range))
+    if FLAGS.track_features: print('Track features: On (OpenCV Lukas-Kanade)')
 
     if FLAGS.less_num_inliers:
         print('--min_num_inliers_for_valid_match=10')

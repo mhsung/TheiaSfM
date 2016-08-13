@@ -119,6 +119,28 @@ void GetConsecutivePairsToMatch(
   LOG(INFO) << "# of consecutive pairs: " << pairs_to_match->size();
 }
 
+// @mhsung
+void ReadInitialOrientations(
+    const std::vector<std::string>& image_filenames,
+    std::vector<Eigen::Matrix3d>* initial_orientations) {
+  CHECK_NOTNULL(initial_orientations)->clear();
+
+  std::unordered_map<std::string, Eigen::Matrix3d>
+      initial_orientations_with_names;
+  CHECK(ReadOrientations(FLAGS_initial_orientations_data_type,
+                         FLAGS_initial_orientations_filepath,
+                         &initial_orientations_with_names));
+
+  initial_orientations->reserve(initial_orientations_with_names.size());
+  for (const auto& image_name : image_filenames) {
+    std::string basename;
+    CHECK(theia::GetFilenameFromFilepath(image_name, false, &basename));
+    const Eigen::Matrix3d& orientation =
+        FindOrDie(initial_orientations_with_names, basename);
+    initial_orientations->push_back(orientation);
+  }
+}
+
 void SetMatchingOptions(theia::FeatureMatcherOptions* matching_options) {
   matching_options->match_out_of_core = FLAGS_match_out_of_core;
   theia::GetDirectoryFromFilepath(
@@ -198,22 +220,8 @@ int main(int argc, char *argv[]) {
   // @mhsung
   std::vector<Eigen::Matrix3d> initial_orientations;
   if (FLAGS_initial_orientations_filepath != "") {
-    std::unordered_map<std::string, Eigen::Matrix3d>
-        initial_orientations_with_names;
-    CHECK(ReadOrientations(FLAGS_initial_orientations_data_type,
-                           FLAGS_initial_orientations_filepath,
-                           &initial_orientations_with_names));
-
-    initial_orientations.reserve(initial_orientations_with_names.size());
-    for (const auto& image_name : image_filenames) {
-      const std::string basename = stlplus::basename_part(image_name);
-      const Eigen::Matrix3d& orientation =
-          FindOrDie(initial_orientations_with_names, basename);
-      initial_orientations.push_back(orientation);
-    }
-  }
-
-  if (!initial_orientations.empty()) {
+    ReadInitialOrientations(image_filenames, &initial_orientations);
+    CHECK(initial_orientations.size() == image_filenames.size());
     matching_options.use_initial_orientation_constraints = true;
   }
 

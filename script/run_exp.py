@@ -14,6 +14,7 @@ import match_info
 import options
 import orientation
 import reconstruction
+import track
 
 
 FLAGS = gflags.FLAGS
@@ -40,7 +41,10 @@ PATHS = namedtuple('PATHS', [
     'matches_info_path',
     'reconstruction_file',
     'ground_truth_path',
-    'orientation_path'])
+    'orientation_path',
+    'feature_track_image_path',
+    'feature_track_path',
+    ])
 
 
 def set_output_name():
@@ -48,6 +52,7 @@ def set_output_name():
     if FLAGS.every_10:      output_name += '_10'
     if FLAGS.seq_range > 0: output_name += ('_seq_' + str(FLAGS.seq_range))
 
+    if FLAGS.track_features:            output_name += '_track'
     if FLAGS.less_num_inliers:          output_name += '_lni'
     if FLAGS.less_sampson_error:        output_name += '_lse'
     if FLAGS.no_two_view_bundle:        output_name += '_ntb'
@@ -99,6 +104,14 @@ def set_paths():
         PATHS.orientation_path =\
             os.path.join(PATHS.output_path, 'orientation')
 
+    if FLAGS.track_features:
+        PATHS.feature_track_image_path = \
+            os.path.join(FLAGS.data_dir, 'feature_tracks')
+        if not os.path.isdir(PATHS.feature_track_image_path):
+            os.makedirs(PATHS.feature_track_image_path)
+        PATHS.feature_track_path =\
+            os.path.join(PATHS.feature_track_image_path, 'feature_tracks.txt')
+
 
 def print_paths():
     print('== Paths ==')
@@ -129,25 +142,39 @@ if __name__ == '__main__':
         reconstruction.clean(FLAGS, PATHS)
         match_info.clean(FLAGS, PATHS)
         orientation.clean(FLAGS, PATHS)
+        track.clean(FLAGS, PATHS)
 
     if FLAGS.clean:
         shutil.rmtree(PATHS.output_path)
         print("Removed '" + PATHS.output_path + "'.")
         sys.exit(0)
 
-    # Run.
+    # Calibrate image.
     if not os.path.exists(PATHS.calibration_file):
         calibration.run(FLAGS, PATHS)
 
-    if not os.path.exists(PATHS.feature_path):
-        feature.run(FLAGS, PATHS)
+    if FLAGS.track_features:
+        # Track features.
+        if not os.path.exists(PATHS.feature_track_path):
+            track.track_features(FLAGS, PATHS)
 
-    if not os.path.exists(PATHS.matches_file):
-        match.run(FLAGS, PATHS)
+        # Extract matches from feature tracks.
+        if not os.path.exists(PATHS.matches_file):
+            track.extract_matches(FLAGS, PATHS)
+    else:
+        # Extract features.
+        if not os.path.exists(PATHS.feature_path):
+            feature.run(FLAGS, PATHS)
 
+        # Match features.
+        if not os.path.exists(PATHS.matches_file):
+            match.run(FLAGS, PATHS)
+
+    # Build reconstruction.
     if not os.path.exists(PATHS.reconstruction_file + '-0'):
         reconstruction.run(FLAGS, PATHS)
 
+    # Extract additional information.
     if not PATHS.ground_truth_path.isspace():
         match_info.run(FLAGS, PATHS)
         orientation.run(FLAGS, PATHS)

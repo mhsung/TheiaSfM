@@ -288,12 +288,8 @@ void FeatureMatcher::MatchAndVerifyImagePairs(
       const CameraIntrinsicsPrior intrinsics2 =
         FindWithDefault(intrinsics_, image2_name, CameraIntrinsicsPrior());
 
-        // @mhsung
-//      TwoViewMatchGeometricVerification geometric_verification(
-//          options_.geometric_verification_options, intrinsics1, intrinsics2,
-//          *features1, *features2, putative_matches);
+      // @mhsung
       std::unique_ptr<TwoViewMatchGeometricVerification> geometric_verification;
-
       const Eigen::Matrix3d* initial_orientation1 =
           FindOrNull(initial_orientations_, image1_name);
       const Eigen::Matrix3d* initial_orientation2 =
@@ -312,8 +308,6 @@ void FeatureMatcher::MatchAndVerifyImagePairs(
       }
 
       // If geometric verification fails, do not add the match to the output.
-      // @mhsung
-      //if (!geometric_verification.VerifyMatches(
       if (!geometric_verification->VerifyMatches(
               &image_pair_match.correspondences,
               &image_pair_match.twoview_info)) {

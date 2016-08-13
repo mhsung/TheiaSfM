@@ -129,3 +129,7 @@ target_link_libraries(exp_extract_match_info theia ${GFLAGS_LIBRARIES} ${GLOG_LI
 add_executable(exp_draw_matches exp_draw_matches.cc)
 target_link_libraries(exp_draw_matches theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_convert_feature_track_file exp_convert_feature_track_file.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_convert_feature_track_file theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
