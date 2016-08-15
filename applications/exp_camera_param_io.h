@@ -135,6 +135,15 @@ void SyncOrientationSequences(
     std::unordered_map<std::string, Eigen::Matrix3d>*
     synced_estimated_orientations);
 
+void SyncOrientationSequencesWithPivot(
+    const std::string& pivot_view_name,
+    const std::unordered_map<std::string, Eigen::Matrix3d>&
+    reference_orientations,
+    const std::unordered_map<std::string, Eigen::Matrix3d>&
+    estimated_orientations,
+    std::unordered_map<std::string, Eigen::Matrix3d>*
+    synced_estimated_orientations);
+
 void SyncModelviewSequences(
     const std::unordered_map<std::string, Eigen::Affine3d>&
     reference_modelviews,

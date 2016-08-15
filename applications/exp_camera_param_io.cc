@@ -447,9 +447,8 @@ void SyncOrientationSequences(
     estimated_orientations,
     std::unordered_map<std::string, Eigen::Matrix3d>*
     synced_estimated_orientations) {
-  CHECK_NOTNULL(synced_estimated_orientations);
+  CHECK_NOTNULL(synced_estimated_orientations)->clear();
 
-  synced_estimated_orientations->clear();
   if (estimated_orientations.empty()) return;
   synced_estimated_orientations->reserve(estimated_orientations.size());
 
@@ -504,6 +503,33 @@ void SyncOrientationSequences(
           << sum_after_angles / estimated_orientations.size();
 }
 
+void SyncOrientationSequencesWithPivot(
+    const std::string& pivot_view_name,
+    const std::unordered_map<std::string, Eigen::Matrix3d>&
+    reference_orientations,
+    const std::unordered_map<std::string, Eigen::Matrix3d>&
+    estimated_orientations,
+    std::unordered_map<std::string, Eigen::Matrix3d>*
+    synced_estimated_orientations) {
+  CHECK_NOTNULL(synced_estimated_orientations)->clear();
+
+  if (estimated_orientations.empty()) return;
+  synced_estimated_orientations->reserve(estimated_orientations.size());
+
+  const Eigen::Matrix3d ref_R =
+      FindOrDie(reference_orientations, pivot_view_name);
+  const Eigen::Matrix3d est_R =
+      FindOrDie(estimated_orientations, pivot_view_name);
+  const Eigen::Matrix3d global_R = est_R.transpose() * ref_R;
+
+  // Post-multiply transpose of global_R.
+  for (auto& est_R_pair : estimated_orientations) {
+    const std::string view_name = est_R_pair.first;
+    const Eigen::Matrix3d est_R = est_R_pair.second;
+    (*synced_estimated_orientations)[view_name] = est_R * global_R;
+  }
+}
+
 void SyncModelviewSequences(
     const std::unordered_map<std::string, Eigen::Affine3d>&
     reference_modelviews,
@@ -511,9 +537,8 @@ void SyncModelviewSequences(
     estimated_modelviews,
     std::unordered_map<std::string, Eigen::Affine3d>*
     synced_estimated_modelviews) {
-  CHECK_NOTNULL(synced_estimated_modelviews);
+  CHECK_NOTNULL(synced_estimated_modelviews)->clear();
 
-  synced_estimated_modelviews->clear();
   if (estimated_modelviews.empty()) return;
   synced_estimated_modelviews->reserve(estimated_modelviews.size());
 

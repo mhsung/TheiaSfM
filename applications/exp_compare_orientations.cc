@@ -19,6 +19,7 @@ DEFINE_string(reference_data_type, "", "");
 DEFINE_string(reference_filepath, "", "");
 DEFINE_string(estimate_data_type, "", "");
 DEFINE_string(estimate_filepath, "", "");
+DEFINE_string(pivot_image_name, "", "");
 DEFINE_string(output_filepath, "", "");
 
 
@@ -39,8 +40,16 @@ int main(int argc, char* argv[]) {
   // Sync estimated orientations with reference.
   std::unordered_map<std::string, Eigen::Matrix3d>
       relative_estimated_orientations;
-  SyncOrientationSequences(reference_orientations, estimated_orientations,
-                           &relative_estimated_orientations);
+  if (FLAGS_pivot_image_name != "") {
+    LOG(INFO) << "Pivot view: " << FLAGS_pivot_image_name;
+    SyncOrientationSequencesWithPivot(
+        FLAGS_pivot_image_name, reference_orientations, estimated_orientations,
+        &relative_estimated_orientations);
+  } else {
+    SyncOrientationSequences(
+        reference_orientations, estimated_orientations,
+        &relative_estimated_orientations);
+  }
 
   WriteOrientationsAsCameraParams(
       FLAGS_output_filepath, relative_estimated_orientations);
