@@ -137,12 +137,14 @@ if __name__ == '__main__':
     # Clean files if desired.
     if FLAGS.clean or FLAGS.overwrite:
         calibration.clean(FLAGS, PATHS)
-        feature.clean(FLAGS, PATHS)
+        if FLAGS.track_features:
+            track.clean(FLAGS, PATHS)
+        else:
+            feature.clean(FLAGS, PATHS)
         match.clean(FLAGS, PATHS)
         reconstruction.clean(FLAGS, PATHS)
         match_info.clean(FLAGS, PATHS)
         orientation.clean(FLAGS, PATHS)
-        track.clean(FLAGS, PATHS)
 
     if FLAGS.clean:
         shutil.rmtree(PATHS.output_path)

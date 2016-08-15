@@ -160,15 +160,15 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
 
 // @mhsung
 // ---- //
-DEFINE_string(init_orientation_data_type, "", "");
-DEFINE_string(init_orientation_filepath, "", "");
+DEFINE_string(initial_orientations_data_type, "", "");
+DEFINE_string(initial_orientations_filepath, "", "");
 
 // Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
 DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 
 // Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is selected
 // as global rotation estimator type.
-DEFINE_double(rotation_estimation_constraint_weight, 1.0, "");
+DEFINE_double(rotation_estimation_constraint_weight, 1.0E2, "");
 
 DEFINE_string(match_pairs_file, "",
               "Filename of match pair list. Each line has 'name1,name2' "
@@ -397,7 +397,7 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
   // Read orientation.
   std::unordered_map<std::string, Eigen::Matrix3d> init_orientations_with_names;
   CHECK(ReadOrientations(
-      FLAGS_init_orientation_data_type, FLAGS_init_orientation_filepath,
+      FLAGS_initial_orientations_data_type, FLAGS_initial_orientations_filepath,
       &init_orientations_with_names));
 
   std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
@@ -533,7 +533,7 @@ int main(int argc, char *argv[]) {
   }
 
   // @mhsung
-  if (FLAGS_init_orientation_filepath != "") {
+  if (FLAGS_initial_orientations_filepath != "") {
     SetInitialOrientations(&reconstruction_builder);
   }
 

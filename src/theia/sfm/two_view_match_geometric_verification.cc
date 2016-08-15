@@ -153,16 +153,16 @@ bool TwoViewMatchGeometricVerification::VerifyMatches(
   // @mhsung
   // FIXME:
   // Try to use initial orientation in RANSAC.
-//  if (initial_orientation1_ != nullptr && initial_orientation2_ != nullptr) {
-//    if (!EstimateTwoViewInfoWithInitOrientations(
-//        options_.estimate_twoview_info_options,
-//        intrinsics1_, intrinsics2_,
-//        *initial_orientation1_, *initial_orientation2_,
-//        correspondences, twoview_info, &inlier_indices)) {
-//      return false;
-//    }
-//  }
-//  else {
+  if (initial_orientation1_ != nullptr && initial_orientation2_ != nullptr) {
+    if (!EstimateTwoViewInfoWithInitOrientations(
+        options_.estimate_twoview_info_options,
+        intrinsics1_, intrinsics2_,
+        *initial_orientation1_, *initial_orientation2_,
+        correspondences, twoview_info, &inlier_indices)) {
+      return false;
+    }
+  }
+  else {
     if (!EstimateTwoViewInfo(options_.estimate_twoview_info_options,
                              intrinsics1_,
                              intrinsics2_,
@@ -171,7 +171,7 @@ bool TwoViewMatchGeometricVerification::VerifyMatches(
                              &inlier_indices)) {
       return false;
     }
-//  }
+  }
   VLOG(2) << inlier_indices.size()
           << " matches passed initial geometric verification out of "
           << matches_.size() << " putative matches.";

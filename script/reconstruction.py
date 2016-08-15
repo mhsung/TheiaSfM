@@ -63,6 +63,11 @@ def run(FLAGS, PATHS):
         cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'
     if FLAGS.less_sampson_error:
         cmd += '--max_sampson_error_for_verified_match=10.0' + ' \\\n'
+    if FLAGS.use_initial_orientations:
+        cmd += '--initial_orientations_data_type=' + \
+               FLAGS.ground_truth_type + ' \\\n'
+        cmd += '--initial_orientations_filepath=' + \
+               PATHS.ground_truth_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(

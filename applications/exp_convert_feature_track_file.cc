@@ -14,6 +14,7 @@
 #include "applications/command_line_helpers.h"
 #include "applications/exp_camera_param_io.h"
 #include "applications/exp_camera_param_utils.h"
+#include "applications/exp_feature_track_io.h"
 #include "theia/matching/feature_matcher_options.h"
 
 // Input/output files.
@@ -41,57 +42,9 @@ DEFINE_string(initial_orientations_data_type, "", "");
 DEFINE_string(initial_orientations_filepath, "", "");
 
 
-namespace {
-    struct FeatureTrack;
-    typedef std::unique_ptr<FeatureTrack> FeatureTrackPtr;
-
-    struct FeatureTrack {
-        int start_index_;
-        int length_;
-        std::vector<Eigen::Vector2d> points_;
-
-        static FeatureTrackPtr Parse(const std::string& str) {
-          FeatureTrackPtr feature_tracks(new FeatureTrack);
-          std::stringstream sstr(str);
-          sstr >> feature_tracks->start_index_;
-          sstr >> feature_tracks->length_;
-          CHECK_GE(feature_tracks->start_index_, 0);
-          CHECK_GT(feature_tracks->length_, 1);
-          feature_tracks->points_.reserve(feature_tracks->length_);
-          for (int i = 0; i < feature_tracks->length_; ++i) {
-            double x, y;
-            sstr >> x;
-            sstr >> y;
-            CHECK(!sstr.eof());
-            feature_tracks->points_.push_back(Eigen::Vector2d(x, y));
-          }
-          return feature_tracks;
-        }
-    };
-}
-
-bool ReadFeatureTracks(const std::string& feature_tracks_file,
-  std::list<FeatureTrackPtr>* feature_tracks) {
-  CHECK_NOTNULL(feature_tracks)->clear();
-
-  std::ifstream tracks_reader(feature_tracks_file);
-  if (!tracks_reader.is_open()) {
-    LOG(ERROR) << "Could not open the feature tracks file: "
-               << feature_tracks_file << " for reading.";
-    return false;
-  }
-
-  std::string line;
-  while(std::getline(tracks_reader, line)) {
-    feature_tracks->push_back(std::move(FeatureTrack::Parse(line)));
-  }
-
-  return true;
-}
-
 void GetPutativeMatches(
     const std::string& image1_name, const std::string& image2_name,
-    const std::vector<FeatureCorrespondence>& correspondences,
+    const std::list<FeatureCorrespondence>& correspondences,
     KeypointsAndDescriptors* features1, KeypointsAndDescriptors* features2,
     std::vector<IndexedFeatureMatch>* putative_matches) {
   CHECK_NOTNULL(features1)->keypoints.clear();
@@ -120,41 +73,15 @@ void GetPutativeMatches(
   }
 }
 
-void CreateMatchesFromFeatureTracks(
-    const std::list<FeatureTrackPtr>& feature_tracks,
-    std::map< std::pair<int, int>, std::vector<FeatureCorrespondence> >*
-    image_pair_correspondences) {
-  CHECK_NOTNULL(image_pair_correspondences)->clear();
-
-  for (const FeatureTrackPtr& feature_track : feature_tracks) {
-    // For all pairs in frames in the track.
-    for (int idx1 = 0; idx1 < feature_track->length_ - 1; ++idx1) {
-      const Eigen::Vector2d feature1 = feature_track->points_[idx1];
-      const int image1_idx = idx1 + feature_track->start_index_;
-
-      for (int idx2 = idx1 + 1; idx2 < feature_track->length_; ++idx2) {
-        const Eigen::Vector2d feature2 = feature_track->points_[idx2];
-        const int image2_idx = idx2 + feature_track->start_index_;
-
-        (*image_pair_correspondences)[std::make_pair(image1_idx, image2_idx)]
-            .push_back(FeatureCorrespondence(feature1, feature2));
-      }
-    }
-  }
-}
-
-void CreateMatchesFromFeatureTracks(
-    const std::list<FeatureTrackPtr>& feature_tracks,
+void CreateMatchesFromCorrespondences(
+    std::unordered_map< std::pair<int, int>, std::list<FeatureCorrespondence> >&
+    image_pair_correspondences,
     const std::vector<std::string>& image_filenames,
     const std::vector<CameraIntrinsicsPrior>& intrinsics,
     const std::vector<Eigen::Matrix3d>& initial_orientations,
     const FeatureMatcherOptions& options,
     std::vector<theia::ImagePairMatch>* matches) {
   CHECK_NOTNULL(matches)->clear();
-
-  std::map< std::pair<int, int>, std::vector<FeatureCorrespondence> >
-      image_pair_correspondences;
-  CreateMatchesFromFeatureTracks(feature_tracks, &image_pair_correspondences);
 
   const int num_images = image_filenames.size();
   CHECK_EQ(intrinsics.size(), num_images);
@@ -341,10 +268,17 @@ int main(int argc, char *argv[]) {
   CHECK(ReadFeatureTracks(FLAGS_feature_tracks_file, &feature_tracks));
 
   // Extract matches from the feature tracks.
+  std::unordered_map< std::pair<int, int>, std::list<FeatureCorrespondence> >
+      image_pair_correspondences;
+  GetCorrespodnencesFromFeatureTracks(
+      feature_tracks, &image_pair_correspondences);
+  LOG(INFO) << "Parsing feature tracks completed.";
+
   std::vector<theia::ImagePairMatch> matches;
-  CreateMatchesFromFeatureTracks(
-      feature_tracks, image_filenames, intrinsics, initial_orientations,
-      matching_options, &matches);
+  CreateMatchesFromCorrespondences(
+      image_pair_correspondences, image_filenames, intrinsics,
+      initial_orientations, matching_options, &matches);
+  LOG(INFO) << "Extracting matches from feature tracks completed.";
 
   // Write the matches out.
   LOG(INFO) << "Writing matches to file: " << FLAGS_output_matches_file;

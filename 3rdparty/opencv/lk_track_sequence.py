@@ -44,10 +44,15 @@ lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
                   criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
 
-feature_params = dict( maxCorners = 500,
-                       qualityLevel = 0.3,
-                       minDistance = 7,
-                       blockSize = 7 )
+# feature_params = dict( maxCorners = 500,
+#                        qualityLevel = 0.3,
+#                        minDistance = 7,
+#                        blockSize = 7 )
+
+feature_params = dict( maxCorners = 1000,
+                       qualityLevel = 0.1,
+                       minDistance = 10,
+                       blockSize = 3 )
 
 class App:
     def __init__(self):
@@ -109,8 +114,12 @@ class App:
                     new_tracks.append(tr)
                     cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
                 self.tracks = new_tracks
-                cv2.polylines(vis, [np.int32(tr) for tr in self.tracks], False, (0, 255, 0))
-                draw_str(vis, (20, 20), 'track count: %d' % len(self.tracks))
+
+                # @mhsung
+                # Do not draw track lines and number of tracks.
+                # cv2.polylines(vis, [np.int32(tr) for tr in self.tracks],
+                #               False, (0, 255, 0))
+                # draw_str(vis, (20, 20), 'track count: %d' % len(self.tracks))
 
             if self.frame_idx % self.detect_interval == 0:
                 mask = np.zeros_like(frame_gray)
@@ -121,6 +130,8 @@ class App:
                 if p is not None:
                     for x, y in np.float32(p).reshape(-1, 2):
                         self.tracks.append([(x, y)])
+                        # @mhsung
+                        cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
 
 
             self.frame_idx += 1
