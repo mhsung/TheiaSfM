@@ -38,6 +38,7 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_string('images', '', '')
 gflags.DEFINE_string('output_image_dir', '', '')
 gflags.DEFINE_string('output_feature_tracks_file', '', '')
+gflags.DEFINE_bool('show_images', False, '')
 
 
 lk_params = dict( winSize  = (15, 15),
@@ -93,6 +94,9 @@ class App:
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             vis = frame.copy()
 
+            # @mhsung
+            image_name = os.path.splitext(os.path.basename(image_file))[0]
+
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
@@ -136,18 +140,20 @@ class App:
 
             self.frame_idx += 1
             self.prev_gray = frame_gray
-            cv2.imshow('lk_track', vis)
+            if FLAGS.show_images:
+                cv2.imshow('lk_track', vis)
+            else:
+                print('{}: track count = {}'.format(
+                    image_name, len(self.tracks)))
 
             # @mhsung
-            image_name = os.path.splitext(os.path.basename(image_file))[0]
-            output_file = os.path.join(FLAGS.output_image_dir,
-                                       image_name + '.png')
+            output_file = os.path.join(
+                FLAGS.output_image_dir, image_name + '.png')
             cv2.imwrite(output_file, vis)
 
-
-            ch = 0xFF & cv2.waitKey(1)
-            if ch == 27:
-                break
+            # ch = 0xFF & cv2.waitKey(1)
+            # if ch == 27:
+            #     break
 
         track_file.close()
 
@@ -157,7 +163,8 @@ def main():
 
     #print(__doc__)
     App().run()
-    cv2.destroyAllWindows()
+    if FLAGS.show_images:
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     main()

@@ -47,6 +47,8 @@
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/types.h"
 #include "theia/util/map_util.h"
+// @mhsung
+#include "theia/util/random.h"
 #include "theia/util/util.h"
 
 namespace theia {
@@ -166,6 +168,10 @@ void NonlinearPositionEstimator::InitializeRandomPositions(
   }
 
   positions->reserve(orientations.size());
+
+  // @mhsung
+  // Use fixed seed.
+  srand(kTheiaRandomSeed);
   for (const auto& orientation : orientations) {
     if (ContainsKey(constrained_positions, orientation.first)) {
       (*positions)[orientation.first] = 100.0 * Vector3d::Random();
@@ -223,6 +229,10 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
       static_cast<double>(num_point_to_camera_constraints);
 
   triangulated_points_.reserve(tracks_to_add.size());
+
+  // @mhsung
+  // Use fixed seed.
+  srand(kTheiaRandomSeed);
   for (const TrackId track_id : tracks_to_add) {
     triangulated_points_[track_id] = 100.0 * Vector3d::Random();
 

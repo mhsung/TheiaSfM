@@ -22,7 +22,11 @@ def run(FLAGS, PATHS):
     cmd += '--output_reconstruction=' + PATHS.reconstruction_file + ' \\\n'
 
     ############### General SfM Options ###############
-    cmd += '--reconstruction_estimator=GLOBAL' + ' \\\n'
+    if FLAGS.use_initial_orientations:
+        cmd += '--reconstruction_estimator=EXP_GLOBAL' + ' \\\n'
+    else:
+        cmd += '--reconstruction_estimator=GLOBAL' + ' \\\n'
+
     cmd += '--max_track_length=1000' + ' \\\n'
     cmd += '--reconstruct_largest_connected_component=true' + ' \\\n'
     cmd += '--only_calibrated_views=false' + ' \\\n'
@@ -30,7 +34,11 @@ def run(FLAGS, PATHS):
 
     ############### Global SfM Options ###############
     cmd += '--global_position_estimator=LEAST_UNSQUARED_DEVIATION' + ' \\\n'
-    cmd += '--global_rotation_estimator=ROBUST_L1L2' + ' \\\n'
+    if FLAGS.use_initial_orientations:
+        cmd += '--global_rotation_estimator=CONSTRAINED_ROBUST_L1L2' + ' \\\n'
+    else:
+        cmd += '--global_rotation_estimator=ROBUST_L1L2' + ' \\\n'
+
     cmd += '--post_rotation_filtering_degrees=20.0' + ' \\\n'
     cmd += '--refine_relative_translations_after_rotation_estimation=true' \
            + ' \\\n'
@@ -68,7 +76,9 @@ def run(FLAGS, PATHS):
                FLAGS.ground_truth_type + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
                PATHS.ground_truth_path + ' \\\n'
+        # cmd += '--exp_global_run_bundle_adjustment=false' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(
         cmd, os.path.join(PATHS.script_path, 'reconstruction.sh'))
+

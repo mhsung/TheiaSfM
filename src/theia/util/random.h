@@ -36,6 +36,9 @@
 #define THEIA_UTIL_RANDOM_H_
 
 namespace theia {
+// @mhsung
+extern unsigned kTheiaRandomSeed;
+
 // Initializes the random generator to be based on the current time. Does not
 // have to be called before calling RandDouble, but it works best if it is.
 void InitRandomGenerator();

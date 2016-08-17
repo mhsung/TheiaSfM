@@ -133,9 +133,11 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   summary.camera_intrinsics_calibration_time = timer.ElapsedTimeInSeconds();
 
 
+  // FIXME:
+  // Consider to add this filtering...
   // @mhsung
   // Step 2-a. Filter initial orientation.
-  FilterInitialOrientations();
+  // FilterInitialOrientations();
 
 
   // Step 3. Estimate global rotations.
@@ -152,7 +154,11 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   // Step 4. Filter bad rotations.
   LOG(INFO) << "Filtering any bad rotation estimations.";
   timer.Reset();
-  FilterRotations();
+  // FIXME:
+  if (options_.global_rotation_estimator_type !=
+      GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
+    FilterRotations();
+  }
   global_estimator_timings.rotation_filtering_time =
       timer.ElapsedTimeInSeconds();
 

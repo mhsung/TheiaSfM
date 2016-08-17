@@ -168,7 +168,7 @@ DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 
 // Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is selected
 // as global rotation estimator type.
-DEFINE_double(rotation_estimation_constraint_weight, 1.0E2, "");
+DEFINE_double(rotation_estimation_constraint_weight, 1.0E3, "");
 
 DEFINE_string(match_pairs_file, "",
               "Filename of match pair list. Each line has 'name1,name2' "
@@ -407,9 +407,10 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
   // FIXME:
   // This part must be moved to 'ReconstructionBuilder'.
   for (const auto& init_orientation : init_orientations) {
+    const theia::ViewId view_id = init_orientation.first;
     theia::View* view = reconstruction_builder->GetMutableReconstruction()
         ->MutableView(init_orientation.first);
-    CHECK_NOTNULL(view);
+    CHECK(view) << "View does not exist (View ID = " << view_id << ").";;
     Eigen::Vector3d angle_axis;
     ceres::RotationMatrixToAngleAxis(
         ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),

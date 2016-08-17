@@ -248,11 +248,10 @@ void WriteOrientationsAsCameraParams(
     const std::unordered_map<std::string, Eigen::Matrix3d>& orientations) {
   CHECK_NE(camera_param_dir, "");
 
-  // Empty directory.
-  if (stlplus::folder_exists(camera_param_dir)) {
-    CHECK(stlplus::folder_delete(camera_param_dir, true));
+  // Create directory.
+  if (!stlplus::folder_exists(camera_param_dir)) {
+    CHECK(stlplus::folder_create(camera_param_dir));
   }
-  CHECK(stlplus::folder_create(camera_param_dir));
   CHECK(stlplus::folder_writable(camera_param_dir));
 
   for (const auto& orientation : orientations) {
@@ -283,11 +282,10 @@ void WriteOrientationsAsCameraParams(
     const std::string& camera_param_dir, const Reconstruction& reconstruction) {
   CHECK_NE(camera_param_dir, "");
 
-  // Empty directory.
+  // Create directory.
   if (stlplus::folder_exists(camera_param_dir)) {
-    CHECK(stlplus::folder_delete(camera_param_dir, true));
+    CHECK(stlplus::folder_create(camera_param_dir));
   }
-  CHECK(stlplus::folder_create(camera_param_dir));
   CHECK(stlplus::folder_writable(camera_param_dir));
 
   for (const ViewId view_id : reconstruction.ViewIds()) {
@@ -313,11 +311,10 @@ void WriteModelviews(
     const std::unordered_map<std::string, Eigen::Affine3d>& modelviews) {
   CHECK_NE(modelview_dir, "");
 
-  // Empty directory.
-  if (stlplus::folder_exists(modelview_dir)) {
-    CHECK(stlplus::folder_delete(modelview_dir, true));
+  // Create directory.
+  if (!stlplus::folder_exists(modelview_dir)) {
+    CHECK(stlplus::folder_create(modelview_dir));
   }
-  CHECK(stlplus::folder_create(modelview_dir));
   CHECK(stlplus::folder_writable(modelview_dir));
 
   for (const auto& modelview : modelviews) {
@@ -334,11 +331,10 @@ void WriteModelviews(
     const std::string& modelview_dir, const Reconstruction& reconstruction) {
   CHECK_NE(modelview_dir, "");
 
-  // Empty directory.
-  if (stlplus::folder_exists(modelview_dir)) {
-    CHECK(stlplus::folder_delete(modelview_dir, true));
+  // Create directory.
+  if (!stlplus::folder_exists(modelview_dir)) {
+    CHECK(stlplus::folder_create(modelview_dir));
   }
-  CHECK(stlplus::folder_create(modelview_dir));
   CHECK(stlplus::folder_writable(modelview_dir));
 
   for (const ViewId view_id : reconstruction.ViewIds()) {

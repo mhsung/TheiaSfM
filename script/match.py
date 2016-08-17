@@ -34,11 +34,11 @@ def run(FLAGS, PATHS):
         cmd += '--bundle_adjust_two_view_geometry=false' + ' \\\n'
     if FLAGS.no_only_symmetric:
         cmd += '--keep_only_symmetric_matches=false' + ' \\\n'
-    if FLAGS.use_initial_orientations:
-        cmd += '--initial_orientations_data_type=' + \
-               FLAGS.ground_truth_type + ' \\\n'
-        cmd += '--initial_orientations_filepath=' + \
-               PATHS.ground_truth_path + ' \\\n'
+    # if FLAGS.use_initial_orientations:
+    #     cmd += '--initial_orientations_data_type=' + \
+    #            FLAGS.ground_truth_type + ' \\\n'
+    #     cmd += '--initial_orientations_filepath=' + \
+    #            PATHS.ground_truth_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(PATHS.script_path, 'match.sh'))

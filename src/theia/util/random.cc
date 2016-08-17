@@ -43,14 +43,16 @@ namespace {
 std::default_random_engine util_generator;
 }  // namespace
 
+// @mhsung
+unsigned kTheiaRandomSeed = 20160810;
+
 // Initializes the random generator to be based on the current time. Does not
 // have to be called before calling RandDouble, but it works best if it is.
 void InitRandomGenerator() {
   // @mhsung
   // Use fixed seed.
   //unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  unsigned seed = 20160810;
-  util_generator.seed(seed);
+  util_generator.seed(kTheiaRandomSeed);
 }
 
 // Get a random double between lower and upper (inclusive).
