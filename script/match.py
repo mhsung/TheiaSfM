@@ -34,6 +34,9 @@ def run(FLAGS, PATHS):
         cmd += '--bundle_adjust_two_view_geometry=false' + ' \\\n'
     if FLAGS.no_only_symmetric:
         cmd += '--keep_only_symmetric_matches=false' + ' \\\n'
+
+    # FIXME:
+    # Should we use initial orientation in matching?
     # if FLAGS.use_initial_orientations:
     #     cmd += '--initial_orientations_data_type=' + \
     #            FLAGS.ground_truth_type + ' \\\n'

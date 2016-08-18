@@ -36,7 +36,8 @@ def show(FLAGS, PATHS):
         print('--bundle_adjust_two_view_geometry=false')
     if FLAGS.no_only_symmetric:
         print('--keep_only_symmetric_matches=false')
-    if FLAGS.use_initial_orientations:
+
+    if PATHS.ground_truth_path:
         print('--initial_orientations_data_type=' +
               FLAGS.ground_truth_type)
         print('--initial_orientations_filepath=' +

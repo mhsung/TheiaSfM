@@ -18,7 +18,9 @@ def track_features(FLAGS, PATHS):
            ' \\\n'
     cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
     cmd += '--output_image_dir=' + PATHS.feature_track_image_path + ' \\\n'
-    cmd += '--output_feature_tracks_file=' + PATHS.feature_track_path
+    cmd += '--output_feature_tracks_file=' + PATHS.feature_track_path + ' \\\n'
+
+    cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
         PATHS.script_path, 'track_features.sh'))
 

@@ -41,6 +41,7 @@ PATHS = namedtuple('PATHS', [
     'matches_info_path',
     'reconstruction_file',
     'ground_truth_path',
+    'ground_truth_camera_param_path',
     'orientation_path',
     'feature_track_image_path',
     'feature_track_path',
@@ -98,11 +99,19 @@ def set_paths():
     PATHS.matches_info_path = os.path.join(PATHS.output_path, 'matches')
     PATHS.reconstruction_file = os.path.join(PATHS.output_path, 'output')
 
-    if not FLAGS.ground_truth_filename.isspace():
-        PATHS.ground_truth_path =\
+    PATHS.ground_truth_path = ''
+    if FLAGS.ground_truth_filename:
+        PATHS.ground_truth_path = \
             os.path.join(FLAGS.data_dir, FLAGS.ground_truth_filename)
-        PATHS.orientation_path =\
-            os.path.join(PATHS.output_path, 'orientation')
+        if not os.path.exists(PATHS.ground_truth_path):
+            print("Warning: Ground truth does not exist: '"
+                  + PATHS.ground_truth_path + "'")
+            PATHS.ground_truth_path = ''
+        else:
+            PATHS.ground_truth_camera_param_path = \
+                os.path.join(FLAGS.data_dir, 'camera_params')
+            PATHS.orientation_path = \
+                os.path.join(PATHS.output_path, 'orientation')
 
     if FLAGS.track_features:
         PATHS.feature_track_image_path = \
@@ -177,7 +186,9 @@ if __name__ == '__main__':
         reconstruction.run(FLAGS, PATHS)
 
     # Extract additional information.
-    if not PATHS.ground_truth_path.isspace():
+    if PATHS.ground_truth_path:
+        if not os.path.exists(PATHS.ground_truth_camera_param_path):
+            orientation.convert_ground_truth(FLAGS, PATHS)
+
         match_info.run(FLAGS, PATHS)
         orientation.run(FLAGS, PATHS)
-

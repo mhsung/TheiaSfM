@@ -24,6 +24,7 @@ from __future__ import print_function
 import numpy as np
 import cv2
 import gflags
+import glog as log
 import glob
 import video
 from common import anorm2, draw_str
@@ -143,7 +144,7 @@ class App:
             if FLAGS.show_images:
                 cv2.imshow('lk_track', vis)
             else:
-                print('{}: track count = {}'.format(
+                log.info('{}: track count = {}'.format(
                     image_name, len(self.tracks)))
 
             # @mhsung

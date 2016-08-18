@@ -76,7 +76,6 @@ def run(FLAGS, PATHS):
                FLAGS.ground_truth_type + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
                PATHS.ground_truth_path + ' \\\n'
-        # cmd += '--exp_global_run_bundle_adjustment=false' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(
