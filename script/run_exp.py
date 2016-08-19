@@ -43,8 +43,8 @@ PATHS = namedtuple('PATHS', [
     'ground_truth_path',
     'ground_truth_camera_param_path',
     'orientation_path',
-    'feature_track_image_path',
     'feature_track_path',
+    'feature_track_info_path',
     ])
 
 
@@ -96,7 +96,6 @@ def set_paths():
     # Output files.
     PATHS.calibration_file = os.path.join(FLAGS.data_dir, 'calibration.txt')
     PATHS.matches_file = os.path.join(PATHS.output_path, 'matches.bin')
-    PATHS.matches_info_path = os.path.join(PATHS.output_path, 'matches')
     PATHS.reconstruction_file = os.path.join(PATHS.output_path, 'output')
 
     PATHS.ground_truth_path = ''
@@ -110,27 +109,53 @@ def set_paths():
         else:
             PATHS.ground_truth_camera_param_path = \
                 os.path.join(FLAGS.data_dir, 'camera_params')
+            PATHS.matches_info_path = \
+                os.path.join(PATHS.output_path, 'matches')
             PATHS.orientation_path = \
                 os.path.join(PATHS.output_path, 'orientation')
 
     if FLAGS.track_features:
-        PATHS.feature_track_image_path = \
+        PATHS.feature_track_path = \
             os.path.join(FLAGS.data_dir, 'feature_tracks')
-        if not os.path.isdir(PATHS.feature_track_image_path):
-            os.makedirs(PATHS.feature_track_image_path)
-        PATHS.feature_track_path =\
-            os.path.join(PATHS.feature_track_image_path, 'feature_tracks.txt')
+        if not os.path.isdir(PATHS.feature_track_path):
+            os.makedirs(PATHS.feature_track_path)
+        PATHS.feature_track_info_path =\
+            os.path.join(PATHS.feature_track_path, 'feature_tracks.txt')
 
 
 def print_paths():
     print('== Paths ==')
     print('Image files: ' + PATHS.image_wildcard)
     print('Calibrations File: ' + PATHS.calibration_file)
-    print('Features files: ' + PATHS.feature_wildcard)
+
+    if FLAGS.track_features:
+        print('Feature tracks directory: ' + PATHS.feature_track_path)
+    else:
+        print('Features files: ' + PATHS.feature_wildcard)
+
     print('Matches file: ' + PATHS.matches_file)
-    print('Matches info directory: ' + PATHS.matches_info_path)
+
+    if PATHS.ground_truth_path:
+        print('Matches info directory: ' + PATHS.matches_info_path)
+        print('Orientation directory: ' + PATHS.orientation_path)
+
     print('Reconstruction file: ' + PATHS.reconstruction_file)
     print('')
+
+
+def clean_files():
+    calibration.clean(FLAGS, PATHS)
+    if FLAGS.track_features:
+        track.clean(FLAGS, PATHS)
+    else:
+        feature.clean(FLAGS, PATHS)
+
+    match.clean(FLAGS, PATHS)
+    reconstruction.clean(FLAGS, PATHS)
+
+    if PATHS.ground_truth_path:
+        match_info.clean(FLAGS, PATHS)
+        orientation.clean(FLAGS, PATHS)
 
 
 if __name__ == '__main__':
@@ -143,22 +168,16 @@ if __name__ == '__main__':
     print_paths()
     options.show(FLAGS, PATHS)
 
+
     # Clean files if desired.
     if FLAGS.clean or FLAGS.overwrite:
-        calibration.clean(FLAGS, PATHS)
-        if FLAGS.track_features:
-            track.clean(FLAGS, PATHS)
-        else:
-            feature.clean(FLAGS, PATHS)
-        match.clean(FLAGS, PATHS)
-        reconstruction.clean(FLAGS, PATHS)
-        match_info.clean(FLAGS, PATHS)
-        orientation.clean(FLAGS, PATHS)
+        clean_files()
 
     if FLAGS.clean:
         shutil.rmtree(PATHS.output_path)
         print("Removed '" + PATHS.output_path + "'.")
         sys.exit(0)
+
 
     # Calibrate image.
     if not os.path.exists(PATHS.calibration_file):
@@ -166,7 +185,7 @@ if __name__ == '__main__':
 
     if FLAGS.track_features:
         # Track features.
-        if not os.path.exists(PATHS.feature_track_path):
+        if not os.path.exists(PATHS.feature_track_info_path):
             track.track_features(FLAGS, PATHS)
 
         # Extract matches from feature tracks.
@@ -189,6 +208,5 @@ if __name__ == '__main__':
     if PATHS.ground_truth_path:
         if not os.path.exists(PATHS.ground_truth_camera_param_path):
             orientation.convert_ground_truth(FLAGS, PATHS)
-
         match_info.run(FLAGS, PATHS)
         orientation.run(FLAGS, PATHS)

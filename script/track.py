@@ -3,11 +3,16 @@
 
 import run_cmd
 import os
+import shutil
 
 
 def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.feature_track_info_path):
+        os.remove(PATHS.feature_track_info_path)
+        print("Removed '" + PATHS.feature_track_info_path + "'.")
+
     if os.path.exists(PATHS.feature_track_path):
-        os.remove(PATHS.feature_track_path)
+        shutil.rmtree(PATHS.feature_track_path)
         print("Removed '" + PATHS.feature_track_path + "'.")
 
 
@@ -17,10 +22,10 @@ def track_features(FLAGS, PATHS):
     cmd += FLAGS.bin_dir + '/../../3rdparty/opencv/lk_track_sequence.py' +\
            ' \\\n'
     cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
-    cmd += '--output_image_dir=' + PATHS.feature_track_image_path + ' \\\n'
-    cmd += '--output_feature_tracks_file=' + PATHS.feature_track_path + ' \\\n'
+    cmd += '--output_image_dir=' + PATHS.feature_track_path + ' \\\n'
+    cmd += '--output_feature_tracks_file=' + PATHS.feature_track_info_path
 
-    cmd += '--log_dir=' + PATHS.log_path
+    #cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
         PATHS.script_path, 'track_features.sh'))
 
@@ -33,7 +38,7 @@ def extract_matches(FLAGS, PATHS):
     #cmd += '--num_threads=' + str(FLAGS.num_threads) + ' \\\n'
     cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
-    cmd += '--feature_tracks_file=' + PATHS.feature_track_path + ' \\\n'
+    cmd += '--feature_tracks_file=' + PATHS.feature_track_info_path + ' \\\n'
     cmd += '--output_matches_file=' + PATHS.matches_file + ' \\\n'
 
     if FLAGS.seq_range > 0:
