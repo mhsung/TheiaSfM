@@ -23,7 +23,7 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 
 gflags.DEFINE_string('ground_truth_type', 'pose', '')
-gflags.DEFINE_string('ground_truth_filename', 'pose', '')
+gflags.DEFINE_string('ground_truth_filename', 'poses', '')
 
 gflags.DEFINE_string('bin_dir', os.path.join('..', 'build', 'bin'), '')
 
@@ -136,6 +136,8 @@ def print_paths():
     print('Matches file: ' + PATHS.matches_file)
 
     if PATHS.ground_truth_path:
+        print('Ground truth camera param directory: ' +\
+                PATHS.ground_truth_camera_param_path)
         print('Matches info directory: ' + PATHS.matches_info_path)
         print('Orientation directory: ' + PATHS.orientation_path)
 
@@ -154,6 +156,7 @@ def clean_files():
     reconstruction.clean(FLAGS, PATHS)
 
     if PATHS.ground_truth_path:
+        orientation.clean_ground_truth_camera_param(FLAGS, PATHS)
         match_info.clean(FLAGS, PATHS)
         orientation.clean(FLAGS, PATHS)
 

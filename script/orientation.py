@@ -6,10 +6,10 @@ import os
 import shutil
 
 
-def clean(FLAGS, PATHS):
-    if os.path.exists(PATHS.orientation_path):
-        shutil.rmtree(PATHS.orientation_path)
-        print("Removed '" + PATHS.orientation_path + "'.")
+def clean_ground_truth_camera_param(FLAGS, PATHS):
+    if os.path.exists(PATHS.ground_truth_camera_param_path):
+        shutil.rmtree(PATHS.ground_truth_camera_param_path)
+        print("Removed '" + PATHS.ground_truth_camera_param_path + "'.")
 
 
 def convert_ground_truth(FLAGS, PATHS):
@@ -26,6 +26,12 @@ def convert_ground_truth(FLAGS, PATHS):
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(
         cmd, os.path.join(PATHS.script_path, 'convert_ground_truth.sh'))
+
+
+def clean(FLAGS, PATHS):
+    if os.path.exists(PATHS.orientation_path):
+        shutil.rmtree(PATHS.orientation_path)
+        print("Removed '" + PATHS.orientation_path + "'.")
 
 
 def run(FLAGS, PATHS):

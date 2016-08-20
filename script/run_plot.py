@@ -26,7 +26,7 @@ gflags.DEFINE_string('images', 'images/*.png', '')
 gflags.DEFINE_string('param_data_names', 'Theia,Theia_track', '')
 gflags.DEFINE_string('param_data_dirs',
                      'sfm/orientation,sfm_track/orientation', '')
-gflags.DEFINE_string('convnet_dir', 'convnet/output_params', '')
+gflags.DEFINE_string('convnet_dir', '', '')
 gflags.DEFINE_string('output_plot_file', 'plot.png', '')
 gflags.DEFINE_string('output_convnet_max_score', '', '')
 gflags.DEFINE_string('output_convnet_seam_fitting',
@@ -84,7 +84,7 @@ def plot_data(data_name_list, data_x_list, data_y_list,
 
     plot_file = os.path.join(FLAGS.data_dir, FLAGS.output_plot_file)
     plt.savefig(plot_file)
-    os.system('open ' + plot_file)
+    # os.system('open ' + plot_file)
 
 
 if __name__ == '__main__':
