@@ -5,30 +5,16 @@ from scipy import optimize
 
 import gflags
 import glob
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import shutil
 import sys
-import warnings
 
 
 FLAGS = gflags.FLAGS
 ANGLE_TYPES = ['Azimuth', 'Elevation', 'Theta']
 NUM_ANGLE_TYPES = len(ANGLE_TYPES)
 NUM_ANGLE_SAMPLES = 360
-
-
-# Set input files.
-gflags.DEFINE_string('data_dir', '/Users/msung/Developer/data/MVI_0206', '')
-gflags.DEFINE_string('images', 'images/*.png', '')
-gflags.DEFINE_string('param_data_names',
-                     'Theia_10,Theia_track', '')
-gflags.DEFINE_string('param_data_dirs',
-                     'sfm_10/orientation,sfm_track/orientation', '')
-gflags.DEFINE_string('convnet_dir', 'convnet/output_params', '')
-gflags.DEFINE_string('output_plot_file', 'plot.png', '')
 
 
 # Read image file prefix and min/max frame indices.
@@ -48,17 +34,18 @@ def read_images(data_wildcard):
 
     assert (min_frame is not None)
     assert (max_frame is not None)
-
     return file_prefix, min_frame, max_frame
 
 
 # Read camera params from files.
 def read_camera_params(data_dir, file_prfix, min_frame, max_frame):
+    num_frames = max_frame - min_frame + 1
+
     # X: frame indices.
-    x_values = np.zeros([0, 1])
+    x_values = np.arange(min_frame, max_frame + 1)
 
     # Y: angle values.
-    y_values = np.zeros([0, NUM_ANGLE_TYPES])
+    y_values = np.full((num_frames, NUM_ANGLE_TYPES), np.nan)
 
     filenames = [os.path.splitext(os.path.basename(x))[0] for x in
                  glob.glob(os.path.join(data_dir, file_prfix + '*.txt'))]
@@ -70,13 +57,33 @@ def read_camera_params(data_dir, file_prfix, min_frame, max_frame):
         frame_str = filename[len(file_prfix):]
         assert (frame_str.isdigit())
         frame = int(frame_str)
+        assert (frame >= min_frame and frame <= max_frame)
 
         filepath = os.path.join(data_dir, filename + '.txt')
         angles = np.genfromtxt(filepath, delimiter=' ')
-        x_values = np.vstack((x_values, frame))
-        y_values = np.vstack((y_values, angles))
+
+        frame_index = frame - min_frame
+        y_values[frame_index, :] = angles
 
     return x_values, y_values
+
+
+# Write camera params to files.
+def write_camera_params(data_dir, file_prefix, x_values, y_values):
+    assert (x_values.shape[0] == y_values.shape[0])
+
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    for i in range(x_values.shape[0]):
+        frame = x_values[i]
+        angles = y_values[i, :]
+        if np.isnan(angles).any():
+            continue
+
+        filepath = os.path.join(data_dir, file_prefix +
+                                '{:04d}.txt'.format(frame))
+        np.savetxt(filepath, angles, delimiter=' ', newline=' ', fmt='%f')
 
 
 # Read ConvNet prediction distributions from files.
@@ -210,13 +217,15 @@ def compute_max_score_curve(
     # X: frames.
     x_values = np.arange(min_frame, max_frame + 1)
 
-    y_values = np.zeros([num_frames, NUM_ANGLE_TYPES])
-    for type_index in range(NUM_ANGLE_TYPES):
-        y_values[:, type_index] = compute_max_score_angles(z_values[type_index])
+    # Y: angle values.
+    y_values = np.full((num_frames, NUM_ANGLE_TYPES), np.nan)
 
-    # Take values only for loaded frames.
-    x_values = x_values[loaded_frame_indices]
-    y_values = y_values[loaded_frame_indices]
+    for type_index in range(NUM_ANGLE_TYPES):
+        angles = compute_max_score_angles(z_values[type_index])
+
+        # Take values only for loaded frames.
+        y_values[loaded_frame_indices, type_index] = \
+            angles[loaded_frame_indices]
 
     return x_values, y_values
 
@@ -228,135 +237,78 @@ def compute_seam_fitting_curve(
     # X: frames.
     x_values = np.arange(min_frame, max_frame + 1)
 
-    y_values = np.zeros([num_frames, NUM_ANGLE_TYPES])
-    for type_index in range(NUM_ANGLE_TYPES):
-        y_values[:, type_index] = \
-            compute_seam_fitting_angles(z_values[type_index])
+    # Y: angle values.
+    y_values = np.full((num_frames, NUM_ANGLE_TYPES), np.nan)
 
-    # Take values only for loaded frames.
-    x_values = x_values[loaded_frame_indices]
-    y_values = y_values[loaded_frame_indices]
+    for type_index in range(NUM_ANGLE_TYPES):
+        angles = compute_seam_fitting_angles(z_values[type_index])
+
+        # Take values only for loaded frames.
+        y_values[loaded_frame_indices, type_index] =\
+            angles[loaded_frame_indices]
 
     return x_values, y_values
 
 
 # Test whether angle range is smaller after shifting 180 degree.
 def good_to_shift_angle_range(angles):
-    angle_range = max(angles) - min(angles)
+    angle_range = np.nanmax(angles) - np.nanmin(angles)
 
     shifted_angles = np.copy(angles)
     shifted_angles[shifted_angles < 180] += 360
-    shifted_angle_range = max(shifted_angles) - min(shifted_angles)
+    shifted_angle_range = np.nanmax(shifted_angles) - np.nanmin(shifted_angles)
 
     return (1.10 * shifted_angle_range < angle_range)
 
 
-def plot_data(data_name_list, data_x_list, data_y_list,
-              cn_pred_x=None, cn_pred_y=None, cn_pred_z=None):
-    num_data = len(data_name_list)
-    assert (len(data_x_list) == num_data)
-    assert (len(data_y_list) == num_data)
+# Linearly interpolate NaN values by rows.
+def linearly_interpolate_values(values):
+    interp_values = np.copy(values)
+    is_not_nan = ~np.isnan(values).any(axis=1)
+    not_nan_indices = np.nonzero(is_not_nan)[0]
+    num_indices = values.shape[0]
 
-    colors = cm.jet(np.linspace(0., 1., num_data))
-    fig = plt.figure(figsize=(24, 12))
+    # Cannot interpolate if number of observed values are less than two.
+    if len(not_nan_indices) < 2:
+        return interp_values
 
-    for type_index in range(NUM_ANGLE_TYPES):
-        plt.subplot(3, 1, type_index + 1)
+    # NOTE:
+    # Do not use numpy.interp() since values (angles) are 'circular'.
+    for i in range(len(not_nan_indices) - 1):
+        index1 = not_nan_indices[i]
+        index2 = not_nan_indices[i + 1]
+        assert (index1 < index2)
 
-        # Determine Y range shift using the first data.
-        shift_y_range = False
-        if num_data > 0:
-            y_values = data_y_list[0][:, type_index]
-            shift_y_range = good_to_shift_angle_range(y_values)
+        y1 = np.copy(values[index1, :])
+        y2 = np.copy(values[index2, :])
+        for type_index in range(NUM_ANGLE_TYPES):
+            # Values (angles) are 'circular'.
+            while y2[type_index] > y1[type_index] + 180.0:
+                y2[type_index] -= 360.0
+            while y2[type_index] < y1[type_index] - 180.0:
+                y2[type_index] += 360.0
 
-        y_lim = np.array([0, 360])
-        if shift_y_range:
-            y_lim += 180
+        for index in range(index1 + 1, index2):
+            assert (~is_not_nan[index])
+            w1 = float(index2 - index) / (index2 - index1)
+            w2 = float(index - index1) / (index2 - index1)
+            interp_values[index, :] = w1 * y1 + w2 * y2
 
-        if cn_pred_x is not None and\
-            cn_pred_y is not None and\
-            cn_pred_z is not None:
-            x_values = cn_pred_x
-            y_values = cn_pred_y
-            z_values = cn_pred_z[type_index]
-            if shift_y_range:
-                y_values = np.hstack((
-                    y_values[:, 180:], y_values[:, :180] + 360))
-                z_values = np.hstack((z_values[:, 180:], z_values[:, :180]))
-            plt.pcolor(x_values, y_values, z_values, cmap='Oranges', vmin=0)
-            plt.colorbar()
+    # Extrapolate at two end points
+    index1 = not_nan_indices[0]
+    index2 = not_nan_indices[1]
+    for index in range(index1):
+        assert (~is_not_nan[index])
+        w1 = float(index2 - index) / (index2 - index1)
+        w2 = float(index - index1) / (index2 - index1)
+        interp_values[index, :] = w1 * y1 + w2 * y2
 
-        for data_index in range(num_data):
-            x_values = data_x_list[data_index]
-            y_values = data_y_list[data_index][:, type_index]
-            if shift_y_range:
-                y_values[y_values < 180] += 360
-            plt.plot(x_values, y_values, label=data_name_list[data_index],
-                     color=colors[data_index])
+    index1 = not_nan_indices[-2]
+    index2 = not_nan_indices[-1]
+    for index in range(index2 + 1, num_indices):
+        assert (~is_not_nan[index])
+        w1 = float(index2 - index) / (index2 - index1)
+        w2 = float(index - index1) / (index2 - index1)
+        interp_values[index, :] = w1 * y1 + w2 * y2
 
-        plt.ylim(y_lim)
-        plt.xlabel("Frame Index")
-        plt.ylabel("Angle (Degree)")
-        plt.legend(loc='upper left', fontsize=8)
-        plt.title(ANGLE_TYPES[type_index])
-
-    plot_file = os.path.join(FLAGS.data_dir, FLAGS.output_plot_file)
-    plt.savefig(plot_file)
-    os.system('open ' + plot_file)
-
-
-if __name__ == '__main__':
-    FLAGS(sys.argv)
-
-    image_wildcard = os.path.join(FLAGS.data_dir, FLAGS.images)
-    file_prefix, min_frame, max_frame = read_images(image_wildcard)
-    print('File prefix: {}'.format(file_prefix))
-    print('Frame range: [{}, {}]'.format(min_frame, max_frame))
-
-
-    # Read camera param data.
-    data_name_list = []
-    data_x_list = []
-    data_y_list = []
-
-    data_name_list = FLAGS.param_data_names.split(',')
-    data_dir_list = FLAGS.param_data_dirs.split(',')
-    assert (len(data_name_list) == len(data_dir_list))
-
-    for i in range(len(data_dir_list)):
-        data_path = os.path.join(FLAGS.data_dir, data_dir_list[i])
-        x_values, y_values = read_camera_params(
-            data_path, file_prefix, min_frame, max_frame)
-        data_x_list.append(x_values)
-        data_y_list.append(y_values)
-        print("Loaded '{}'.".format(data_path))
-
-
-    # Read ConvNet outputs if exist.
-    if FLAGS.convnet_dir:
-        convnet_path = os.path.join(FLAGS.data_dir, FLAGS.convnet_dir)
-        cn_pred_x, cn_pred_y, cn_pred_z, cv_loaded_frame_indices =\
-            read_convnet_preds(convnet_path, file_prefix, min_frame, max_frame)
-        print("Loaded '{}'.".format(convnet_path))
-
-        # print('Compute max score curves...')
-        # cn_max_score_x, cn_max_score_y = compute_max_score_curve(
-        #         cn_pred_z, min_frame, max_frame, cv_loaded_frame_indices)
-        # data_name_list.append('ConvNetMaxScore')
-        # data_x_list.append(cn_max_score_x)
-        # data_y_list.append(cn_max_score_y)
-        # print('Done.')
-
-        print('Compute seam fitting curves...')
-        cn_seam_fitting_x, cn_seam_fitting_y = compute_seam_fitting_curve(
-            cn_pred_z, min_frame, max_frame, cv_loaded_frame_indices)
-        data_name_list.append('ConvNetSeamFitting')
-        data_x_list.append(cn_seam_fitting_x)
-        data_y_list.append(cn_seam_fitting_y)
-        print('Done.')
-
-
-    print('Draw plots...')
-    plot_data(data_name_list, data_x_list, data_y_list,
-              cn_pred_x, cn_pred_y, cn_pred_z)
-    print('Done.')
+    return interp_values

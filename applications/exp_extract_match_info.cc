@@ -266,10 +266,19 @@ void CompareRelativePosesWithGroundTruth(
     const std::string basename_1 = stlplus::basename_part(match.image1);
     const std::string basename_2 = stlplus::basename_part(match.image2);
 
-    const Eigen::Matrix3d gt_rotation1 =
-        theia::FindOrDie(ground_truth_orientations, basename_1);
-    const Eigen::Matrix3d gt_rotation2 =
-        theia::FindOrDie(ground_truth_orientations, basename_2);
+    const Eigen::Matrix3d* gt_rotation1 =
+        theia::FindOrNull(ground_truth_orientations, basename_1);
+    const Eigen::Matrix3d* gt_rotation2 =
+        theia::FindOrNull(ground_truth_orientations, basename_2);
+
+    if (gt_rotation1 == nullptr) {
+      LOG(WARNING) << "Ground truth does not exist: '" << basename_1 << "'";
+      continue;
+    }
+    if (gt_rotation2 == nullptr) {
+      LOG(WARNING) << "Ground truth does not exist: '" << basename_2 << "'";
+      continue;
+    }
 
     Eigen::Matrix3d est_relative_rotation;
     ceres::AngleAxisToRotationMatrix(
@@ -279,7 +288,7 @@ void CompareRelativePosesWithGroundTruth(
     // Compute relative rotation error.
     const double relative_rotation_angle_error =
         RelativeOrientationAbsAngleError(
-            gt_rotation1, gt_rotation2, est_relative_rotation);
+            *gt_rotation1, *gt_rotation2, est_relative_rotation);
     max_relative_rotation_angle_error = std::max(
         relative_rotation_angle_error, max_relative_rotation_angle_error);
 

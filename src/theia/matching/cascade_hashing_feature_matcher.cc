@@ -212,33 +212,6 @@ void CascadeHashingFeatureMatcher::AddImages(
   CreateHashedImagesInParallel(image_names, feature_filenames);
 }
 
-// @mhsung
-void CascadeHashingFeatureMatcher::AddImages(
-    const std::vector<std::string>& image_names,
-    const std::vector<CameraIntrinsicsPrior>& intrinsics,
-    const std::vector<Eigen::Matrix3d>& initial_orientations) {
-  CHECK_EQ(image_names.size(), intrinsics.size())
-    << "Number of images and intrinsic parameters mismatches.";
-  CHECK_EQ(image_names.size(), initial_orientations.size())
-    << "Number of images and initial orientations mismatches.";
-  image_names_.reserve(image_names.size() + image_names_.size());
-  image_names_.insert(image_names_.end(),
-                      image_names.begin(),
-                      image_names.end());
-  std::vector<std::string> feature_filenames(image_names.size());
-  for (int i = 0; i < image_names.size(); ++i) {
-    intrinsics_[image_names[i]] = intrinsics[i];
-    initial_orientations_[image_names[i]] = initial_orientations[i];
-    feature_filenames[i] = FeatureFilenameFromImage(image_names[i]);
-  }
-  // Initialize cascade hasher (if needed).
-  std::shared_ptr<KeypointsAndDescriptors> features =
-      this->keypoints_and_descriptors_cache_->Fetch(feature_filenames[0]);
-  InitializeCascadeHasher(features->descriptors[0].size());
-  // Create the hashed images.
-  CreateHashedImagesInParallel(image_names, feature_filenames);
-}
-
 bool CascadeHashingFeatureMatcher::MatchImagePair(
     const KeypointsAndDescriptors& features1,
     const KeypointsAndDescriptors& features2,

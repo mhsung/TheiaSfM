@@ -127,6 +127,12 @@ void MapOrientationsToViewNames(
     const std::unordered_map<ViewId, Eigen::Matrix3d>& id_orientations,
     std::unordered_map<std::string, Eigen::Matrix3d>* name_orientations);
 
+bool CheckOrientationNamesValid(
+    const std::unordered_map<std::string, Eigen::Matrix3d>& orientations,
+    const std::vector<std::string>& image_filenames,
+    std::unordered_map<std::string, Eigen::Matrix3d>*
+    orientations_with_image_filenames = nullptr);
+
 void SyncOrientationSequences(
     const std::unordered_map<std::string, Eigen::Matrix3d>&
     reference_orientations,

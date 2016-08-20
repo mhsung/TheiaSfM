@@ -131,6 +131,7 @@ target_link_libraries(exp_draw_matches theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIE
 
 add_executable(exp_convert_feature_track_file exp_convert_feature_track_file.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc
+  exp_feature_match_utils.h exp_feature_match_utils.cc
   exp_feature_track_io.h exp_feature_track_io.cc)
 target_link_libraries(exp_convert_feature_track_file theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 

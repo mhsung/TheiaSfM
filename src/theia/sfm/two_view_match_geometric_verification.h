@@ -100,15 +100,12 @@ class TwoViewMatchGeometricVerification {
       const std::vector<IndexedFeatureMatch>& matches);
 
   // @mhsung
-  TwoViewMatchGeometricVerification(
-      const Options& options,
-      const CameraIntrinsicsPrior& intrinsics1,
-      const CameraIntrinsicsPrior& intrinsics2,
-      const KeypointsAndDescriptors& features1,
-      const KeypointsAndDescriptors& features2,
-      const Eigen::Matrix3d& initial_orientation1,
-      const Eigen::Matrix3d& initial_orientation2,
-      const std::vector<IndexedFeatureMatch>& matches);
+  void ResetInitialOrientations();
+
+  // @mhsung
+  void SetInitialOrientations(
+      const Eigen::Matrix3d* initial_orientation1,
+      const Eigen::Matrix3d* initial_orientation2);
 
   // Perform 2-view geometric verification for the input. The verified matches
   // are returned along with the 2-view info. If the verification fails, false

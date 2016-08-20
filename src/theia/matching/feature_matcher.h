@@ -116,10 +116,8 @@ class FeatureMatcher {
                          const std::vector<CameraIntrinsicsPrior>& intrinsics);
 
   // @mhsung
-  virtual void AddImages(const std::vector<std::string>& image_names,
-                         const std::vector<CameraIntrinsicsPrior>& intrinsics,
-                         const std::vector<Eigen::Matrix3d>&
-                         initial_orientations);
+  virtual void SetInitialOrientations(
+      std::unordered_map<std::string, Eigen::Matrix3d> initial_orientations);
 
   // Matches features between all images. No geometric verification is
   // performed. Only the matches which pass the have greater than

@@ -119,28 +119,6 @@ void GetConsecutivePairsToMatch(
   LOG(INFO) << "# of consecutive pairs: " << pairs_to_match->size();
 }
 
-// @mhsung
-void ReadInitialOrientations(
-    const std::vector<std::string>& image_filenames,
-    std::vector<Eigen::Matrix3d>* initial_orientations) {
-  CHECK_NOTNULL(initial_orientations)->clear();
-
-  std::unordered_map<std::string, Eigen::Matrix3d>
-      initial_orientations_with_names;
-  CHECK(ReadOrientations(FLAGS_initial_orientations_data_type,
-                         FLAGS_initial_orientations_filepath,
-                         &initial_orientations_with_names));
-
-  initial_orientations->reserve(initial_orientations_with_names.size());
-  for (const auto& image_name : image_filenames) {
-    std::string basename;
-    CHECK(theia::GetFilenameFromFilepath(image_name, false, &basename));
-    const Eigen::Matrix3d& orientation =
-        FindOrDie(initial_orientations_with_names, basename);
-    initial_orientations->push_back(orientation);
-  }
-}
-
 void SetMatchingOptions(theia::FeatureMatcherOptions* matching_options) {
   matching_options->match_out_of_core = FLAGS_match_out_of_core;
   theia::GetDirectoryFromFilepath(
@@ -213,39 +191,33 @@ int main(int argc, char *argv[]) {
   std::vector<std::string> image_filenames;
   GetImageFilesAndFilenames(features_filepaths, &image_filenames);
 
+  // Create the feature matcher.
   theia::FeatureMatcherOptions matching_options;
   SetMatchingOptions(&matching_options);
-
-
-  // @mhsung
-  std::vector<Eigen::Matrix3d> initial_orientations;
-  if (FLAGS_initial_orientations_filepath != "") {
-    ReadInitialOrientations(image_filenames, &initial_orientations);
-    CHECK(initial_orientations.size() == image_filenames.size());
-    matching_options.use_initial_orientation_constraints = true;
-  }
-
-
-  // Create the feature matcher.
   const theia::MatchingStrategy matching_strategy =
       StringToMatchingStrategyType(FLAGS_matching_strategy);
   std::unique_ptr<theia::FeatureMatcher> matcher =
       CreateFeatureMatcher(matching_strategy, matching_options);
 
-  // Optionally read the intrinsics from a calibration file.
+  // Read the intrinsics from a calibration file.
   std::vector<theia::CameraIntrinsicsPrior> intrinsics;
   ReadIntrinsicsFromCalibrationFile(image_filenames, &intrinsics);
 
+  // Add all the features to the matcher.
+  matcher->AddImages(image_filenames, intrinsics);
 
   // @mhsung
-  if (!initial_orientations.empty()) {
-    // Set initial orientations to be used as constraints.
-    matcher->AddImages(image_filenames, intrinsics, initial_orientations);
-  } else {
-    // Add all the features to the matcher.
-    matcher->AddImages(image_filenames, intrinsics);
+  if (FLAGS_initial_orientations_filepath != "") {
+    std::unordered_map<std::string, Eigen::Matrix3d>
+        initial_orientations_with_basenames;
+    CHECK(ReadOrientations(FLAGS_initial_orientations_data_type,
+                           FLAGS_initial_orientations_filepath,
+                           &initial_orientations_with_basenames));
+    std::unordered_map<std::string, Eigen::Matrix3d> initial_orientations;
+    CHECK(CheckOrientationNamesValid(initial_orientations_with_basenames,
+                                     image_filenames, &initial_orientations));
+    matcher->SetInitialOrientations(initial_orientations);
   }
-
 
   // @mhsung
   if (FLAGS_match_only_consecutive_pairs) {

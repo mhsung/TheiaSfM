@@ -87,23 +87,6 @@ bool AcceptableReprojectionError(
 
 }  // namespace
 
-TwoViewMatchGeometricVerification::TwoViewMatchGeometricVerification(
-    const TwoViewMatchGeometricVerification::Options& options,
-    const CameraIntrinsicsPrior& intrinsics1,
-    const CameraIntrinsicsPrior& intrinsics2,
-    const KeypointsAndDescriptors& features1,
-    const KeypointsAndDescriptors& features2,
-    const std::vector<IndexedFeatureMatch>& matches)
-    : options_(options),
-      intrinsics1_(intrinsics1),
-      intrinsics2_(intrinsics2),
-      features1_(features1),
-      features2_(features2),
-      matches_(matches),
-      // @mhsung
-      initial_orientation1_(nullptr),
-      initial_orientation2_(nullptr) {}
-
 // @mhsung
 TwoViewMatchGeometricVerification::TwoViewMatchGeometricVerification(
     const TwoViewMatchGeometricVerification::Options& options,
@@ -111,8 +94,6 @@ TwoViewMatchGeometricVerification::TwoViewMatchGeometricVerification(
     const CameraIntrinsicsPrior& intrinsics2,
     const KeypointsAndDescriptors& features1,
     const KeypointsAndDescriptors& features2,
-    const Eigen::Matrix3d& initial_orientation1,
-    const Eigen::Matrix3d& initial_orientation2,
     const std::vector<IndexedFeatureMatch>& matches)
     : options_(options),
       intrinsics1_(intrinsics1),
@@ -120,8 +101,24 @@ TwoViewMatchGeometricVerification::TwoViewMatchGeometricVerification(
       features1_(features1),
       features2_(features2),
       matches_(matches),
-      initial_orientation1_(&initial_orientation1),
-      initial_orientation2_(&initial_orientation2) {}
+      initial_orientation1_(nullptr),
+      initial_orientation2_(nullptr) {}
+
+// @mhsung
+void TwoViewMatchGeometricVerification::ResetInitialOrientations() {
+  initial_orientation1_ = nullptr;
+  initial_orientation2_ = nullptr;
+}
+
+// @mhsung
+void TwoViewMatchGeometricVerification::SetInitialOrientations(
+    const Eigen::Matrix3d* initial_orientation1,
+    const Eigen::Matrix3d* initial_orientation2) {
+  CHECK_NOTNULL(initial_orientation1);
+  CHECK_NOTNULL(initial_orientation2);
+  initial_orientation1_ = initial_orientation1;
+  initial_orientation2_ = initial_orientation2;
+}
 
 void TwoViewMatchGeometricVerification::CreateCorrespondencesFromIndexedMatches(
     std::vector<FeatureCorrespondence>* correspondences) {
@@ -151,8 +148,6 @@ bool TwoViewMatchGeometricVerification::VerifyMatches(
   // Estimate 2-view geometry from feature matches.
   std::vector<int> inlier_indices;
   // @mhsung
-  // FIXME:
-  // Try to use initial orientation in RANSAC.
   if (initial_orientation1_ != nullptr && initial_orientation2_ != nullptr) {
     if (!EstimateTwoViewInfoWithInitOrientations(
         options_.estimate_twoview_info_options,

@@ -85,9 +85,6 @@ struct FeatureMatcherOptions {
   // Only images that contain more feature matches than this number will be
   // returned.
   int min_num_feature_matches = 30;
-
-  // @mhsung
-  bool use_initial_orientation_constraints = false;
 };
 
 }  // namespace theia

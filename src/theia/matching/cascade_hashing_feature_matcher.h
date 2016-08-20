@@ -74,12 +74,6 @@ class CascadeHashingFeatureMatcher : public FeatureMatcher {
   void AddImages(const std::vector<std::string>& image_names,
                  const std::vector<CameraIntrinsicsPrior>& intrinsics) override;
 
-  // @mhsung
-  void AddImages(const std::vector<std::string>& image_names,
-                 const std::vector<CameraIntrinsicsPrior>& intrinsics,
-                 const std::vector<Eigen::Matrix3d>&
-                 initial_orientations) override;
-
  private:
   bool MatchImagePair(
       const KeypointsAndDescriptors& features1,

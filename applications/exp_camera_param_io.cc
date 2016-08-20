@@ -436,6 +436,44 @@ void MapOrientationsToViewNames(
   }
 }
 
+bool CheckOrientationNamesValid(
+    const std::unordered_map<std::string, Eigen::Matrix3d>& orientations,
+    const std::vector<std::string>& image_filenames,
+    std::unordered_map<std::string, Eigen::Matrix3d>*
+    orientations_with_image_filenames) {
+  if (orientations_with_image_filenames) {
+    orientations_with_image_filenames->reserve(orientations.size());
+  }
+
+  for (const auto& orientation : orientations) {
+    const std::string& orientation_name = orientation.first;
+
+    bool image_exists = false;
+    for (const auto& image_filename : image_filenames) {
+      std::string image_basename;
+      CHECK(theia::GetFilenameFromFilepath(
+          image_filename, false, &image_basename));
+      if (image_basename == orientation_name) {
+
+        if (orientations_with_image_filenames) {
+          orientations_with_image_filenames->emplace(
+              image_filename, orientation.second);
+        }
+
+        image_exists = true;
+        break;
+      }
+    }
+
+    if (!image_exists) {
+      LOG(WARNING) << "Image '" << orientation_name << "' does not exist.";
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void SyncOrientationSequences(
     const std::unordered_map<std::string, Eigen::Matrix3d>&
     reference_orientations,

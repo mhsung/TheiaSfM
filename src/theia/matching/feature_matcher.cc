@@ -156,20 +156,9 @@ void FeatureMatcher::AddImages(
 }
 
 // @mhsung
-void FeatureMatcher::AddImages(
-    const std::vector<std::string>& image_names,
-    const std::vector<CameraIntrinsicsPrior>& intrinsics,
-    const std::vector<Eigen::Matrix3d>& initial_orientations) {
-  CHECK_EQ(image_names.size(), intrinsics.size());
-  CHECK_EQ(image_names.size(), initial_orientations.size());
-  image_names_.reserve(image_names.size() + image_names_.size());
-  image_names_.insert(image_names_.end(),
-                      image_names.begin(),
-                      image_names.end());
-  for (int i = 0; i < image_names.size(); ++i) {
-    intrinsics_[image_names[i]] = intrinsics[i];
-    initial_orientations_[image_names[i]] = initial_orientations[i];
-  }
+void FeatureMatcher::SetInitialOrientations(
+    std::unordered_map<std::string, Eigen::Matrix3d> initial_orientations) {
+      initial_orientations_ = initial_orientations;
 }
 
 std::string FeatureMatcher::FeatureFilenameFromImage(
@@ -288,27 +277,24 @@ void FeatureMatcher::MatchAndVerifyImagePairs(
       const CameraIntrinsicsPrior intrinsics2 =
         FindWithDefault(intrinsics_, image2_name, CameraIntrinsicsPrior());
 
+      TwoViewMatchGeometricVerification geometric_verification(
+          options_.geometric_verification_options, intrinsics1, intrinsics2,
+          *features1, *features2, putative_matches);
+
       // @mhsung
-      std::unique_ptr<TwoViewMatchGeometricVerification> geometric_verification;
       const Eigen::Matrix3d* initial_orientation1 =
           FindOrNull(initial_orientations_, image1_name);
       const Eigen::Matrix3d* initial_orientation2 =
           FindOrNull(initial_orientations_, image2_name);
-      if (options_.use_initial_orientation_constraints &&
-          initial_orientation1 != nullptr &&
-          initial_orientation2 != nullptr) {
-        geometric_verification.reset(new TwoViewMatchGeometricVerification(
-            options_.geometric_verification_options, intrinsics1, intrinsics2,
-            *features1, *features2,
-            *initial_orientation1, *initial_orientation2, putative_matches));
-      } else {
-        geometric_verification.reset(new TwoViewMatchGeometricVerification(
-            options_.geometric_verification_options, intrinsics1, intrinsics2,
-            *features1, *features2, putative_matches));
+      if (initial_orientation1 != nullptr && initial_orientation2 != nullptr) {
+        geometric_verification.SetInitialOrientations(
+            initial_orientation1, initial_orientation2);
+        VLOG(2) << "Use initial orientation constraints for image "
+                << image1_name << " and " << image2_name << ".";
       }
 
       // If geometric verification fails, do not add the match to the output.
-      if (!geometric_verification->VerifyMatches(
+      if (!geometric_verification.VerifyMatches(
               &image_pair_match.correspondences,
               &image_pair_match.twoview_info)) {
         VLOG(2) << "Geometric verification between images " << image1_name
