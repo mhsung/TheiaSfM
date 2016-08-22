@@ -146,7 +146,7 @@ void ReadOrientationsFromCameraParams(
 
     // Read camera parameters.
     std::ifstream file(filepath);
-    Eigen::Vector3i camera_params;
+    Eigen::Vector3d camera_params;
     for(int i = 0; i < 3; ++i) file >> camera_params[i];
     file.close();
 

@@ -295,20 +295,20 @@ def linearly_interpolate_values(values):
             interp_values[index, :] = w1 * y1 + w2 * y2
 
     # Extrapolate at two end points
-    index1 = not_nan_indices[0]
-    index2 = not_nan_indices[1]
-    for index in range(index1):
-        assert (~is_not_nan[index])
-        w1 = float(index2 - index) / (index2 - index1)
-        w2 = float(index - index1) / (index2 - index1)
-        interp_values[index, :] = w1 * y1 + w2 * y2
-
-    index1 = not_nan_indices[-2]
-    index2 = not_nan_indices[-1]
-    for index in range(index2 + 1, num_indices):
-        assert (~is_not_nan[index])
-        w1 = float(index2 - index) / (index2 - index1)
-        w2 = float(index - index1) / (index2 - index1)
-        interp_values[index, :] = w1 * y1 + w2 * y2
+    # index1 = not_nan_indices[0]
+    # index2 = not_nan_indices[1]
+    # for index in range(index1):
+    #     assert (~is_not_nan[index])
+    #     w1 = float(index2 - index) / (index2 - index1)
+    #     w2 = float(index - index1) / (index2 - index1)
+    #     interp_values[index, :] = w1 * y1 + w2 * y2
+    #
+    # index1 = not_nan_indices[-2]
+    # index2 = not_nan_indices[-1]
+    # for index in range(index2 + 1, num_indices):
+    #     assert (~is_not_nan[index])
+    #     w1 = float(index2 - index) / (index2 - index1)
+    #     w2 = float(index - index1) / (index2 - index1)
+    #     interp_values[index, :] = w1 * y1 + w2 * y2
 
     return interp_values
