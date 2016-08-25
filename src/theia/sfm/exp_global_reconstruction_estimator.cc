@@ -10,6 +10,8 @@
 
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
+// @mhsung
+#include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/view_graph/view_graph.h"
@@ -52,6 +54,8 @@ void SetUnderconstrainedAsUnestimated(Reconstruction* reconstruction) {
         SetUnderconstrainedViewsToUnestimated(reconstruction);
     num_underconstrained_tracks =
         SetUnderconstrainedTracksToUnestimated(reconstruction);
+    LOG(INFO) << "Num underconstrained views: " << num_underconstrained_views;
+    LOG(INFO) << "Num underconstrained tracks: " << num_underconstrained_tracks;
   }
 }
 
@@ -133,11 +137,9 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   summary.camera_intrinsics_calibration_time = timer.ElapsedTimeInSeconds();
 
 
-  // FIXME:
-  // Consider to add this filtering...
   // @mhsung
   // Step 2-a. Filter initial orientation.
-  // FilterInitialOrientations();
+  FilterInitialOrientations();
 
 
   // Step 3. Estimate global rotations.
@@ -289,60 +291,62 @@ void ExpGlobalReconstructionEstimator::FilterInitialOrientations() {
   const int num_constrained_views = constrained_views.size();
   if (num_constrained_views == 0) return;
 
-  std::unordered_map<ViewId, int> view_id_to_index;
-  int index = 0;
-  view_id_to_index.reserve(constrained_views.size());
-  for (const auto& view : constrained_views) {
-    view_id_to_index[view.first] = index;
-    ++index;
-  }
 
   // Accumulate pairwise errors to each view.
-  Eigen::VectorXd accumulated_errors =
-      Eigen::VectorXd::Zero(num_constrained_views);
-  Eigen::VectorXi view_count_in_pairs =
-      Eigen::VectorXi::Zero(num_constrained_views);
+  std::unordered_map<ViewId, double> accumulated_errors;
+  std::unordered_map<ViewId, int> view_counts_in_pairs;
+  accumulated_errors.reserve(num_constrained_views);
+  view_counts_in_pairs.reserve(num_constrained_views);
+  for (const auto& view : constrained_views) {
+    const ViewId view_id = view.first;
+    accumulated_errors[view_id] = 0.0;
+    view_counts_in_pairs[view_id] = 0.0;
+  }
 
   for (const auto& view_pair : view_pairs) {
     const ViewId view_id_1 = view_pair.first.first;
     const ViewId view_id_2 = view_pair.first.second;
     // FIXME:
-    // Use the numbers of point matches as weights.
-    //const int num_verified_matches = view_pair.second.num_verified_matches;
+    // Consider to use the numbers of point matches as weights.
+    // const int num_verified_matches = view_pair.second.num_verified_matches;
 
     if (constrained_views.find(view_id_1) != constrained_views.end() &&
         constrained_views.find(view_id_2) != constrained_views.end()) {
-      const Eigen::Vector3d R_12 = view_pair.second.rotation_2;
-      const Eigen::Vector3d relative_rotation_error =
-      ComputeRelativeRotationError(view_pair.second.rotation_2,
-          constrained_views.at(view_id_1), constrained_views.at(view_id_2));
+      Eigen::Matrix3d rotation1, rotation2, relative_rotation12;
+      ceres::AngleAxisToRotationMatrix(
+          constrained_views.at(view_id_1).data(),
+          ceres::ColumnMajorAdapter3x3(rotation1.data()));
+      ceres::AngleAxisToRotationMatrix(
+          constrained_views.at(view_id_2).data(),
+          ceres::ColumnMajorAdapter3x3(rotation2.data()));
+      ceres::AngleAxisToRotationMatrix(
+          view_pair.second.rotation_2.data(),
+          ceres::ColumnMajorAdapter3x3(relative_rotation12.data()));
 
       // Measure error based on relative rotation angle.
-      const double relative_rotation_angle = relative_rotation_error.norm();
-      CHECK_LE(relative_rotation_angle, M_PI);
-      const double error = relative_rotation_angle / M_PI * 180.0;
+      const double relative_rotation_angle_error =
+          RelativeOrientationAbsAngleError(
+              rotation1, rotation2, relative_rotation12);
 
       // Accumulate error and count view graph edges for each view.
-      const int index_1 = FindOrDie(view_id_to_index, view_id_1);
-      const int index_2 = FindOrDie(view_id_to_index, view_id_1);
-      accumulated_errors(index_1) += error;
-      accumulated_errors(index_2) += error;
-      view_count_in_pairs(index_1) += 1;
-      view_count_in_pairs(index_2) += 1;
+      accumulated_errors[view_id_1] += relative_rotation_angle_error;
+      accumulated_errors[view_id_2] += relative_rotation_angle_error;
+      view_counts_in_pairs[view_id_1] += 1;
+      view_counts_in_pairs[view_id_2] += 1;
     }
   }
 
   // Calculate average of errors.
-  const Eigen::VectorXd avg_errors =
-      accumulated_errors.cwiseQuotient(view_count_in_pairs.cast<double>());
-
   std::unordered_map<ViewId, double> view_errors;
   view_errors.reserve(num_constrained_views);
   for (const auto& view : constrained_views) {
-    const int index = FindOrDie(view_id_to_index, view.first);
+    const ViewId view_id = view.first;
+
+    const double sum_error = FindOrDie(accumulated_errors, view_id);
+    const int num_pairs = FindOrDie(view_counts_in_pairs, view_id);
     // Skip view with zero view graph edge count.
-    if (view_count_in_pairs[index] > 0) {
-      view_errors[view.first] = avg_errors[index];
+    if (num_pairs > 0) {
+      view_errors[view_id] = sum_error / num_pairs;
     }
   }
 
@@ -359,25 +363,29 @@ void ExpGlobalReconstructionEstimator::FilterInitialOrientations() {
                const std::pair<ViewId, double>& b) {
                 return a.second > b.second; });
 
-  VLOG(3) << "Initial orientation errors:";
+  VLOG(2) << "Initial orientation errors:";
   for (const auto& view_error: sorted_view_errors) {
     const std::string& name = reconstruction_->View(view_error.first)->Name();
     const double& error = view_error.second;
     if (error > KErrorThreshold) {
-      VLOG(3) << "[" << name << "]:" << " error = " << error << "  - Unset";
+      VLOG(2) << "[" << name << "]:" << " error = " << error << "  - Unset";
     } else {
-      VLOG(3) << "[" << name << "]:" << " error = " << error;
+      VLOG(2) << "[" << name << "]:" << " error = " << error;
     }
   }
 
   // Unset initial orientation having large errors.
+  int num_unset_initial_orientations = 0;
   for (const auto& view_error: view_errors) {
     const ViewId view_id = view_error.first;
     const double error = view_error.second;
     if (error > KErrorThreshold) {
       reconstruction_->MutableView(view_id)->RemoveInitialOrientation();
+      ++num_unset_initial_orientations;
     }
   }
+  VLOG(2) << "Num unset initial orientations: "
+          << num_unset_initial_orientations;
 }
 
 }  // namespace theia
