@@ -139,7 +139,7 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
 
   // @mhsung
   // Step 2-a. Filter initial orientation.
-  FilterInitialOrientations();
+  //FilterInitialOrientations();
 
 
   // Step 3. Estimate global rotations.

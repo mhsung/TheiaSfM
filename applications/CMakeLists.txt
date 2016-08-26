@@ -139,3 +139,8 @@ add_executable(exp_draw_feature_tracks exp_draw_feature_tracks.cc
   exp_feature_track_io.h exp_feature_track_io.cc)
 target_link_libraries(exp_draw_feature_tracks theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_export_camera_view_directions_from_bboxes exp_export_camera_view_directions_from_bboxes.cc
+  exp_bounding_box_utils.h exp_bounding_box_utils.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_export_camera_view_directions_from_bboxes theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
