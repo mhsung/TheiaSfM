@@ -138,44 +138,53 @@ void RobustRotationEstimator::SetupLinearSystem() {
   sparse_matrix_.resize(view_pairs_->size() * 3,
                         (global_orientations_->size() - 1) * 3);
 
+  // @mhsung.
+  std::vector<Eigen::Triplet<double> > triplet_list;
+  FillLinearSystemTripletList(&triplet_list);
+
+  sparse_matrix_.setFromTriplets(triplet_list.begin(), triplet_list.end());
+}
+
+void RobustRotationEstimator::FillLinearSystemTripletList(
+    std::vector<Eigen::Triplet<double> >* triplet_list) {
+  CHECK_NOTNULL(triplet_list)->clear();
+
   // For each relative rotation constraint, add an entry to the sparse
   // matrix. We use the first order approximation of angle axis such that:
   // R_ij = R_j - R_i. This makes the sparse matrix just a bunch of identity
   // matrices.
   int rotation_error_index = 0;
-  std::vector<Eigen::Triplet<double> > triplet_list;
   for (const auto& view_pair : *view_pairs_) {
     const int view1_index =
         FindOrDie(view_id_to_index_, view_pair.first.first);
     if (view1_index != kConstantRotationIndex) {
-      triplet_list.emplace_back(3 * rotation_error_index,
-                                3 * view1_index,
-                                -1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 1,
-                                3 * view1_index + 1,
-                                -1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 2,
-                                3 * view1_index + 2,
-                                -1.0);
+      triplet_list->emplace_back(3 * rotation_error_index,
+                                 3 * view1_index,
+                                 -1.0);
+      triplet_list->emplace_back(3 * rotation_error_index + 1,
+                                 3 * view1_index + 1,
+                                 -1.0);
+      triplet_list->emplace_back(3 * rotation_error_index + 2,
+                                 3 * view1_index + 2,
+                                 -1.0);
     }
 
     const int view2_index =
         FindOrDie(view_id_to_index_, view_pair.first.second);
     if (view2_index != kConstantRotationIndex) {
-      triplet_list.emplace_back(3 * rotation_error_index + 0,
-                                3 * view2_index + 0,
-                                1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 1,
-                                3 * view2_index + 1,
-                                1.0);
-      triplet_list.emplace_back(3 * rotation_error_index + 2,
-                                3 * view2_index + 2,
-                                1.0);
+      triplet_list->emplace_back(3 * rotation_error_index + 0,
+                                 3 * view2_index + 0,
+                                 1.0);
+      triplet_list->emplace_back(3 * rotation_error_index + 1,
+                                 3 * view2_index + 1,
+                                 1.0);
+      triplet_list->emplace_back(3 * rotation_error_index + 2,
+                                 3 * view2_index + 2,
+                                 1.0);
     }
 
     ++rotation_error_index;
   }
-  sparse_matrix_.setFromTriplets(triplet_list.begin(), triplet_list.end());
 }
 
 // Computes the relative rotation error based on the current global

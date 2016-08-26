@@ -34,10 +34,24 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
   // called once.
   virtual void SetupLinearSystem();
 
+  // @mhsung.
+  virtual void FillLinearSystemTripletList(
+      std::vector<Eigen::Triplet<double> >* triplet_list);
+
   // Computes the relative rotation error based on the current global
   // orientation estimates.
   virtual void ComputeRotationError();
 
+  // Performs the L1 robust loss minimization.
+  virtual bool SolveL1Regression();
+
+  // Performs the iteratively reweighted least squares.
+  virtual bool SolveIRLS();
+
+  Eigen::VectorXd weight_vector_;
+
+  // FIXME:
+  // Remove constant weight and use weight vector only.
   const double constraint_weight_;
 
   const std::unordered_map<ViewId, Eigen::Vector3d>* constrained_views_;

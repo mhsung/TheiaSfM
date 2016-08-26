@@ -83,19 +83,29 @@ class RobustRotationEstimator : public RotationEstimator {
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the
   // first-order approximation of the angle-axis rotations. This should only be
   // called once.
-  // @mhsung: Changed to virtual function.
+  // @mhsung
+  // Changed to virtual function.
   virtual void SetupLinearSystem();
+
+  // @mhsung
+  virtual void FillLinearSystemTripletList(
+      std::vector<Eigen::Triplet<double> >* triplet_list);
 
   // Computes the relative rotation error based on the current global
   // orientation estimates.
-  // @mhsung: Changed to virtual function.
+  // @mhsung
+  // Changed to virtual function.
   virtual void ComputeRotationError();
 
   // Performs the L1 robust loss minimization.
-  bool SolveL1Regression();
+  // @mhsung
+  // Changed to virtual function.
+  virtual bool SolveL1Regression();
 
   // Performs the iteratively reweighted least squares.
-  bool SolveIRLS();
+  // @mhsung
+  // Changed to virtual function.
+  virtual bool SolveIRLS();
 
   // Updates the global rotations based on the current rotation change.
   void UpdateGlobalRotations();

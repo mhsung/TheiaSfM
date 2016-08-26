@@ -138,6 +138,8 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
 
 
   // @mhsung
+  // FIXME:
+  // Should we use initial orientation filter?
   // Step 2-a. Filter initial orientation.
   //FilterInitialOrientations();
 
@@ -157,6 +159,7 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   LOG(INFO) << "Filtering any bad rotation estimations.";
   timer.Reset();
   // FIXME:
+      // Shouldn't we use after-optimization orientation filter?
   if (options_.global_rotation_estimator_type !=
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
     FilterRotations();
@@ -170,37 +173,32 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
     positions_[item.first] = Eigen::Vector3d::Zero();
   }
 
-  // FIXME:
-  // Remove the if-expression. Translation computation is not related with
-  // bundle adjustment.
-  if (options_.exp_global_run_bundle_adjustment) {
-    // Step 5. Optimize relative translations.
-    LOG(INFO) << "Optimizing the pairwise translation estimations.";
-    timer.Reset();
-    OptimizePairwiseTranslations();
-    global_estimator_timings.relative_translation_optimization_time =
-        timer.ElapsedTimeInSeconds();
+  // Step 5. Optimize relative translations.
+  LOG(INFO) << "Optimizing the pairwise translation estimations.";
+  timer.Reset();
+  OptimizePairwiseTranslations();
+  global_estimator_timings.relative_translation_optimization_time =
+      timer.ElapsedTimeInSeconds();
 
-    // Step 6. Filter bad relative translations.
-    LOG(INFO) << "Filtering any bad relative translations.";
-    timer.Reset();
-    FilterRelativeTranslation();
-    global_estimator_timings.relative_translation_filtering_time =
-        timer.ElapsedTimeInSeconds();
+  // Step 6. Filter bad relative translations.
+  LOG(INFO) << "Filtering any bad relative translations.";
+  timer.Reset();
+  FilterRelativeTranslation();
+  global_estimator_timings.relative_translation_filtering_time =
+      timer.ElapsedTimeInSeconds();
 
-    // Step 7. Estimate global positions.
-    LOG(INFO) << "Estimating the positions of all cameras.";
-    timer.Reset();
-    if (!EstimatePosition()) {
-      LOG(WARNING) << "Position estimation failed!";
-      summary.success = false;
-      return summary;
-    }
-    LOG(INFO) << positions_.size()
-              << " camera positions were estimated successfully.";
-    global_estimator_timings.position_estimation_time =
-        timer.ElapsedTimeInSeconds();
+  // Step 7. Estimate global positions.
+  LOG(INFO) << "Estimating the positions of all cameras.";
+  timer.Reset();
+  if (!EstimatePosition()) {
+    LOG(WARNING) << "Position estimation failed!";
+    summary.success = false;
+    return summary;
   }
+  LOG(INFO) << positions_.size()
+            << " camera positions were estimated successfully.";
+  global_estimator_timings.position_estimation_time =
+      timer.ElapsedTimeInSeconds();
 
   summary.pose_estimation_time =
       global_estimator_timings.rotation_estimation_time +
