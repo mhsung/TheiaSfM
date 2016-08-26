@@ -35,15 +35,14 @@ if __name__ == '__main__':
     print('File prefix: {}'.format(file_prefix))
     print('Frame range: [{}, {}]'.format(min_frame, max_frame))
 
-
     # Read camera param data.
     input_data_path = os.path.join(FLAGS.data_dir, FLAGS.input_param_data_dir)
-    x_values, y_values = plot_utils.read_camera_params(
+    x_values, y_values = plot_utils.read_frame_values(
         input_data_path, file_prefix, min_frame, max_frame)
     print("Loaded '{}'.".format(input_data_path))
 
-    interp_y_values = plot_utils.linearly_interpolate_values(y_values)
+    interp_y_values = plot_utils.linearly_interpolate_angles(y_values)
     output_data_path = os.path.join(FLAGS.data_dir, FLAGS.output_param_data_dir)
-    plot_utils.write_camera_params(
+    plot_utils.write_frame_values(
         output_data_path, file_prefix, x_values, interp_y_values)
     print("Saved '{}'.".format(output_data_path))

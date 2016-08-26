@@ -38,14 +38,14 @@ def read_images(data_wildcard):
 
 
 # Read camera params from files.
-def read_camera_params(data_dir, file_prfix, min_frame, max_frame):
+def read_frame_values(data_dir, file_prfix, min_frame, max_frame, sep=' '):
     num_frames = max_frame - min_frame + 1
 
     # X: frame indices.
     x_values = np.arange(min_frame, max_frame + 1)
 
     # Y: angle values.
-    y_values = np.full((num_frames, NUM_ANGLE_TYPES), np.nan)
+    y_values = []
 
     filenames = [os.path.splitext(os.path.basename(x))[0] for x in
                  glob.glob(os.path.join(data_dir, file_prfix + '*.txt'))]
@@ -60,16 +60,22 @@ def read_camera_params(data_dir, file_prfix, min_frame, max_frame):
         assert (frame >= min_frame and frame <= max_frame)
 
         filepath = os.path.join(data_dir, filename + '.txt')
-        angles = np.genfromtxt(filepath, delimiter=' ')
+        values = np.genfromtxt(filepath, delimiter=sep)
 
         frame_index = frame - min_frame
-        y_values[frame_index, :] = angles
+
+        if len(y_values) == 0:
+            # Initialize y-values with the dimension.
+            dim = len(values)
+            y_values = np.full((num_frames, dim), np.nan)
+
+        y_values[frame_index, :] = values
 
     return x_values, y_values
 
 
 # Write camera params to files.
-def write_camera_params(data_dir, file_prefix, x_values, y_values):
+def write_frame_values(data_dir, file_prefix, x_values, y_values, sep=' '):
     assert (x_values.shape[0] == y_values.shape[0])
 
     if not os.path.exists(data_dir):
@@ -77,13 +83,13 @@ def write_camera_params(data_dir, file_prefix, x_values, y_values):
 
     for i in range(x_values.shape[0]):
         frame = x_values[i]
-        angles = y_values[i, :]
-        if np.isnan(angles).any():
+        values = y_values[i, :]
+        if np.isnan(values).any():
             continue
 
         filepath = os.path.join(data_dir, file_prefix +
                                 '{:04d}.txt'.format(frame))
-        np.savetxt(filepath, angles, delimiter=' ', newline=' ', fmt='%f')
+        np.savetxt(filepath, values, delimiter=sep, newline=' ', fmt='%f')
 
 
 # Read ConvNet prediction distributions from files.
@@ -262,7 +268,7 @@ def good_to_shift_angle_range(angles):
 
 
 # Linearly interpolate NaN values by rows.
-def linearly_interpolate_values(values):
+def linearly_interpolate_angles(values):
     interp_values = np.copy(values)
     is_not_nan = ~np.isnan(values).any(axis=1)
     not_nan_indices = np.nonzero(is_not_nan)[0]
@@ -281,7 +287,7 @@ def linearly_interpolate_values(values):
 
         y1 = np.copy(values[index1, :])
         y2 = np.copy(values[index2, :])
-        for type_index in range(NUM_ANGLE_TYPES):
+        for type_index in range(values.shape[1]):
             # Values (angles) are 'circular'.
             while y2[type_index] > y1[type_index] + 180.0:
                 y2[type_index] -= 360.0

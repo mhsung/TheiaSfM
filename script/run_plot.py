@@ -21,11 +21,13 @@ NUM_ANGLE_SAMPLES = 360
 
 
 # Set input files.
-gflags.DEFINE_string('data_dir', '', '')
+gflags.DEFINE_string('data_dir', '/Users/msung/Developer/data/MVI_0206', '')
 gflags.DEFINE_string('images', 'images/*.png', '')
-gflags.DEFINE_string('param_data_names', 'Theia,Theia_track', '')
+gflags.DEFINE_string('param_data_names', 'ConvNet,Theia_10,Theia_track', '')
 gflags.DEFINE_string('param_data_dirs',
-                     'sfm/orientation,sfm_track/orientation', '')
+                     'convnet/interp_seam_fitting_params,'
+                     'sfm_10/interp_orientation,'
+                     'sfm_track_test/orientation', '')
 gflags.DEFINE_string('convnet_dir', '', '')
 gflags.DEFINE_string('output_plot_file', 'plot.png', '')
 gflags.DEFINE_string('output_convnet_max_score', '', '')
@@ -84,7 +86,7 @@ def plot_data(data_name_list, data_x_list, data_y_list,
 
     plot_file = os.path.join(FLAGS.data_dir, FLAGS.output_plot_file)
     plt.savefig(plot_file)
-    # os.system('open ' + plot_file)
+    os.system('open ' + plot_file)
 
 
 if __name__ == '__main__':
@@ -107,7 +109,7 @@ if __name__ == '__main__':
 
     for i in range(len(data_dir_list)):
         data_path = os.path.join(FLAGS.data_dir, data_dir_list[i])
-        x_values, y_values = plot_utils.read_camera_params(
+        x_values, y_values = plot_utils.read_frame_values(
             data_path, file_prefix, min_frame, max_frame)
 
         data_x_list.append(x_values)
@@ -151,7 +153,7 @@ if __name__ == '__main__':
         if FLAGS.output_convnet_seam_fitting:
             output_path = os.path.join(
                 FLAGS.data_dir, FLAGS.output_convnet_seam_fitting)
-            plot_utils.write_camera_params(
+            plot_utils.write_frame_values(
                 output_path, file_prefix, cn_seam_fitting_x, cn_seam_fitting_y)
             print("Loaded '{}'.".format(output_path))
 

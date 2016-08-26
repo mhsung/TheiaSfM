@@ -118,6 +118,8 @@ set(THEIA_SRC
   sfm/incremental_reconstruction_estimator.cc
   # @mhsung
   sfm/exp_global_reconstruction_estimator.cc
+  # @mhsung
+  sfm/exp_bundle_adjustment_only_estimator.cc
   sfm/localize_view_to_reconstruction.cc
   sfm/pose/dls_impl.cc
   sfm/pose/dls_pnp.cc
