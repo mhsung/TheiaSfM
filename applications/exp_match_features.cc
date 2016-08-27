@@ -214,8 +214,8 @@ int main(int argc, char *argv[]) {
                            FLAGS_initial_orientations_filepath,
                            &initial_orientations_with_basenames));
     std::unordered_map<std::string, Eigen::Matrix3d> initial_orientations;
-    CHECK(CheckOrientationNamesValid(initial_orientations_with_basenames,
-                                     image_filenames, &initial_orientations));
+    CHECK(CheckViewNamesValid(initial_orientations_with_basenames,
+                              image_filenames, &initial_orientations));
     matcher->SetInitialOrientations(initial_orientations);
   }
 

@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <stlplus3/file_system.hpp>
 #include <unordered_map>
 #include <vector>
 
@@ -106,8 +107,26 @@ void WriteModelviews(
 void PrintFovy(const int image_height, const Reconstruction& reconstruction);
 
 
-
 // -- Utility functions -- //
+
+template<typename T>
+void MapViewNamesToIds(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<std::string, T>& values_with_names,
+    std::unordered_map<ViewId, T>* values_with_ids);
+
+template<typename T>
+void MapViewIdsToNames(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<ViewId, T>& values_with_ids,
+    std::unordered_map<std::string, T>* values_with_names);
+
+template<typename T>
+bool CheckViewNamesValid(
+    const std::unordered_map<std::string, T>& values_with_view_names,
+    const std::vector<std::string>& image_filenames,
+    std::unordered_map<std::string, T>* values_with_image_filenames =
+    nullptr);
 
 void GetOrientationsFromReconstruction(
     const Reconstruction& reconstruction,
@@ -116,22 +135,6 @@ void GetOrientationsFromReconstruction(
 void GetOrientationsFromReconstruction(
     const Reconstruction& reconstruction,
     std::unordered_map<std::string, Eigen::Matrix3d>* orientations);
-
-void MapOrientationsToViewIds(
-    const Reconstruction& reconstruction,
-    const std::unordered_map<std::string, Eigen::Matrix3d>& name_orientations,
-    std::unordered_map<ViewId, Eigen::Matrix3d>* id_orientations);
-
-void MapOrientationsToViewNames(
-    const Reconstruction& reconstruction,
-    const std::unordered_map<ViewId, Eigen::Matrix3d>& id_orientations,
-    std::unordered_map<std::string, Eigen::Matrix3d>* name_orientations);
-
-bool CheckOrientationNamesValid(
-    const std::unordered_map<std::string, Eigen::Matrix3d>& orientations,
-    const std::vector<std::string>& image_filenames,
-    std::unordered_map<std::string, Eigen::Matrix3d>*
-    orientations_with_image_filenames = nullptr);
 
 void SyncOrientationSequences(
     const std::unordered_map<std::string, Eigen::Matrix3d>&
@@ -296,5 +299,89 @@ bool WriteEigenMatrixToBinary(
   file.write((char*) (&cols), sizeof(int32_t));
   file.write((char*) _matrix.data(), rows * cols * sizeof(Scalar));
   file.close();
+  return true;
+}
+
+template<typename T>
+void MapViewNamesToIds(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<std::string, T>& values_with_names,
+    std::unordered_map<ViewId, T>* values_with_ids) {
+  CHECK_NOTNULL(values_with_ids);
+  values_with_ids->clear();
+  values_with_ids->reserve(values_with_names.size());
+
+  for(const auto& value : values_with_names) {
+    // FIXME:
+    // Now we simply assume that all view name has '.png' extension.
+    const auto& view_name = value.first + ".png";
+    const ViewId view_id = reconstruction.ViewIdFromName(view_name);
+    if (view_id == kInvalidViewId) {
+      LOG(WARNING) << "Invalid view name: '" << view_name << "'";
+    } else {
+      const auto& orientation = value.second;
+      (*values_with_ids)[view_id] = orientation;
+    }
+  }
+}
+
+template<typename T>
+void MapViewIdsToNames(
+    const Reconstruction& reconstruction,
+    const std::unordered_map<ViewId, T>& values_with_ids,
+    std::unordered_map<std::string, T>* values_with_names) {
+  CHECK_NOTNULL(values_with_names);
+  values_with_names->clear();
+  values_with_names->reserve(values_with_ids.size());
+
+  for(const auto& value : values_with_ids) {
+    const ViewId view_id = value.first;
+    const View* view = reconstruction.View(view_id);
+    if (view == nullptr) {
+      LOG(WARNING) << "Invalid view ID: '" << view_id << "'";
+    } else {
+      const std::string basename = stlplus::basename_part(view->Name());
+      const auto& orientation = value.second;
+      (*values_with_names)[basename] = orientation;
+    }
+  }
+}
+
+template<typename T>
+bool CheckViewNamesValid(
+    const std::unordered_map<std::string, T>& values_with_view_names,
+    const std::vector<std::string>& image_filenames,
+    std::unordered_map<std::string, T>*
+    values_with_image_filenames) {
+  if (values_with_image_filenames) {
+    values_with_image_filenames->reserve(values_with_view_names.size());
+  }
+
+  for (const auto& value : values_with_view_names) {
+    const std::string& view_name = value.first;
+
+    bool image_exists = false;
+    for (const auto& image_filename : image_filenames) {
+      std::string image_basename;
+      CHECK(theia::GetFilenameFromFilepath(
+          image_filename, false, &image_basename));
+      if (image_basename == view_name) {
+
+        if (values_with_image_filenames) {
+          values_with_image_filenames->emplace(
+              image_filename, value.second);
+        }
+
+        image_exists = true;
+        break;
+      }
+    }
+
+    if (!image_exists) {
+      LOG(WARNING) << "Image '" << view_name << "' does not exist.";
+      return false;
+    }
+  }
+
   return true;
 }

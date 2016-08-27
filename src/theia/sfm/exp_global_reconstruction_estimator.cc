@@ -159,7 +159,7 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   LOG(INFO) << "Filtering any bad rotation estimations.";
   timer.Reset();
   // FIXME:
-      // Shouldn't we use after-optimization orientation filter?
+  // Shouldn't we use after-optimization orientation filter?
   if (options_.global_rotation_estimator_type !=
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
     FilterRotations();

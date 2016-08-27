@@ -107,7 +107,7 @@ if __name__ == '__main__':
 
     for i in range(len(data_dir_list)):
         data_path = os.path.join(FLAGS.data_dir, data_dir_list[i])
-        x_values, y_values = plot_utils.read_camera_params(
+        x_values, y_values = plot_utils.read_frame_values(
             data_path, file_prefix, min_frame, max_frame)
 
         data_x_list.append(x_values)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
         if FLAGS.output_convnet_seam_fitting:
             output_path = os.path.join(
                 FLAGS.data_dir, FLAGS.output_convnet_seam_fitting)
-            plot_utils.write_camera_params(
+            plot_utils.write_frame_values(
                 output_path, file_prefix, cn_seam_fitting_x, cn_seam_fitting_y)
             print("Loaded '{}'.".format(output_path))
 

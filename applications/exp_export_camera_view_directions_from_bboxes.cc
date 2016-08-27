@@ -13,10 +13,10 @@
 
 // Input/output files.
 DEFINE_string(calibration_filepath, "", "");
-DEFINE_string(input_bounding_box_filepath, "", "");
-DEFINE_string(input_orientation_data_type, "",
+DEFINE_string(input_bounding_boxes_filepath, "", "");
+DEFINE_string(input_orientations_data_type, "",
               "'param', 'pose', 'modelview', or " "'reconstruction'");
-DEFINE_string(input_orientation_filepath, "", "");
+DEFINE_string(input_orientations_filepath, "", "");
 DEFINE_string(output_ply_filepath, "output.ply", "");
 
 
@@ -51,9 +51,6 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
 
-  std::unordered_map<std::string, Eigen::Vector4d> bounding_boxes;
-  ReadBoundingBoxes(FLAGS_input_bounding_box_filepath, &bounding_boxes);
-
   std::unordered_map<std::string, CameraIntrinsicsPrior>
       intrinsics_with_filenames;
   CHECK(theia::ReadCalibration(
@@ -68,29 +65,33 @@ int main(int argc, char* argv[]) {
     intrinsics[basename] = view.second;
   }
 
+  // Read orientations and bounding boxes.
   std::unordered_map<std::string, Eigen::Matrix3d> orientations;
   CHECK(ReadOrientations(
-      FLAGS_input_orientation_data_type,
-      FLAGS_input_orientation_filepath, &orientations));
+      FLAGS_input_orientations_data_type,
+      FLAGS_input_orientations_filepath, &orientations));
+  std::unordered_map<std::string, Eigen::Vector4d> bounding_boxes;
+  ReadBoundingBoxes(FLAGS_input_bounding_boxes_filepath, &bounding_boxes);
 
-  std::unordered_map<std::string, Eigen::Vector3d> cam_coord_cam_to_objs;
-  ComputeCameraToObjectDirections(
-      bounding_boxes, intrinsics, &cam_coord_cam_to_objs);
+  // Compute object to camera direction in world coordinates.
+  std::vector<Eigen::Vector3d> world_coord_obj_to_cam_dirs;
+  world_coord_obj_to_cam_dirs.reserve(bounding_boxes.size());
 
-  // Compute direction of camera from object.
-  std::vector<Eigen::Vector3d> world_coord_obj_to_cams;
-  world_coord_obj_to_cams.reserve(cam_coord_cam_to_objs.size());
-
-  for (const auto& view : cam_coord_cam_to_objs) {
+  for (const auto& view : bounding_boxes) {
     const std::string view_name = view.first;
-    const Eigen::Vector3d cam_coord_cam_to_obj = view.second;
+    const Eigen::Vector4d bounding_box = view.second;
+    const theia::CameraIntrinsicsPrior* intrinsic =
+        theia::FindOrNull(intrinsics, view_name);
     const Eigen::Matrix3d* orientation =
         theia::FindOrNull(orientations, view_name);
-    if (orientation == nullptr) continue;
+    if (intrinsic == nullptr || orientation == nullptr) continue;
 
-    const Eigen::Vector3d world_coord_obj_to_cam =
-        (*orientation).inverse() * (-cam_coord_cam_to_obj);
-    world_coord_obj_to_cams.push_back(world_coord_obj_to_cam);
+    const Eigen::Vector3d cam_coord_cam_to_obj_dir =
+        ComputeCameraToObjectDirections(bounding_box, *intrinsic);
+    const Eigen::Vector3d world_coord_obj_to_cam_dir =
+        (*orientation).inverse() * (-cam_coord_cam_to_obj_dir);
+    world_coord_obj_to_cam_dirs.push_back(world_coord_obj_to_cam_dir);
   }
-  CHECK(WritePlyFile(FLAGS_output_ply_filepath, world_coord_obj_to_cams));
+
+  CHECK(WritePlyFile(FLAGS_output_ply_filepath, world_coord_obj_to_cam_dirs));
 }

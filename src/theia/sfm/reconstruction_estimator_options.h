@@ -49,6 +49,7 @@ enum class ReconstructionEstimatorType {
   INCREMENTAL = 1,
   // @mhsung
   EXP_GLOBAL = 2,
+  BUNDLE_ADJUSTMENT_ONLY = 3,
 };
 
 // The recommended type of rotations solver is the Robust L1-L2 method. This

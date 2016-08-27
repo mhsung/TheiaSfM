@@ -87,7 +87,7 @@ bool LeastUnsquaredDeviationPositionEstimator::EstimatePositions(
   weights_.setConstant(constraint_matrix_.rows(), 1.0);
 
   // Set the lower bounds for the QP. The positions should be unbounded while
-  // the scales havea lower bound of 1.0.
+  // the scales have a lower bound of 1.0.
   Eigen::VectorXd lower_bound(constraint_matrix_.cols());
   lower_bound.head(3 * orientations.size())
       .setConstant(-std::numeric_limits<double>::infinity());

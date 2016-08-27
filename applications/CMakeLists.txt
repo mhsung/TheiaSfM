@@ -144,3 +144,8 @@ add_executable(exp_export_camera_view_directions_from_bboxes exp_export_camera_v
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_export_camera_view_directions_from_bboxes theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_run_bundle_adjustment exp_run_bundle_adjustment.cc
+  exp_bounding_box_utils.h exp_bounding_box_utils.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_run_bundle_adjustment theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+

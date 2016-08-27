@@ -7,7 +7,6 @@
 #include <gflags/gflags.h>
 #include <iostream>
 #include <sstream>
-#include <stlplus3/file_system.hpp>
 
 #include "exp_camera_param_utils.h"
 #include "unsupported/Eigen/MatrixFunctions"
@@ -391,87 +390,6 @@ void GetOrientationsFromReconstruction(
     const std::string basename = stlplus::basename_part(view->Name());
     (*orientations)[basename] = camera.GetOrientationAsRotationMatrix();
   }
-}
-
-void MapOrientationsToViewIds(
-    const Reconstruction& reconstruction,
-    const std::unordered_map<std::string, Eigen::Matrix3d>& name_orientations,
-    std::unordered_map<ViewId, Eigen::Matrix3d>* id_orientations) {
-  CHECK_NOTNULL(id_orientations);
-  id_orientations->clear();
-  id_orientations->reserve(name_orientations.size());
-
-  for(const auto& name_orientation : name_orientations) {
-    // FIXME:
-    // Now we simply assume that all view name has '.png' extension.
-    const auto& view_name = name_orientation.first + ".png";
-    const ViewId view_id = reconstruction.ViewIdFromName(view_name);
-    if (view_id == kInvalidViewId) {
-      LOG(WARNING) << "Invalid view name: '" << view_name << "'";
-    } else {
-      const auto& orientation = name_orientation.second;
-      (*id_orientations)[view_id] = orientation;
-    }
-  }
-}
-
-void MapOrientationsToViewNames(
-    const Reconstruction& reconstruction,
-    const std::unordered_map<ViewId, Eigen::Matrix3d>& id_orientations,
-    std::unordered_map<std::string, Eigen::Matrix3d>* name_orientations) {
-  CHECK_NOTNULL(name_orientations);
-  name_orientations->clear();
-  name_orientations->reserve(id_orientations.size());
-
-  for(const auto& id_orientation : id_orientations) {
-    const ViewId view_id = id_orientation.first;
-    const View* view = reconstruction.View(view_id);
-    if (view == nullptr) {
-      LOG(WARNING) << "Invalid view ID: '" << view_id << "'";
-    } else {
-      const std::string basename = stlplus::basename_part(view->Name());
-      const auto& orientation = id_orientation.second;
-      (*name_orientations)[basename] = orientation;
-    }
-  }
-}
-
-bool CheckOrientationNamesValid(
-    const std::unordered_map<std::string, Eigen::Matrix3d>& orientations,
-    const std::vector<std::string>& image_filenames,
-    std::unordered_map<std::string, Eigen::Matrix3d>*
-    orientations_with_image_filenames) {
-  if (orientations_with_image_filenames) {
-    orientations_with_image_filenames->reserve(orientations.size());
-  }
-
-  for (const auto& orientation : orientations) {
-    const std::string& orientation_name = orientation.first;
-
-    bool image_exists = false;
-    for (const auto& image_filename : image_filenames) {
-      std::string image_basename;
-      CHECK(theia::GetFilenameFromFilepath(
-          image_filename, false, &image_basename));
-      if (image_basename == orientation_name) {
-
-        if (orientations_with_image_filenames) {
-          orientations_with_image_filenames->emplace(
-              image_filename, orientation.second);
-        }
-
-        image_exists = true;
-        break;
-      }
-    }
-
-    if (!image_exists) {
-      LOG(WARNING) << "Image '" << orientation_name << "' does not exist.";
-      return false;
-    }
-  }
-
-  return true;
 }
 
 void SyncOrientationSequences(

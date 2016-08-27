@@ -41,6 +41,7 @@
 #include "theia/sfm/reconstruction_estimator_options.h"
 // @mhsung
 #include "theia/sfm/exp_global_reconstruction_estimator.h"
+#include "theia/sfm/exp_bundle_adjustment_only_estimator.h"
 
 namespace theia {
 
@@ -56,6 +57,9 @@ ReconstructionEstimator* ReconstructionEstimator::Create(
     // @mhsung
     case ReconstructionEstimatorType::EXP_GLOBAL:
       return new ExpGlobalReconstructionEstimator(options);
+      break;
+    case ReconstructionEstimatorType::BUNDLE_ADJUSTMENT_ONLY:
+      return new ExpBundleAdjustmentOnlyEstimator(options);
       break;
     default:
       LOG(FATAL) << "Invalid reconstruction estimator specified.";

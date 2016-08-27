@@ -101,7 +101,10 @@ inline ReconstructionEstimatorType StringToReconstructionEstimatorType(
   // @mhsung
   else if (reconstruction_estimator == "EXP_GLOBAL") {
     return ReconstructionEstimatorType::EXP_GLOBAL;
-  } else {
+  } else if (reconstruction_estimator == "BUNDLE_ADJUSTMENT_ONLY") {
+    return ReconstructionEstimatorType::BUNDLE_ADJUSTMENT_ONLY;
+  }
+  else {
     LOG(FATAL)
         << "Invalid reconstruction estimator type. Using GLOBAL instead.";
     return ReconstructionEstimatorType::GLOBAL;

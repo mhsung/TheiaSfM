@@ -142,8 +142,8 @@ int main(int argc, char *argv[]) {
     CHECK(ReadOrientations(FLAGS_initial_orientations_data_type,
                            FLAGS_initial_orientations_filepath,
                            &initial_orientations_with_basenames));
-    CHECK(CheckOrientationNamesValid(initial_orientations_with_basenames,
-                                     image_filenames, &initial_orientations));
+    CHECK(CheckViewNamesValid(initial_orientations_with_basenames,
+                              image_filenames, &initial_orientations));
   }
 
   // Read the feature tracks.
