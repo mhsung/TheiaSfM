@@ -242,7 +242,7 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
                       positions);
   }
 
-  VLOG(2) << num_point_to_camera_constraints << " point to camera constriants "
+  VLOG(2) << num_point_to_camera_constraints << " point to camera constraints "
                                                 "were added to the position "
                                                 "estimation problem.";
 }

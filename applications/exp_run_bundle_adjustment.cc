@@ -256,6 +256,7 @@ void SetOrientationsAndPositions(
   MapViewNamesToIds(*reconstruction_builder->GetReconstruction(),
                     orientations_with_names, &orientations);
 
+  // Read bounding boxes.
   std::unordered_map<std::string, Eigen::Vector4d> bounding_boxes_with_names;
   ReadBoundingBoxes(FLAGS_bounding_boxes_filepath, &bounding_boxes_with_names);
   std::unordered_map<theia::ViewId, Eigen::Vector4d> bounding_boxes;

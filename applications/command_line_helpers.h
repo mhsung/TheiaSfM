@@ -138,6 +138,10 @@ inline GlobalPositionEstimatorType StringToPositionEstimatorType(
     return GlobalPositionEstimatorType::LINEAR_TRIPLET;
   } else if (position_estimator == "LEAST_UNSQUARED_DEVIATION") {
     return GlobalPositionEstimatorType::LEAST_UNSQUARED_DEVIATION;
+  }
+  // @mhsung
+  else if (position_estimator == "CONSTRAINED_NONLINEAR") {
+    return GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR;
   } else {
     LOG(FATAL)
         << "Invalid position estimator type. Using NONLINEAR instead.";

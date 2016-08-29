@@ -59,7 +59,6 @@ enum class GlobalRotationEstimatorType {
   ROBUST_L1L2 = 0,
   NONLINEAR = 1,
   LINEAR = 2,
-
   // @mhsung
   CONSTRAINED_ROBUST_L1L2 = 3
 };
@@ -76,6 +75,8 @@ enum class GlobalPositionEstimatorType {
   NONLINEAR = 0,
   LINEAR_TRIPLET = 1,
   LEAST_UNSQUARED_DEVIATION = 2,
+  // @mhsung
+  CONSTRAINED_NONLINEAR = 3,
 };
 
 // Options for the reconstruction estimation.
@@ -167,6 +168,11 @@ struct ReconstructionEstimatorOptions {
   // Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is chosen
   // for global rotation estimator type.
   double rotation_estimation_constraint_weight = 1.0;
+
+  // @mhsung
+  // Constraint weight. Only used when 'CONSTRAINED_NONLINEAR' is chosen
+  // for global position estimator type.
+  double position_estimation_constraint_weight = 1.0;
 
   // --------------- Global Position Estimation Options --------------- //
   NonlinearPositionEstimator::Options nonlinear_position_estimator_options;

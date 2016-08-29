@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "applications/command_line_helpers.h"
+#include "applications/exp_bounding_box_utils.h"
 #include "applications/exp_camera_param_io.h"
 #include "applications/exp_camera_param_utils.h"
 
@@ -162,13 +163,15 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
 // ---- //
 DEFINE_string(initial_orientations_data_type, "", "");
 DEFINE_string(initial_orientations_filepath, "", "");
+DEFINE_string(initial_bounding_boxes_filepath, "", "");
 
 // Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
 DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 
 // Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is selected
 // as global rotation estimator type.
-DEFINE_double(rotation_estimation_constraint_weight, 1.0E3, "");
+DEFINE_double(rotation_estimation_constraint_weight, 1.0E2, "");
+DEFINE_double(position_estimation_constraint_weight, 1.0E2, "");
 
 DEFINE_string(match_pairs_file, "",
               "Filename of match pair list. Each line has 'name1,name2' "
@@ -293,6 +296,8 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
       FLAGS_exp_global_run_bundle_adjustment;
   reconstruction_estimator_options.rotation_estimation_constraint_weight =
       FLAGS_rotation_estimation_constraint_weight;
+  reconstruction_estimator_options.position_estimation_constraint_weight =
+      FLAGS_position_estimation_constraint_weight;
 
   return options;
 }
@@ -399,7 +404,6 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
   CHECK(ReadOrientations(
       FLAGS_initial_orientations_data_type, FLAGS_initial_orientations_filepath,
       &init_orientations_with_names));
-
   std::unordered_map<theia::ViewId, Eigen::Matrix3d> init_orientations;
   MapViewNamesToIds(*reconstruction_builder->GetReconstruction(),
                     init_orientations_with_names, &init_orientations);
@@ -409,13 +413,42 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
   for (const auto& init_orientation : init_orientations) {
     const theia::ViewId view_id = init_orientation.first;
     theia::View* view = reconstruction_builder->GetMutableReconstruction()
-        ->MutableView(init_orientation.first);
-    CHECK(view) << "View does not exist (View ID = " << view_id << ").";;
+        ->MutableView(view_id);
+    CHECK(view) << "View does not exist (View ID = " << view_id << ").";
+
     Eigen::Vector3d angle_axis;
     ceres::RotationMatrixToAngleAxis(
         ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
         angle_axis.data());
     view->SetInitialOrientation(angle_axis);
+  }
+}
+
+// @mhsung
+void SetInitialPositionDirections(ReconstructionBuilder*
+    reconstruction_builder) {
+  // Read orientation.
+  std::unordered_map<std::string, Eigen::Vector4d>
+      init_bounding_boxes_with_names;
+  ReadBoundingBoxes(FLAGS_initial_bounding_boxes_filepath,
+                    &init_bounding_boxes_with_names);
+  std::unordered_map<theia::ViewId, Eigen::Vector4d> init_bounding_boxes;
+  MapViewNamesToIds(*reconstruction_builder->GetReconstruction(),
+                    init_bounding_boxes_with_names, &init_bounding_boxes);
+
+  // FIXME:
+  // This part must be moved to 'ReconstructionBuilder'.
+  for (const auto& init_bounding_box : init_bounding_boxes) {
+    const theia::ViewId view_id = init_bounding_box.first;
+    theia::View* view = reconstruction_builder->GetMutableReconstruction()
+        ->MutableView(view_id);
+    CHECK(view) << "View does not exist (View ID = " << view_id << ").";
+
+    const Eigen::Vector3d cam_coord_cam_to_obj_dir =
+        ComputeCameraToObjectDirections(
+            init_bounding_box.second, view->CameraIntrinsicsPrior());
+    // Store object (origin) to camera direction.
+    view->SetInitialPositionDirection(-cam_coord_cam_to_obj_dir);
   }
 }
 
@@ -536,6 +569,11 @@ int main(int argc, char *argv[]) {
   // @mhsung
   if (FLAGS_initial_orientations_filepath != "") {
     SetInitialOrientations(&reconstruction_builder);
+  }
+
+  // @mhsung
+  if (FLAGS_initial_bounding_boxes_filepath != "") {
+    SetInitialPositionDirections(&reconstruction_builder);
   }
 
   std::vector<Reconstruction*> reconstructions;

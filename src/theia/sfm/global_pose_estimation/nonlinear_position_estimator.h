@@ -83,7 +83,10 @@ class NonlinearPositionEstimator : public PositionEstimator {
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
- private:
+ // @mhsung
+ // private -> protected.
+ //private:
+ protected:
   // Initialize all cameras to be random.
   void InitializeRandomPositions(
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,

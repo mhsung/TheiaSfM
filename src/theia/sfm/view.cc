@@ -46,12 +46,19 @@
 
 namespace theia {
 
+// @mhsung
 View::View() : name_(""), is_estimated_(false),
-               is_orientation_initialized_(false) {}
+               is_orientation_initialized_(false),
+               init_orientation_(Eigen::Vector3d::Zero()),
+               is_position_dir_initialized_(false),
+               init_position_dir_(Eigen::Vector3d::Zero()) {}
 
+// @mhsung
 View::View(const std::string& name)
     : name_(name), is_estimated_(false),
-      is_orientation_initialized_(false) {}
+      is_orientation_initialized_(false),
+      is_position_dir_initialized_(false),
+      init_position_dir_(Eigen::Vector3d::Zero()) {}
 
 const std::string& View::Name() const {
   return name_;
@@ -122,6 +129,24 @@ Eigen::Vector3d View::GetInitialOrientation() const {
 void View::RemoveInitialOrientation() {
   init_orientation_.setZero();
   is_orientation_initialized_ = false;
+}
+
+// @mhsung
+void View::SetInitialPositionDirection(const Eigen::Vector3d& position_dir) {
+  init_position_dir_ = position_dir;
+  is_position_dir_initialized_ = true;
+}
+
+// @mhsung
+Eigen::Vector3d View::GetInitialPositionDirection() const {
+  CHECK(is_position_dir_initialized_);
+  return init_position_dir_;
+}
+
+// @mhsung
+void View::RemoveInitialPositionDirection() {
+  init_position_dir_.setZero();
+  is_position_dir_initialized_ = false;
 }
 
 }  // namespace theia

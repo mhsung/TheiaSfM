@@ -34,6 +34,7 @@
 
 #include "theia/sfm/global_reconstruction_estimator.h"
 
+#include <ceres/rotation.h>
 #include <Eigen/Core>
 #include <memory>
 #include <sstream>  // NOLINT
@@ -60,10 +61,12 @@
 #include "theia/sfm/view_graph/remove_disconnected_view_pairs.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/solvers/sample_consensus_estimator.h"
+#include "theia/util/map_util.h"
 #include "theia/util/random.h"
 #include "theia/util/timer.h"
 // @mhsung
 #include "theia/sfm/global_pose_estimation/constrained_robust_rotation_estimator.h"
+#include "theia/sfm/global_pose_estimation/constrained_nonlinear_position_estimator.h"
 
 namespace theia {
 
@@ -309,23 +312,25 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
   if (options_.global_rotation_estimator_type ==
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
 
-    std::unordered_map<ViewId, Eigen::Vector3d> constrained_views;
-    constrained_views.reserve(view_graph_->NumViews());
+    std::unordered_map<ViewId, Eigen::Vector3d> constrained_orientations;
+    constrained_orientations.reserve(view_graph_->NumViews());
     for (const ViewId view_id : reconstruction_->ViewIds()) {
       // Add a constrained view if it exists in the graph and it has initial
       // orientation.
       const View* view = reconstruction_->View(view_id);
-      if (view_graph_->HasView(view_id) && view->IsOrientationInitialized()) {
-        constrained_views[view_id] = view->GetInitialOrientation();
+      if (view_graph_->HasView(view_id) &&
+          view != nullptr &&
+          view->IsOrientationInitialized()) {
+        constrained_orientations[view_id] = view->GetInitialOrientation();
       }
     }
-    CHECK(!constrained_views.empty())
+    CHECK(!constrained_orientations.empty())
     << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
 
     // Initialize the orientation estimations by walking along the maximum
     // spanning tree.
     OrientationsFromMaximumSpanningTree(
-        *view_graph_, &orientations_, &constrained_views);
+        *view_graph_, &orientations_, &constrained_orientations);
 
     RobustRotationEstimator::Options robust_rotation_estimator_options;
     std::unique_ptr<ConstrainedRobustRotationEstimator>
@@ -334,7 +339,7 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
         options_.rotation_estimation_constraint_weight));
 
     return constrained_rotation_estimator->EstimateRotations(
-        view_pairs, constrained_views, &orientations_);
+        view_pairs, constrained_orientations, &orientations_);
   }
 
   // Choose the global rotation estimation type.
@@ -421,6 +426,46 @@ void GlobalReconstructionEstimator::FilterRelativeTranslation() {
 bool GlobalReconstructionEstimator::EstimatePosition() {
   // Estimate position.
   const auto& view_pairs = view_graph_->GetAllEdges();
+
+  // @mhsung
+  if (options_.global_position_estimator_type ==
+    GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
+
+    std::unordered_map<ViewId, Eigen::Vector3d> constrained_position_dirs;
+    constrained_position_dirs.reserve(view_graph_->NumViews());
+    for (const ViewId view_id : reconstruction_->ViewIds()) {
+      // Add a constrained view if it exists in the graph and it has initial
+      // orientation.
+      const View* view = reconstruction_->View(view_id);
+      const Eigen::Vector3d* orientation = FindOrNull(orientations_, view_id);
+      if (view_graph_->HasView(view_id) &&
+          view != nullptr &&
+          view->IsPositionDirectionInitialized() &&
+          orientation != nullptr) {
+        // Compute camera coordinates camera direction to world coordinates
+        // camera direction.
+        Eigen::Matrix3d orientation_mat;
+        ceres::AngleAxisToRotationMatrix(orientation->data(),
+            ceres::ColumnMajorAdapter3x3(orientation_mat.data()));
+        const Eigen::Vector3d world_coord_obj_to_cam_dir =
+            orientation_mat.inverse() * view->GetInitialPositionDirection();
+        constrained_position_dirs[view_id] = world_coord_obj_to_cam_dir;
+      }
+    }
+    CHECK(!constrained_position_dirs.empty())
+    << "No initial orientation is given. Re-run with 'NONLINEAR' option.";
+
+    std::unique_ptr<ConstrainedNonlinearPositionEstimator> position_estimator(
+        new ConstrainedNonlinearPositionEstimator(
+        options_.nonlinear_position_estimator_options, *reconstruction_,
+        options_.position_estimation_constraint_weight));
+
+    return position_estimator->EstimatePositions(view_pairs,
+                                                 orientations_,
+                                                 constrained_position_dirs,
+                                                 &positions_);
+  }
+
   std::unique_ptr<PositionEstimator> position_estimator;
 
   // Choose the global position estimation type.

@@ -1,4 +1,5 @@
 // Author: Minhyuk Sung (mhsung@cs.stanford.edu)
+// Copied from 'robust_rotation_estimator.cc'
 
 #include "theia/sfm/global_pose_estimation/constrained_robust_rotation_estimator.h"
 
@@ -43,20 +44,22 @@ Eigen::Vector3d ComputeAbsoluteRotationError(
 
 bool ConstrainedRobustRotationEstimator::EstimateRotations(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Eigen::Vector3d>& constrained_views,
+    const std::unordered_map<ViewId, Eigen::Vector3d>& constrained_orientations,
     std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations) {
   view_pairs_ = &view_pairs;
-  constrained_views_ = &constrained_views;
+  constrained_orientations_ = &constrained_orientations;
   global_orientations_ = global_orientations;
 
+  // @mhsung
   // Use 'RobustRotationEstimator' if no constraint is given.
-  CHECK(!constrained_views_->empty());
+  CHECK(!constrained_orientations_->empty());
 
   // Check whether all constrained views exist in the given list.
-  for (const auto& view : *constrained_views_) {
-    FindOrDie(*global_orientations, view.first);
+  for (const auto& orientation : *constrained_orientations_) {
+    FindOrDie(*global_orientations, orientation.first);
   }
 
+  // @mhsung
   // If we have constraints, all view are used without fixing one frame as
   // the identity rotation.
   int index = 0;
@@ -74,6 +77,7 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
     return false;
   }
 
+  // @mhsung
   // Do not use IRLS.
   // FIXME:
   // Fix IRLS to use weights properly.
@@ -89,7 +93,7 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
 void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
   const int num_variables = static_cast<int>(global_orientations_->size() * 3);
   const int num_equations = static_cast<int>(
-      (view_pairs_->size() + constrained_views_->size()) * 3);
+      (view_pairs_->size() + constrained_orientations_->size()) * 3);
 
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.
@@ -105,7 +109,7 @@ void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
 
   weight_vector_ = Eigen::VectorXd::Ones(num_equations);
   // Set weights for constraints.
-  weight_vector_.tail(constrained_views_->size() * 3).setConstant(
+  weight_vector_.tail(constrained_orientations_->size() * 3).setConstant(
       constraint_weight_);
 }
 
@@ -116,8 +120,8 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
   int rotation_error_index = static_cast<int>(view_pairs_->size());
 
   // Add constraints.
-  for (const auto& view : *constrained_views_) {
-    const int view_index = FindOrDie(view_id_to_index_, view.first);
+  for (const auto& orientation : *constrained_orientations_) {
+    const int view_index = FindOrDie(view_id_to_index_, orientation.first);
     if (view_index != kConstantRotationIndex) {
       triplet_list->emplace_back(3 * rotation_error_index + 0,
                                  3 * view_index + 0,
@@ -142,10 +146,11 @@ void ConstrainedRobustRotationEstimator::ComputeRotationError() {
   int rotation_error_index = static_cast<int>(view_pairs_->size());
 
   // Add constraints.
-  for (const auto& view : *constrained_views_) {
+  for (const auto& orientation : *constrained_orientations_) {
     relative_rotation_error_.segment<3>(3 * rotation_error_index) =
         ComputeAbsoluteRotationError(
-            view.second, FindOrDie(*global_orientations_, view.first));
+            orientation.second,
+            FindOrDie(*global_orientations_, orientation.first));
     ++rotation_error_index;
   }
 }

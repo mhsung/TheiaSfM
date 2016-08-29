@@ -1,4 +1,5 @@
 // Author: Minhyuk Sung (mhsung@cs.stanford.edu)
+// Copied from 'robust_rotation_estimator.h'
 
 #ifndef THEIA_SFM_GLOBAL_POSE_ESTIMATION_CONSTRAINED_ROBUST_ROTATION_ESTIMATOR_H_
 #define THEIA_SFM_GLOBAL_POSE_ESTIMATION_CONSTRAINED_ROBUST_ROTATION_ESTIMATOR_H_
@@ -25,7 +26,8 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
   // guess. Returns true on successful estimation and false otherwise.
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& constrained_views,
+      const std::unordered_map<ViewId, Eigen::Vector3d>&
+      constrained_orientations,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
 
  protected:
@@ -54,7 +56,7 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
   // Remove constant weight and use weight vector only.
   const double constraint_weight_;
 
-  const std::unordered_map<ViewId, Eigen::Vector3d>* constrained_views_;
+  const std::unordered_map<ViewId, Eigen::Vector3d>* constrained_orientations_;
 };
 
 }  // namespace theia

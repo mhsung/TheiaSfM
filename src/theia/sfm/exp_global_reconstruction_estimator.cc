@@ -167,12 +167,6 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   global_estimator_timings.rotation_filtering_time =
       timer.ElapsedTimeInSeconds();
 
-
-  // Initialize positions with origin.
-  for (const auto& item : orientations_) {
-    positions_[item.first] = Eigen::Vector3d::Zero();
-  }
-
   // Step 5. Optimize relative translations.
   LOG(INFO) << "Optimizing the pairwise translation estimations.";
   timer.Reset();
