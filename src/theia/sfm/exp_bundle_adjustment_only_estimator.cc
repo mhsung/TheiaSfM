@@ -112,12 +112,6 @@ ReconstructionEstimatorSummary ExpBundleAdjustmentOnlyEstimator::Estimate(
     EstimateStructure();
     summary.triangulation_time += timer.ElapsedTimeInSeconds();
 
-    // @mhsung
-    // Set all tracks as estimated.
-    for (const auto& track_id : reconstruction_->TrackIds()) {
-      reconstruction_->MutableTrack(track_id)->SetEstimated(true);
-    }
-
     SetUnderconstrainedAsUnestimated(reconstruction_);
 
     // Step 9. Bundle Adjustment.

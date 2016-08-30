@@ -6,7 +6,9 @@
 #include <time.h>
 #include <theia/theia.h>
 #include <chrono>  // NOLINT
+#include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -16,10 +18,26 @@
 #include "theia/matching/feature_matcher_options.h"
 
 // Input/output files.
-DEFINE_string(images, "", "Wildcard of images to reconstruct.");
+DEFINE_string(image_dir, "", "");
+DEFINE_string(image_filenames_file, "", "");
 DEFINE_string(feature_tracks_file, "", "Filename of the feature track file.");
 DEFINE_string(output_dir, "", "Output directory.");
 
+
+// Get the image filenames.
+// The vector index is equal to view ID.
+void ReadImageFilenames(std::vector<std::string>* image_filenames) {
+  CHECK_NOTNULL(image_filenames)->clear();
+
+  std::ifstream file(FLAGS_image_filenames_file);
+  CHECK(file.good()) << "Can't read file: '" << FLAGS_image_filenames_file;
+
+  std::string line;
+  while(std::getline(file, line)) {
+    if (line == "") continue;
+    image_filenames->push_back(line);
+  }
+}
 
 void DrawFeatures(
     const std::string& image_filepath,
@@ -53,27 +71,23 @@ int main(int argc, char *argv[]) {
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
-  // Get the filepaths of the image files.
-  std::vector<std::string> image_files;
-  CHECK(theia::GetFilepathsFromWildcard(FLAGS_images, &image_files))
-  << "Could not find images that matched the filepath: " << FLAGS_images
-  << ". NOTE that the ~ filepath is not supported.";
-  CHECK_GT(image_files.size(), 0) << "No images found in: " << FLAGS_images;
+  // Get the filenames of the image files.
+  // The vector index is equal to view ID.
+  std::vector<std::string> image_filenames;
+  ReadImageFilenames(&image_filenames);
 
   // Read the feature tracks.
   std::list<theia::FeatureTrackPtr> feature_tracks;
   CHECK(ReadFeatureTracks(FLAGS_feature_tracks_file, &feature_tracks));
 
-  std::unordered_map<int, std::list<theia::Feature> > image_features;
+  std::unordered_map<theia::ViewId, std::list<theia::Feature> > image_features;
   GetImageFeaturesFromFeatureTracks(feature_tracks, &image_features);
 
-  const int num_images = image_files.size();
-  for (int i = 0; i < num_images; ++i) {
-    const std::string image_file = image_files[i];
-    // FIXME:
-    // Do not use image index.
+  for (theia::ViewId view_id = 0; view_id < image_filenames.size(); ++view_id) {
+    const std::string image_file =
+        FLAGS_image_dir + "/" + image_filenames[view_id];
     const std::list<theia::Feature>* features =
-        theia::FindOrNull(image_features, i);
+        theia::FindOrNull(image_features, view_id);
     if (features != nullptr) {
       DrawFeatures(image_file, *features);
     }

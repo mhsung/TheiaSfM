@@ -50,35 +50,35 @@ bool ReadFeatureTracks(const std::string& feature_tracks_file,
 
 void GetImageFeaturesFromFeatureTracks(
     const std::list<theia::FeatureTrackPtr>& feature_tracks,
-    std::unordered_map<int, std::list<Feature> >* image_features) {
+    std::unordered_map<ViewId, std::list<Feature> >* image_features) {
   CHECK_NOTNULL(image_features)->clear();
 
   for (const FeatureTrackPtr& feature_track : feature_tracks) {
-    for (int idx = 0; idx < feature_track->length_; ++idx) {
-      const Eigen::Vector2d feature = feature_track->points_[idx];
-      const int image_idx = feature_track->start_index_ + idx;
-      (*image_features)[image_idx].push_back(feature);
+    for (ViewId i = 0; i < feature_track->length_; ++i) {
+      const Eigen::Vector2d feature = feature_track->points_[i];
+      const ViewId view_id = feature_track->start_index_ + i;
+      (*image_features)[view_id].push_back(feature);
     }
   }
 }
 
 void GetCorrespodnencesFromFeatureTracks(
     const std::list<FeatureTrackPtr>& feature_tracks,
-    std::unordered_map<std::pair<int, int>,
+    std::unordered_map<theia::ViewIdPair,
         std::list<theia::FeatureCorrespondence> >* image_pair_correspondences) {
   CHECK_NOTNULL(image_pair_correspondences)->clear();
 
   for (const FeatureTrackPtr& feature_track : feature_tracks) {
     // For all pairs in frames in the track.
-    for (int idx1 = 0; idx1 < feature_track->length_ - 1; ++idx1) {
-      const Eigen::Vector2d feature1 = feature_track->points_[idx1];
-      const int image1_idx = feature_track->start_index_ + idx1;
+    for (ViewId i1 = 0; i1 < feature_track->length_ - 1; ++i1) {
+      const Eigen::Vector2d feature1 = feature_track->points_[i1];
+      const ViewId view1_id = feature_track->start_index_ + i1;
 
-      for (int idx2 = idx1 + 1; idx2 < feature_track->length_; ++idx2) {
-        const Eigen::Vector2d feature2 = feature_track->points_[idx2];
-        const int image2_idx = feature_track->start_index_ + idx2;
+      for (ViewId i2 = i1 + 1; i2 < feature_track->length_; ++i2) {
+        const Eigen::Vector2d feature2 = feature_track->points_[i2];
+        const ViewId view2_id = feature_track->start_index_ + i2;
 
-        (*image_pair_correspondences)[std::make_pair(image1_idx, image2_idx)]
+        (*image_pair_correspondences)[std::make_pair(view1_id, view2_id)]
             .push_back(FeatureCorrespondence(feature1, feature2));
       }
     }

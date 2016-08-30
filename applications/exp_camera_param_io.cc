@@ -270,8 +270,7 @@ void WriteOrientationsAsCameraParams(
 
     // Write camera parameters.
     std::ofstream file(filepath);
-    const double* values = camera_params.data();
-    for(int i = 0; i < 3; ++i) file << values[i] << " ";
+    for(int i = 0; i < 3; ++i) file << camera_params[i] << " ";
     file.close();
     VLOG(3) << "Saved '" << filepath << "'.";
   }
@@ -298,8 +297,7 @@ void WriteOrientationsAsCameraParams(
 
     // Write camera parameters.
     std::ofstream file(filepath);
-    const double* values = camera_params.data();
-    for(int i = 0; i < 3; ++i) file << values[i] << " ";
+    for(int i = 0; i < 3; ++i) file << camera_params[i] << " ";
     file.close();
     VLOG(3) << "Saved '" << filepath << "'.";
   }

@@ -14,8 +14,8 @@
 namespace theia {
 
 struct FeatureTrack {
-    int start_index_;
-    int length_;
+    ViewId start_index_;
+    ViewId length_;
     std::vector<Eigen::Vector2d> points_;
 
     static FeatureTrack* Parse(const std::string& str);
@@ -27,11 +27,11 @@ bool ReadFeatureTracks(const std::string& feature_tracks_file,
 
 void GetImageFeaturesFromFeatureTracks(
     const std::list<theia::FeatureTrackPtr>& feature_tracks,
-    std::unordered_map<int, std::list<Feature> >* image_features);
+    std::unordered_map<ViewId, std::list<Feature> >* image_features);
 
 void GetCorrespodnencesFromFeatureTracks(
     const std::list<theia::FeatureTrackPtr>& feature_tracks,
-    std::unordered_map<std::pair<int, int>,
-        std::list<FeatureCorrespondence> >* image_pair_correspondences);
+    std::unordered_map<ViewIdPair, std::list<FeatureCorrespondence> >*
+    image_pair_correspondences);
 
 }

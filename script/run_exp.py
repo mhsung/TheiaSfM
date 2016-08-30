@@ -44,6 +44,7 @@ PATHS = namedtuple('PATHS', [
     'ground_truth_camera_param_path',
     'orientation_path',
     'feature_track_path',
+    'image_filenames_path',
     'feature_track_info_path',
     ])
 
@@ -119,6 +120,8 @@ def set_paths():
             os.path.join(FLAGS.data_dir, 'feature_tracks')
         if not os.path.isdir(PATHS.feature_track_path):
             os.makedirs(PATHS.feature_track_path)
+        PATHS.image_filenames_path = \
+            os.path.join(PATHS.feature_track_path, 'image_filenames.txt')
         PATHS.feature_track_info_path =\
             os.path.join(PATHS.feature_track_path, 'feature_tracks.txt')
 

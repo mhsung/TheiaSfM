@@ -38,6 +38,7 @@ FLAGS = gflags.FLAGS
 # Set input files.
 gflags.DEFINE_string('images', '', '')
 gflags.DEFINE_string('output_image_dir', '', '')
+gflags.DEFINE_string('output_image_list_file', '', '')
 gflags.DEFINE_string('output_feature_tracks_file', '', '')
 gflags.DEFINE_bool('show_images', False, '')
 
@@ -85,6 +86,12 @@ class App:
         # @mhsung
         if not os.path.exists(FLAGS.output_image_dir):
             os.makedirs(FLAGS.output_image_dir)
+
+        # @mhsung
+        image_filenames = [os.path.basename(x) for x in self.image_files]
+        image_list_file = open(FLAGS.output_image_list_file, 'w')
+        for image_filename in image_filenames:
+            image_list_file.write('{}\n'.format(image_filename))
 
         track_file = open(FLAGS.output_feature_tracks_file, 'w')
         assert(track_file)

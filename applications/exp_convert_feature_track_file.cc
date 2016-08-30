@@ -20,7 +20,7 @@
 
 
 // Input/output files.
-DEFINE_string(images, "", "Wildcard of images to reconstruct.");
+DEFINE_string(image_filenames_file, "", "");
 DEFINE_string(calibration_file, "",
               "Calibration file containing image calibration data.");
 DEFINE_string(feature_tracks_file, "", "Filename of the feature track file.");
@@ -43,6 +43,22 @@ DEFINE_bool(bundle_adjust_two_view_geometry, true,
 DEFINE_string(initial_orientations_data_type, "", "");
 DEFINE_string(initial_orientations_filepath, "", "");
 
+
+// @mhsung
+// Get the image filenames.
+// The vector index is equal to view ID.
+void ReadImageFilenames(std::vector<std::string>* image_filenames) {
+  CHECK_NOTNULL(image_filenames)->clear();
+
+  std::ifstream file(FLAGS_image_filenames_file);
+  CHECK(file.good()) << "Can't read file: '" << FLAGS_image_filenames_file;
+
+  std::string line;
+  while(std::getline(file, line)) {
+    if (line == "") continue;
+    image_filenames->push_back(line);
+  }
+}
 
 // @mhsung
 void ReadInitialOrientations(
@@ -79,21 +95,6 @@ void SetMatchingOptions(theia::FeatureMatcherOptions* matching_options) {
       FLAGS_min_num_inliers_for_valid_match;
 }
 
-// Gets the image filenames and filepaths from the features filepaths.
-void GetImageFilesAndFilenames(
-    const std::vector<std::string>& features_filepaths,
-    std::vector<std::string>* image_filenames) {
-  image_filenames->resize(features_filepaths.size());
-  for (int i = 0; i < features_filepaths.size(); i++) {
-    const std::size_t features_pos = features_filepaths[i].find(".features");
-    const std::string image_filepath =
-        features_filepaths[i].substr(0, features_pos);
-    CHECK(theia::GetFilenameFromFilepath(image_filepath,
-                                         true,
-                                         &image_filenames->at(i)));
-  }
-}
-
 // Read the camera intrinsics from a file.
 void ReadIntrinsicsFromCalibrationFile(
     const std::vector<std::string>& image_filenames,
@@ -116,16 +117,10 @@ int main(int argc, char *argv[]) {
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
-  // Get the filepaths of the image files.
-  std::vector<std::string> image_files;
-  CHECK(theia::GetFilepathsFromWildcard(FLAGS_images, &image_files))
-  << "Could not find images that matched the filepath: " << FLAGS_images
-  << ". NOTE that the ~ filepath is not supported.";
-  CHECK_GT(image_files.size(), 0) << "No images found in: " << FLAGS_images;
-
-  // Get the image files and image filenames.
+  // Get the filenames of the image files.
+  // The vector index is equal to view ID.
   std::vector<std::string> image_filenames;
-  GetImageFilesAndFilenames(image_files, &image_filenames);
+  ReadImageFilenames(&image_filenames);
 
   // Read the intrinsics from a calibration file.
   std::vector<theia::CameraIntrinsicsPrior> intrinsics;
@@ -147,19 +142,18 @@ int main(int argc, char *argv[]) {
   }
 
   // Read the feature tracks.
-  std::list<FeatureTrackPtr> feature_tracks;
+  std::list<theia::FeatureTrackPtr> feature_tracks;
   CHECK(ReadFeatureTracks(FLAGS_feature_tracks_file, &feature_tracks));
 
   // Extract matches from the feature tracks.
-  std::unordered_map< std::pair<int, int>, std::list<FeatureCorrespondence> >
+  std::unordered_map<theia::ViewIdPair, std::list<FeatureCorrespondence> >
       image_pair_correspondences;
   GetCorrespodnencesFromFeatureTracks(
       feature_tracks, &image_pair_correspondences);
   LOG(INFO) << "Parsing feature tracks completed.";
 
   std::vector<theia::ImagePairMatch> matches;
-  //CreateMatchesFromCorrespondences(
-  CreateMatchesFromCorrespondencesTest(
+  CreateMatchesFromCorrespondences(
       image_pair_correspondences, image_filenames, intrinsics,
       initial_orientations, matching_options, &matches);
   LOG(INFO) << "Extracting matches from feature tracks completed.";

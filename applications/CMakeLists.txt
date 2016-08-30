@@ -150,3 +150,8 @@ add_executable(exp_run_bundle_adjustment exp_run_bundle_adjustment.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
 target_link_libraries(exp_run_bundle_adjustment theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_match_objects_using_feature_tracks exp_match_objects_using_feature_tracks.cc
+  exp_bounding_box_utils.h exp_bounding_box_utils.cc
+  exp_feature_track_io.h exp_feature_track_io.cc)
+target_link_libraries(exp_match_objects_using_feature_tracks theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+

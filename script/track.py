@@ -23,6 +23,7 @@ def track_features(FLAGS, PATHS):
            ' \\\n'
     cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
     cmd += '--output_image_dir=' + PATHS.feature_track_path + ' \\\n'
+    cmd += '--output_image_list_file=' + PATHS.image_filenames_path + ' \\\n'
     cmd += '--output_feature_tracks_file=' + PATHS.feature_track_info_path
 
     #cmd += '--log_dir=' + PATHS.log_path
@@ -36,7 +37,7 @@ def extract_matches(FLAGS, PATHS):
     cmd += FLAGS.bin_dir + '/exp_convert_feature_track_file' + ' \\\n'
 
     #cmd += '--num_threads=' + str(FLAGS.num_threads) + ' \\\n'
-    cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
+    cmd += '--image_filenames_file=' + PATHS.image_filenames_path + ' \\\n'
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
     cmd += '--feature_tracks_file=' + PATHS.feature_track_info_path + ' \\\n'
     cmd += '--output_matches_file=' + PATHS.matches_file + ' \\\n'
