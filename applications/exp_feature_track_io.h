@@ -25,6 +25,10 @@ typedef std::unique_ptr<FeatureTrack> FeatureTrackPtr;
 bool ReadFeatureTracks(const std::string& feature_tracks_file,
                        std::list<FeatureTrackPtr>* feature_tracks);
 
+bool GetStartAndEndIndices(
+    const std::list<theia::FeatureTrackPtr>& feature_tracks,
+    theia::ViewId* start_index, theia::ViewId* end_index);
+
 void GetImageFeaturesFromFeatureTracks(
     const std::list<theia::FeatureTrackPtr>& feature_tracks,
     std::unordered_map<ViewId, std::list<Feature> >* image_features);

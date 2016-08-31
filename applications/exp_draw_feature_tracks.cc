@@ -17,11 +17,12 @@
 #include "applications/exp_feature_track_io.h"
 #include "theia/matching/feature_matcher_options.h"
 
+
 // Input/output files.
-DEFINE_string(image_dir, "", "");
+DEFINE_string(images_dir, "", "");
 DEFINE_string(image_filenames_file, "", "");
-DEFINE_string(feature_tracks_file, "", "Filename of the feature track file.");
-DEFINE_string(output_dir, "", "Output directory.");
+DEFINE_string(feature_tracks_file, "", "");
+DEFINE_string(output_dir, "", "");
 
 
 // Get the image filenames.
@@ -64,7 +65,7 @@ void DrawFeatures(
   const std::string output_filepath =
       FLAGS_output_dir + "/" + image_name + ".png";
   canvas.Write(output_filepath);
-  LOG(INFO) << "Saved '" << output_filepath << "'.";
+  VLOG(3) << "Saved '" << output_filepath << "'.";
 }
 
 int main(int argc, char *argv[]) {
@@ -85,7 +86,7 @@ int main(int argc, char *argv[]) {
 
   for (theia::ViewId view_id = 0; view_id < image_filenames.size(); ++view_id) {
     const std::string image_file =
-        FLAGS_image_dir + "/" + image_filenames[view_id];
+        FLAGS_images_dir + "/" + image_filenames[view_id];
     const std::list<theia::Feature>* features =
         theia::FindOrNull(image_features, view_id);
     if (features != nullptr) {

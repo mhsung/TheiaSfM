@@ -48,6 +48,28 @@ bool ReadFeatureTracks(const std::string& feature_tracks_file,
   return true;
 }
 
+bool GetStartAndEndIndices(
+    const std::list<theia::FeatureTrackPtr>& feature_tracks,
+    theia::ViewId* start_index, theia::ViewId* end_index) {
+  CHECK_NOTNULL(start_index);
+  CHECK_NOTNULL(end_index);
+
+  (*start_index) = std::numeric_limits<theia::ViewId>::max();
+  (*end_index) = 0;
+
+  for (const auto& feature_track : feature_tracks) {
+    const theia::ViewId track_start_index = feature_track->start_index_;
+    const theia::ViewId track_end_index =
+        feature_track->start_index_ + feature_track->length_;
+    *start_index = std::min(*start_index, track_start_index);
+    *end_index = std::max(*end_index, track_end_index);
+  }
+
+  VLOG(2) << "Start View ID: " << *start_index;
+  VLOG(2) << "End View ID: " << *end_index;
+  return (*end_index > *start_index);
+}
+
 void GetImageFeaturesFromFeatureTracks(
     const std::list<theia::FeatureTrackPtr>& feature_tracks,
     std::unordered_map<ViewId, std::list<Feature> >* image_features) {
