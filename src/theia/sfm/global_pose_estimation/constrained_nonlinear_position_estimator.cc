@@ -64,7 +64,7 @@ ConstrainedNonlinearPositionEstimator::ConstrainedNonlinearPositionEstimator(
 bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     const std::unordered_map<ViewId, Vector3d>& orientations,
-    const std::unordered_map<ViewId, Vector3d>& constrained_position_dirs,
+    const ObjectViewPositionDirections& object_view_constraints,
     std::unordered_map<ViewId, Vector3d>* positions) {
   CHECK_NOTNULL(positions);
   if (view_pairs.empty() || orientations.empty()) {
@@ -75,7 +75,7 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
 
   // @mhsung
   // Use 'NonlinearPositionEstimator' if no constraint is given.
-  CHECK(!constrained_position_dirs.empty());
+  CHECK(!object_view_constraints.empty());
 
   triangulated_points_.clear();
   problem_.reset(new ceres::Problem());
@@ -88,7 +88,7 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
   // Initialize positions to be random.
   // @mhsung
   InitializeRandomPositions(
-      orientations, constrained_position_dirs, positions);
+      orientations, object_view_constraints, positions);
 
   // Add the constraints to the problem.
   AddCameraToCameraConstraints(orientations, positions);
@@ -99,7 +99,7 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
 
   // @mhsung
   AddSingleCameraConstraints(
-      orientations, constrained_position_dirs, positions);
+      orientations, object_view_constraints, positions);
 
   // @mhsung
   // If we have constraints, all view are used without fixing one frame as
@@ -154,16 +154,18 @@ void ConstrainedNonlinearPositionEstimator::InitializeRandomPositions(
 
   // @mhsung
   // Use fixed seed.
-  std::srand(kTheiaRandomSeed);
+  InitRandomGenerator();
   for (const auto& orientation : orientations) {
     if (ContainsKey(constrained_positions, orientation.first)) {
       // Use initial position directions if given.
       const Eigen::Vector3d* init_position_dir =
           FindOrNull(constrained_position_dirs, orientation.first);
+
       if (init_position_dir != nullptr) {
         (*positions)[orientation.first] = 100.0 * (*init_position_dir);
       } else {
-        (*positions)[orientation.first] = 100.0 * Vector3d::Random();
+        (*positions)[orientation.first] =
+            100.0 * RandVector3d().normalized();
       }
     }
   }

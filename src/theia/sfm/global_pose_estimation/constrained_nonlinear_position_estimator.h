@@ -15,6 +15,8 @@
 #include "theia/sfm/reconstruction.h"
 #include "theia/sfm/types.h"
 #include "theia/sfm/view_triplet.h"
+// @mhsung
+#include "theia/sfm/object_view_constraint.h"
 
 namespace theia {
 
@@ -31,8 +33,7 @@ class ConstrainedNonlinearPositionEstimator
   bool EstimatePositions(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
       const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
-      const std::unordered_map<ViewId, Eigen::Vector3d>&
-      constrained_position_dirs,
+      const ObjectViewPositionDirections& object_view_constraints,
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
  private:

@@ -10,11 +10,11 @@
 #include <unordered_map>
 
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
-// @mhsung
-#include "theia/sfm/object_view_constraint.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/util/hash.h"
+// @mhsung
+#include "theia/sfm/object_view_constraint.h"
 
 namespace theia {
 

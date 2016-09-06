@@ -130,6 +130,9 @@ class NonlinearPositionEstimator : public PositionEstimator {
   void AddCamerasAndPointsToParameterGroups(
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
+  // @mhsung
+  static Eigen::Vector3d RandVector3d();
+
   const NonlinearPositionEstimator::Options options_;
   const Reconstruction& reconstruction_;
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;

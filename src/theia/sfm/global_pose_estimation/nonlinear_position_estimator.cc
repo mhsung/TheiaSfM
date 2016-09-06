@@ -171,10 +171,10 @@ void NonlinearPositionEstimator::InitializeRandomPositions(
 
   // @mhsung
   // Use fixed seed.
-  std::srand(kTheiaRandomSeed);
+  InitRandomGenerator();
   for (const auto& orientation : orientations) {
     if (ContainsKey(constrained_positions, orientation.first)) {
-      (*positions)[orientation.first] = 100.0 * Vector3d::Random();
+      (*positions)[orientation.first] = 100.0 * RandVector3d();
     }
   }
 }
@@ -232,9 +232,9 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
 
   // @mhsung
   // Use fixed seed.
-  std::srand(kTheiaRandomSeed);
+  InitRandomGenerator();
   for (const TrackId track_id : tracks_to_add) {
-    triangulated_points_[track_id] = 100.0 * Vector3d::Random();
+    triangulated_points_[track_id] = 100.0 * RandVector3d();
 
     AddTrackToProblem(track_id,
                       orientations,
@@ -383,6 +383,14 @@ void NonlinearPositionEstimator::AddCamerasAndPointsToParameterGroups(
   for (auto& position : *positions) {
     parameter_ordering->AddElementToGroup(position.second.data(), 1);
   }
+}
+
+// @mhsung
+Eigen::Vector3d NonlinearPositionEstimator::RandVector3d() {
+  return Eigen::Vector3d(
+      RandDouble(-1.0, +1.0),
+      RandDouble(-1.0, +1.0),
+      RandDouble(-1.0, +1.0));
 }
 
 }  // namespace theia
