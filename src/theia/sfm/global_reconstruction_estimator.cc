@@ -67,6 +67,7 @@
 // @mhsung
 #include "theia/sfm/global_pose_estimation/constrained_robust_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/constrained_nonlinear_position_estimator.h"
+#include "theia/sfm/object_view_constraint.h"
 
 namespace theia {
 
@@ -312,8 +313,12 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
   if (options_.global_rotation_estimator_type ==
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
 
-    std::unordered_map<ViewId, Eigen::Vector3d> constrained_orientations;
-    constrained_orientations.reserve(view_graph_->NumViews());
+    // Extend to multiple object cases.
+    std::unordered_map<ObjectId, ObjectViewOrientations>
+        object_view_orientations;
+    object_view_orientations.emplace(0, ObjectViewOrientations());
+
+    object_view_orientations[0].reserve(view_graph_->NumViews());
     for (const ViewId view_id : reconstruction_->ViewIds()) {
       // Add a constrained view if it exists in the graph and it has initial
       // orientation.
@@ -321,16 +326,17 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
       if (view_graph_->HasView(view_id) &&
           view != nullptr &&
           view->IsOrientationInitialized()) {
-        constrained_orientations[view_id] = view->GetInitialOrientation();
+        object_view_orientations[0][view_id] =
+            view->GetInitialOrientation();
       }
     }
-    CHECK(!constrained_orientations.empty())
+    CHECK(!object_view_orientations[0].empty())
     << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
 
     // Initialize the orientation estimations by walking along the maximum
     // spanning tree.
     OrientationsFromMaximumSpanningTree(
-        *view_graph_, &orientations_, &constrained_orientations);
+        *view_graph_, &orientations_, &object_view_orientations[0]);
 
     RobustRotationEstimator::Options robust_rotation_estimator_options;
     std::unique_ptr<ConstrainedRobustRotationEstimator>
@@ -338,8 +344,10 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
         robust_rotation_estimator_options,
         options_.rotation_estimation_constraint_weight));
 
+    std::unordered_map<ViewId, Eigen::Vector3d> object_orientations;
     return constrained_rotation_estimator->EstimateRotations(
-        view_pairs, constrained_orientations, &orientations_);
+        view_pairs, object_view_orientations,
+        &orientations_, &object_orientations);
   }
 
   // Choose the global rotation estimation type.

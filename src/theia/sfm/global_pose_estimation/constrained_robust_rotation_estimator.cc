@@ -16,55 +16,43 @@
 #include "theia/util/map_util.h"
 
 namespace theia {
-namespace {
-
-// Computes the absolute rotation error from the global rotations to the
-// absolute rotation. The error is returned in angle axis form.
-Eigen::Vector3d ComputeAbsoluteRotationError(
-    const Eigen::Vector3d& absolute_rotation,
-    const Eigen::Vector3d& rotation) {
-  Eigen::Matrix3d absolute_rotation_matrix, rotation_matrix;
-  ceres::AngleAxisToRotationMatrix(
-      absolute_rotation.data(),
-      ceres::ColumnMajorAdapter3x3(absolute_rotation_matrix.data()));
-  ceres::AngleAxisToRotationMatrix(
-      rotation.data(), ceres::ColumnMajorAdapter3x3(rotation_matrix.data()));
-
-  // Compute the absolute rotation error.
-  const Eigen::Matrix3d absolute_rotation_matrix_error =
-      rotation_matrix * absolute_rotation_matrix.transpose();
-  Eigen::Vector3d absolute_rotation_error;
-  ceres::RotationMatrixToAngleAxis(
-      ceres::ColumnMajorAdapter3x3(absolute_rotation_matrix_error.data()),
-      absolute_rotation_error.data());
-  return absolute_rotation_error;
-}
-
-}  // namespace
 
 bool ConstrainedRobustRotationEstimator::EstimateRotations(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Eigen::Vector3d>& constrained_orientations,
-    std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations) {
+    const std::unordered_map<ObjectId, ObjectViewOrientations>&
+    object_view_constraints,
+    std::unordered_map<ViewId, Eigen::Vector3d>* global_view_orientations,
+    std::unordered_map<ObjectId, Eigen::Vector3d>* global_object_orientations) {
+  CHECK_NOTNULL(global_view_orientations);
+  CHECK_NOTNULL(global_object_orientations);
+
   view_pairs_ = &view_pairs;
-  constrained_orientations_ = &constrained_orientations;
-  global_orientations_ = global_orientations;
+  object_view_constraints_ = &object_view_constraints;
+  global_view_orientations_ = global_view_orientations;
+  global_object_orientations_ = global_object_orientations;
 
-  // @mhsung
-  // Use 'RobustRotationEstimator' if no constraint is given.
-  CHECK(!constrained_orientations_->empty());
+  global_object_orientations_->clear();
+  for (const auto& object : *object_view_constraints_) {
+    CHECK(!object.second.empty());
+    (*global_object_orientations_)[object.first] = Eigen::Vector3d::Zero();
 
-  // Check whether all constrained views exist in the given list.
-  for (const auto& orientation : *constrained_orientations_) {
-    FindOrDie(*global_orientations, orientation.first);
+    // Check whether all constrained views exist in the given list.
+    for (const auto& orientation : object.second) {
+      FindOrDie(*global_view_orientations_, orientation.first);
+    }
   }
 
   // @mhsung
-  // If we have constraints, all view are used without fixing one frame as
-  // the identity rotation.
-  int index = 0;
-  view_id_to_index_.reserve(global_orientations->size());
-  for (const auto& orientation : *global_orientations) {
+  // Fix the orientation of the first object by assigning -1 index.
+  int index = -1;
+  object_id_to_index_.reserve(global_object_orientations_->size());
+  for (const auto& object : *global_object_orientations_) {
+    object_id_to_index_[object.first] = index;
+    ++index;
+  }
+
+  view_id_to_index_.reserve(global_view_orientations_->size());
+  for (const auto& orientation : *global_view_orientations_) {
     view_id_to_index_[orientation.first] = index;
     ++index;
   }
@@ -81,22 +69,36 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
   // Do not use IRLS.
   // FIXME:
   // Fix IRLS to use weights properly.
-//  if (!SolveIRLS()) {
-//    LOG(ERROR) << "Could not solve the least squares error step.";
-//    return false;
-//  }
+  // if (!SolveIRLS()) {
+  //   LOG(ERROR) << "Could not solve the least squares error step.";
+  //   return false;
+  // }
 
   return true;
 }
 
 // Set up the sparse linear system.
 void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
-  const int num_variables = static_cast<int>(global_orientations_->size() * 3);
-  const int num_equations = static_cast<int>(
-      (view_pairs_->size() + constrained_orientations_->size()) * 3);
+  const size_t num_views = global_view_orientations_->size();
+  const size_t num_view_pairs = view_pairs_->size();
+
+  const size_t num_objects = object_view_constraints_->size();
+  size_t num_object_view_pairs = 0;
+  for (const auto& object : *object_view_constraints_) {
+    num_object_view_pairs += object.second.size();
+  }
+
+  // @mhsung
+  // Use 'RobustRotationEstimator' if no constraint is given.
+  CHECK_GT(num_objects, 0);
+  CHECK_GT(num_object_view_pairs, 0);
 
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.
+  const int num_variables = static_cast<int>((num_views + num_objects - 1) * 3);
+  const int num_equations = static_cast<int>(
+      (num_view_pairs + num_object_view_pairs) * 3);
+
   rotation_change_.resize(num_variables);
   relative_rotation_error_.resize(num_equations);
   sparse_matrix_.resize(num_equations, num_variables);
@@ -107,9 +109,9 @@ void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
 
   sparse_matrix_.setFromTriplets(triplet_list.begin(), triplet_list.end());
 
-  weight_vector_ = Eigen::VectorXd::Ones(num_equations);
   // Set weights for constraints.
-  weight_vector_.tail(constrained_orientations_->size() * 3).setConstant(
+  weight_vector_ = Eigen::VectorXd::Ones(num_equations);
+  weight_vector_.tail(num_object_view_pairs * 3).setConstant(
       constraint_weight_);
 }
 
@@ -120,9 +122,24 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
   int rotation_error_index = static_cast<int>(view_pairs_->size());
 
   // Add constraints.
-  for (const auto& orientation : *constrained_orientations_) {
-    const int view_index = FindOrDie(view_id_to_index_, orientation.first);
-    if (view_index != kConstantRotationIndex) {
+  for (const auto& object : *object_view_constraints_) {
+    const int object_index = FindOrDie(object_id_to_index_, object.first);
+
+    for (const auto& orientation : object.second) {
+      if (object_index != kConstantRotationIndex) {
+        triplet_list->emplace_back(3 * rotation_error_index + 0,
+                                   3 * object_index + 0,
+                                   -1.0);
+        triplet_list->emplace_back(3 * rotation_error_index + 1,
+                                   3 * object_index + 1,
+                                   -1.0);
+        triplet_list->emplace_back(3 * rotation_error_index + 2,
+                                   3 * object_index + 2,
+                                   -1.0);
+      }
+
+      const int view_index = FindOrDie(view_id_to_index_, orientation.first);
+      CHECK (view_index != kConstantRotationIndex);
       triplet_list->emplace_back(3 * rotation_error_index + 0,
                                  3 * view_index + 0,
                                  1.0);
@@ -132,9 +149,9 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
       triplet_list->emplace_back(3 * rotation_error_index + 2,
                                  3 * view_index + 2,
                                  1.0);
-    }
 
-    ++rotation_error_index;
+      ++rotation_error_index;
+    }
   }
 }
 
@@ -146,12 +163,16 @@ void ConstrainedRobustRotationEstimator::ComputeRotationError() {
   int rotation_error_index = static_cast<int>(view_pairs_->size());
 
   // Add constraints.
-  for (const auto& orientation : *constrained_orientations_) {
-    relative_rotation_error_.segment<3>(3 * rotation_error_index) =
-        ComputeAbsoluteRotationError(
-            orientation.second,
-            FindOrDie(*global_orientations_, orientation.first));
-    ++rotation_error_index;
+  for (const auto& object : *object_view_constraints_) {
+    for (const auto& orientation : object.second) {
+      relative_rotation_error_.segment<3>(3 * rotation_error_index) =
+          ComputeRelativeRotationError(
+              orientation.second,
+              FindOrDie(*global_object_orientations_, object.first),
+              FindOrDie(*global_view_orientations_, orientation.first));
+
+      ++rotation_error_index;
+    }
   }
 }
 
@@ -181,6 +202,24 @@ bool ConstrainedRobustRotationEstimator::SolveL1Regression() {
     l1_solver.SetMaxIterations(options.max_num_iterations);
   }
   return true;
+}
+
+// Update the global orientations using the current value in the
+// rotation_change.
+void ConstrainedRobustRotationEstimator::UpdateGlobalRotations() {
+  RobustRotationEstimator::UpdateGlobalRotations();
+
+  for (auto& rotation : *global_object_orientations_) {
+    const int object_index = FindOrDie(object_id_to_index_, rotation.first);
+    if (object_index == kConstantRotationIndex) {
+      continue;
+    }
+
+    // Apply the rotation change to the global orientation.
+    const Eigen::Vector3d& rotation_change =
+        rotation_change_.segment<3>(3 * object_index);
+    ApplyRotation(rotation_change, &rotation.second);
+  }
 }
 
 bool ConstrainedRobustRotationEstimator::SolveIRLS() {

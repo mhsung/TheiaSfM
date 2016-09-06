@@ -47,11 +47,10 @@
 #include "theia/util/map_util.h"
 
 namespace theia {
-namespace {
 
 // Computes the relative rotation error from the global rotations to the
 // relative rotation. The error is returned in angle axis form.
-Eigen::Vector3d ComputeRelativeRotationError(
+Eigen::Vector3d RobustRotationEstimator::ComputeRelativeRotationError(
     const Eigen::Vector3d& relative_rotation,
     const Eigen::Vector3d& rotation1,
     const Eigen::Vector3d& rotation2) {
@@ -76,8 +75,8 @@ Eigen::Vector3d ComputeRelativeRotationError(
 }
 
 // Applies the rotation change to the rotation.
-void ApplyRotation(const Eigen::Vector3d& rotation_change,
-                   Eigen::Vector3d* rotation) {
+void RobustRotationEstimator::ApplyRotation(
+    const Eigen::Vector3d& rotation_change, Eigen::Vector3d* rotation) {
   // Convert to rotation matrices.
   Eigen::Matrix3d rotation_change_matrix, rotation_matrix;
   ceres::AngleAxisToRotationMatrix(
@@ -94,13 +93,11 @@ void ApplyRotation(const Eigen::Vector3d& rotation_change,
       ceres::ColumnMajorAdapter3x3(changed_rotation.data()), rotation->data());
 }
 
-}  // namespace
-
 bool RobustRotationEstimator::EstimateRotations(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations) {
   view_pairs_ = &view_pairs;
-  global_orientations_ = global_orientations;
+  global_view_orientations_ = global_orientations;
 
   // Compute a mapping of view ids to indices in the linear system. One matrix
   // will have an index of -1 and will not be added to the linear system. This
@@ -133,10 +130,10 @@ bool RobustRotationEstimator::EstimateRotations(
 void RobustRotationEstimator::SetupLinearSystem() {
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.
-  rotation_change_.resize((global_orientations_->size() - 1) * 3);
+  rotation_change_.resize((global_view_orientations_->size() - 1) * 3);
   relative_rotation_error_.resize(view_pairs_->size() * 3);
   sparse_matrix_.resize(view_pairs_->size() * 3,
-                        (global_orientations_->size() - 1) * 3);
+                        (global_view_orientations_->size() - 1) * 3);
 
   // @mhsung.
   std::vector<Eigen::Triplet<double> > triplet_list;
@@ -195,8 +192,8 @@ void RobustRotationEstimator::ComputeRotationError() {
     relative_rotation_error_.segment<3>(3 * rotation_error_index) =
         ComputeRelativeRotationError(
             view_pair.second.rotation_2,
-            FindOrDie(*global_orientations_, view_pair.first.first),
-            FindOrDie(*global_orientations_, view_pair.first.second));
+            FindOrDie(*global_view_orientations_, view_pair.first.first),
+            FindOrDie(*global_view_orientations_, view_pair.first.second));
     ++rotation_error_index;
   }
 }
@@ -226,7 +223,7 @@ bool RobustRotationEstimator::SolveL1Regression() {
 // Update the global orientations using the current value in the
 // rotation_change.
 void RobustRotationEstimator::UpdateGlobalRotations() {
-  for (auto& rotation : *global_orientations_) {
+  for (auto& rotation : *global_view_orientations_) {
     const int view_index = FindOrDie(view_id_to_index_, rotation.first);
     if (view_index == kConstantRotationIndex) {
       continue;

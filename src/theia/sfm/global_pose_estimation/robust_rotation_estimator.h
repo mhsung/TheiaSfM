@@ -108,7 +108,21 @@ class RobustRotationEstimator : public RotationEstimator {
   virtual bool SolveIRLS();
 
   // Updates the global rotations based on the current rotation change.
-  void UpdateGlobalRotations();
+  // @mhsung
+  // Changed to virtual function.
+  virtual void UpdateGlobalRotations();
+
+  // @mhsung
+  // Moved from local function to member function.
+  Eigen::Vector3d ComputeRelativeRotationError(
+      const Eigen::Vector3d& relative_rotation,
+      const Eigen::Vector3d& rotation1,
+      const Eigen::Vector3d& rotation2);
+
+  // @mhsung
+  // Moved from local function to member function.
+  void ApplyRotation(const Eigen::Vector3d& rotation_change,
+                     Eigen::Vector3d* rotation);
 
   // We keep one of the rotations as constant to remove the ambiguity of the
   // linear system.
@@ -121,7 +135,9 @@ class RobustRotationEstimator : public RotationEstimator {
   const std::unordered_map<ViewIdPair, TwoViewInfo>* view_pairs_;
 
   // The global orientation estimates for each camera.
-  std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations_;
+  // @mhsung
+  // The name in the original code is 'global_orientations_'.
+  std::unordered_map<ViewId, Eigen::Vector3d>* global_view_orientations_;
 
   // The sparse matrix used to maintain the linear system. This is matrix A in
   // Ax = b.

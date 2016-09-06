@@ -6,9 +6,12 @@
 
 #include <Eigen/Core>
 #include <Eigen/SparseCore>
+#include <list>
 #include <unordered_map>
 
 #include "theia/sfm/global_pose_estimation/robust_rotation_estimator.h"
+// @mhsung
+#include "theia/sfm/object_view_constraint.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/types.h"
 #include "theia/util/hash.h"
@@ -26,9 +29,10 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
   // guess. Returns true on successful estimation and false otherwise.
   bool EstimateRotations(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>&
-      constrained_orientations,
-      std::unordered_map<ViewId, Eigen::Vector3d>* global_orientations);
+      const std::unordered_map<ObjectId, ObjectViewOrientations>&
+      object_view_constraints,
+      std::unordered_map<ViewId, Eigen::Vector3d>* global_view_orientations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* global_object_orientations);
 
  protected:
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the
@@ -50,13 +54,24 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
   // Performs the iteratively reweighted least squares.
   virtual bool SolveIRLS();
 
+  // Updates the global rotations based on the current rotation change.
+  virtual void UpdateGlobalRotations();
+
   Eigen::VectorXd weight_vector_;
 
   // FIXME:
   // Remove constant weight and use weight vector only.
   const double constraint_weight_;
 
-  const std::unordered_map<ViewId, Eigen::Vector3d>* constrained_orientations_;
+  const std::unordered_map<ObjectId, ObjectViewOrientations>*
+      object_view_constraints_;
+
+  // The global orientation estimates for each object.
+  std::unordered_map<ObjectId, Eigen::Vector3d>* global_object_orientations_;
+
+  // Map of ViewIds to the corresponding positions of the object's
+  // orientation in the linear system.
+  std::unordered_map<ObjectId, int> object_id_to_index_;
 };
 
 }  // namespace theia

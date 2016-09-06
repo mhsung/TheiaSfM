@@ -171,7 +171,7 @@ void NonlinearPositionEstimator::InitializeRandomPositions(
 
   // @mhsung
   // Use fixed seed.
-  srand(kTheiaRandomSeed);
+  std::srand(kTheiaRandomSeed);
   for (const auto& orientation : orientations) {
     if (ContainsKey(constrained_positions, orientation.first)) {
       (*positions)[orientation.first] = 100.0 * Vector3d::Random();
@@ -232,7 +232,7 @@ void NonlinearPositionEstimator::AddPointToCameraConstraints(
 
   // @mhsung
   // Use fixed seed.
-  srand(kTheiaRandomSeed);
+  std::srand(kTheiaRandomSeed);
   for (const TrackId track_id : tracks_to_add) {
     triangulated_points_[track_id] = 100.0 * Vector3d::Random();
 

@@ -10,13 +10,13 @@
 
 #include "theia/sfm/reconstruction_estimator_options.h"
 #include "theia/sfm/reconstruction_estimator_utils.h"
-// @mhsung
-#include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 #include "theia/sfm/set_camera_intrinsics_from_priors.h"
 #include "theia/sfm/twoview_info.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/util/map_util.h"
 #include "theia/util/timer.h"
+// @mhsung
+#include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 
 namespace theia {
 

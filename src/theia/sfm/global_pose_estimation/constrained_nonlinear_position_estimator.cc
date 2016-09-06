@@ -86,6 +86,7 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
   static const int kMinNumCamerasForIterativeSolve = 1000;
 
   // Initialize positions to be random.
+  // @mhsung
   InitializeRandomPositions(
       orientations, constrained_position_dirs, positions);
 
@@ -153,7 +154,7 @@ void ConstrainedNonlinearPositionEstimator::InitializeRandomPositions(
 
   // @mhsung
   // Use fixed seed.
-  srand(kTheiaRandomSeed);
+  std::srand(kTheiaRandomSeed);
   for (const auto& orientation : orientations) {
     if (ContainsKey(constrained_positions, orientation.first)) {
       // Use initial position directions if given.
@@ -170,8 +171,7 @@ void ConstrainedNonlinearPositionEstimator::InitializeRandomPositions(
 
 void ConstrainedNonlinearPositionEstimator::AddSingleCameraConstraints(
     const std::unordered_map<ViewId, Vector3d>& orientations,
-    const std::unordered_map<ViewId, Eigen::Vector3d>&
-    constrained_position_dirs,
+    const std::unordered_map<ViewId, Vector3d>& constrained_position_dirs,
     std::unordered_map<ViewId, Vector3d>* positions) {
   for (auto& position : *positions) {
     const ViewId view_id = position.first;
