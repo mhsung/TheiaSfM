@@ -114,7 +114,7 @@ class RobustRotationEstimator : public RotationEstimator {
 
   // @mhsung
   // Moved from local function to member function.
-  Eigen::Vector3d ComputeRelativeRotationError(
+  static Eigen::Vector3d ComputeRelativeRotationError(
       const Eigen::Vector3d& relative_rotation,
       const Eigen::Vector3d& rotation1,
       const Eigen::Vector3d& rotation2);

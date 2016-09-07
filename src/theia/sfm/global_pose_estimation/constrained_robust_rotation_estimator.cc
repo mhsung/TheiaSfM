@@ -32,15 +32,25 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
   global_object_orientations_ = global_object_orientations;
 
   global_object_orientations_->clear();
+  size_t num_object_view_pairs = 0;
   for (const auto& object : *object_view_constraints_) {
     CHECK(!object.second.empty());
-    (*global_object_orientations_)[object.first] = Eigen::Vector3d::Zero();
+    num_object_view_pairs += object.second.size();
 
     // Check whether all constrained views exist in the given list.
     for (const auto& orientation : object.second) {
       FindOrDie(*global_view_orientations_, orientation.first);
     }
+
+    // Initialize object orientations.
+    // FIXME:
+    // Object orientations should be initialized before calling this function.
+    (*global_object_orientations_)[object.first] = Eigen::Vector3d::Zero();
   }
+
+  // @mhsung
+  // Use 'RobustRotationEstimator' if no constraint is given.
+  CHECK_GT(num_object_view_pairs, 0);
 
   // @mhsung
   // Fix the orientation of the first object by assigning -1 index.
@@ -87,11 +97,6 @@ void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
   for (const auto& object : *object_view_constraints_) {
     num_object_view_pairs += object.second.size();
   }
-
-  // @mhsung
-  // Use 'RobustRotationEstimator' if no constraint is given.
-  CHECK_GT(num_objects, 0);
-  CHECK_GT(num_object_view_pairs, 0);
 
   // The rotation change is one less than the number of global rotations because
   // we keep one rotation constant.

@@ -32,30 +32,37 @@ class ConstrainedNonlinearPositionEstimator
   // failure.
   bool EstimatePositions(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientation,
-      const ObjectViewPositionDirections& object_view_constraints,
-      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientation,
+      const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
+          object_view_constraints,
+      std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
+      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
 
  private:
   // Initialize all cameras to be random.
   void InitializeRandomPositions(
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
-      const std::unordered_map<ViewId, Eigen::Vector3d>&
-      constrained_position_dirs,
-      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
+      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
 
   // Creates camera to camera constraints from relative translations.
-  void AddSingleCameraConstraints(
-      const std::unordered_map<ViewId, Eigen::Vector3d>& orientations,
-      const std::unordered_map<ViewId, Eigen::Vector3d>&
-      constrained_position_dirs,
-      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
+  void AddObjectToCameraConstraints(
+      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+      std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
+      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
+
+  void AddCamerasAndPointsToParameterGroups(
+      std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
+      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
 
   friend class EstimatePositionsNonlinearTest;
 
   // FIXME:
   // Remove constant weight and use weight vector.
   const double constraint_weight_;
+
+  const std::unordered_map<ObjectId, ObjectViewPositionDirections>*
+      object_view_constraints_;
 
   DISALLOW_COPY_AND_ASSIGN(ConstrainedNonlinearPositionEstimator);
 };

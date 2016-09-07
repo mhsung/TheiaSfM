@@ -131,6 +131,12 @@ class NonlinearPositionEstimator : public PositionEstimator {
       std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   // @mhsung
+  // Moved from local function to member function.
+  static Eigen::Vector3d GetRotatedTranslation(
+      const Eigen::Vector3d& rotation_angle_axis,
+      const Eigen::Vector3d& translation);
+
+  // @mhsung
   static Eigen::Vector3d RandVector3d();
 
   const NonlinearPositionEstimator::Options options_;

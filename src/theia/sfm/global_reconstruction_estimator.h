@@ -99,8 +99,13 @@ class GlobalReconstructionEstimator : public ReconstructionEstimator {
   BundleAdjustmentOptions bundle_adjustment_options_;
   RansacParameters ransac_params_;
 
-  std::unordered_map<ViewId, Eigen::Vector3d> orientations_;
-  std::unordered_map<ViewId, Eigen::Vector3d> positions_;
+  // @mhsung
+  // The name in the original code is 'orientations_' and 'positions_'.
+  std::unordered_map<ViewId, Eigen::Vector3d> view_orientations_;
+  std::unordered_map<ViewId, Eigen::Vector3d> view_positions_;
+
+  std::unordered_map<ViewId, Eigen::Vector3d> object_orientations_;
+  std::unordered_map<ViewId, Eigen::Vector3d> object_positions_;
 
   DISALLOW_COPY_AND_ASSIGN(GlobalReconstructionEstimator);
 };

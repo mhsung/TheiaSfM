@@ -57,15 +57,6 @@ namespace {
 using Eigen::Matrix3d;
 using Eigen::Vector3d;
 
-Vector3d GetRotatedTranslation(const Vector3d& rotation_angle_axis,
-                               const Vector3d& translation) {
-  Matrix3d rotation;
-  ceres::AngleAxisToRotationMatrix(
-      rotation_angle_axis.data(),
-      ceres::ColumnMajorAdapter3x3(rotation.data()));
-  return rotation.transpose() * translation;
-}
-
 Vector3d GetRotatedFeatureRay(const Camera& camera,
                               const Vector3d& orientation,
                               const Feature& feature) {
@@ -83,6 +74,15 @@ bool CompareViewsPerTrack(const std::pair<TrackId, int>& t1,
 }
 
 }  // namespace
+
+Vector3d NonlinearPositionEstimator::GetRotatedTranslation(
+    const Vector3d& rotation_angle_axis, const Vector3d& translation) {
+  Matrix3d rotation;
+  ceres::AngleAxisToRotationMatrix(
+      rotation_angle_axis.data(),
+      ceres::ColumnMajorAdapter3x3(rotation.data()));
+  return rotation.transpose() * translation;
+}
 
 NonlinearPositionEstimator::NonlinearPositionEstimator(
     const NonlinearPositionEstimator::Options& options,

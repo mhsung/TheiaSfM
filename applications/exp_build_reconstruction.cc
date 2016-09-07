@@ -447,8 +447,8 @@ void SetInitialPositionDirections(ReconstructionBuilder*
     const Eigen::Vector3d cam_coord_cam_to_obj_dir =
         ComputeCameraToObjectDirections(
             init_bounding_box.second, view->CameraIntrinsicsPrior());
-    // Store object (origin) to camera direction.
-    view->SetInitialPositionDirection(-cam_coord_cam_to_obj_dir);
+    // Store camera(origin) to object direction.
+    view->SetInitialPositionDirection(cam_coord_cam_to_obj_dir);
   }
 }
 

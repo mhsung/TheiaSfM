@@ -142,8 +142,8 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
   CHECK_NOTNULL(reconstruction);
   reconstruction_ = reconstruction;
   view_graph_ = view_graph;
-  orientations_.clear();
-  positions_.clear();
+  view_orientations_.clear();
+  view_positions_.clear();
 
   ReconstructionEstimatorSummary summary;
   GlobalReconstructionEstimatorTimings global_estimator_timings;
@@ -207,7 +207,7 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
     summary.success = false;
     return summary;
   }
-  LOG(INFO) << positions_.size()
+  LOG(INFO) << view_positions_.size()
             << " camera positions were estimated successfully.";
   global_estimator_timings.position_estimation_time =
       timer.ElapsedTimeInSeconds();
@@ -220,8 +220,8 @@ ReconstructionEstimatorSummary GlobalReconstructionEstimator::Estimate(
       global_estimator_timings.position_estimation_time;
 
   // Set the poses in the reconstruction object.
-  SetReconstructionFromEstimatedPoses(orientations_,
-                                      positions_,
+  SetReconstructionFromEstimatedPoses(view_orientations_,
+                                      view_positions_,
                                       reconstruction_);
 
   // Always triangulate once, then retriangulate and remove outliers depending
@@ -313,6 +313,7 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
   if (options_.global_rotation_estimator_type ==
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
 
+    // FIXME:
     // Extend to multiple object cases.
     std::unordered_map<ObjectId, ObjectViewOrientations>
         object_view_orientations;
@@ -324,10 +325,8 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
       // orientation.
       const View* view = reconstruction_->View(view_id);
       if (view_graph_->HasView(view_id) &&
-          view != nullptr &&
-          view->IsOrientationInitialized()) {
-        object_view_orientations[0][view_id] =
-            view->GetInitialOrientation();
+          view != nullptr && view->IsOrientationInitialized()) {
+        object_view_orientations[0][view_id] = view->GetInitialOrientation();
       }
     }
     CHECK(!object_view_orientations[0].empty())
@@ -336,7 +335,7 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
     // Initialize the orientation estimations by walking along the maximum
     // spanning tree.
     OrientationsFromMaximumSpanningTree(
-        *view_graph_, &orientations_, &object_view_orientations[0]);
+        *view_graph_, &view_orientations_, &object_view_orientations[0]);
 
     RobustRotationEstimator::Options robust_rotation_estimator_options;
     std::unique_ptr<ConstrainedRobustRotationEstimator>
@@ -344,10 +343,11 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
         robust_rotation_estimator_options,
         options_.rotation_estimation_constraint_weight));
 
-    std::unordered_map<ViewId, Eigen::Vector3d> object_orientations;
+    // FIXME:
+    // Initialize object orientations before calling estimate function.
     return constrained_rotation_estimator->EstimateRotations(
         view_pairs, object_view_orientations,
-        &orientations_, &object_orientations);
+        &view_orientations_, &object_orientations_);
   }
 
   // Choose the global rotation estimation type.
@@ -356,7 +356,7 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
     case GlobalRotationEstimatorType::ROBUST_L1L2: {
       // Initialize the orientation estimations by walking along the maximum
       // spanning tree.
-      OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_);
+      OrientationsFromMaximumSpanningTree(*view_graph_, &view_orientations_);
       RobustRotationEstimator::Options robust_rotation_estimator_options;
       rotation_estimator.reset(
           new RobustRotationEstimator(robust_rotation_estimator_options));
@@ -365,7 +365,7 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
     case GlobalRotationEstimatorType::NONLINEAR: {
       // Initialize the orientation estimations by walking along the maximum
       // spanning tree.
-      OrientationsFromMaximumSpanningTree(*view_graph_, &orientations_);
+      OrientationsFromMaximumSpanningTree(*view_graph_, &view_orientations_);
       rotation_estimator.reset(new NonlinearRotationEstimator());
       break;
     }
@@ -381,28 +381,28 @@ bool GlobalReconstructionEstimator::EstimateGlobalRotations() {
     }
   }
 
-  return rotation_estimator->EstimateRotations(view_pairs, &orientations_);
+  return rotation_estimator->EstimateRotations(view_pairs, &view_orientations_);
 }
 
 void GlobalReconstructionEstimator::FilterRotations() {
   // Filter view pairs based on the relative rotation and the estimated global
   // orientations.
   FilterViewPairsFromOrientation(
-      orientations_,
+      view_orientations_,
       options_.rotation_filtering_max_difference_degrees,
       view_graph_);
   // Remove any disconnected views from the estimation.
   const std::unordered_set<ViewId> removed_views =
       RemoveDisconnectedViewPairs(view_graph_);
   for (const ViewId removed_view : removed_views) {
-    orientations_.erase(removed_view);
+    view_orientations_.erase(removed_view);
   }
 }
 
 void GlobalReconstructionEstimator::OptimizePairwiseTranslations() {
   if (options_.refine_relative_translations_after_rotation_estimation) {
     RefineRelativeTranslationsWithKnownRotations(*reconstruction_,
-                                                 orientations_,
+                                                 view_orientations_,
                                                  options_.num_threads,
                                                  view_graph_);
   }
@@ -413,21 +413,21 @@ void GlobalReconstructionEstimator::FilterRelativeTranslation() {
     LOG(INFO) << "Extracting maximal rigid component of viewing graph to "
                  "determine which cameras are well-constrained for position "
                  "estimation.";
-    ExtractMaximallyParallelRigidSubgraph(orientations_, view_graph_);
+    ExtractMaximallyParallelRigidSubgraph(view_orientations_, view_graph_);
   }
 
   // Filter potentially bad relative translations.
   if (options_.filter_relative_translations_with_1dsfm) {
     LOG(INFO) << "Filtering relative translations with 1DSfM filter.";
     FilterViewPairsFromRelativeTranslation(translation_filter_options_,
-                                           orientations_,
+                                           view_orientations_,
                                            view_graph_);
   }
   // Remove any disconnected views from the estimation.
   const std::unordered_set<ViewId> removed_views =
       RemoveDisconnectedViewPairs(view_graph_);
   for (const ViewId removed_view : removed_views) {
-    orientations_.erase(removed_view);
+    view_orientations_.erase(removed_view);
   }
 }
 
@@ -439,28 +439,26 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
   if (options_.global_position_estimator_type ==
     GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
 
-    std::unordered_map<ViewId, Eigen::Vector3d> constrained_position_dirs;
-    constrained_position_dirs.reserve(view_graph_->NumViews());
+    // FIXME:
+    // Extend to multiple object cases.
+    std::unordered_map<ObjectId, ObjectViewPositionDirections>
+        object_view_position_directions;
+    object_view_position_directions.emplace(0, ObjectViewOrientations());
+
+    object_view_position_directions[0].reserve(view_graph_->NumViews());
     for (const ViewId view_id : reconstruction_->ViewIds()) {
       // Add a constrained view if it exists in the graph and it has initial
       // orientation.
       const View* view = reconstruction_->View(view_id);
-      const Eigen::Vector3d* orientation = FindOrNull(orientations_, view_id);
+      const Eigen::Vector3d* orientation =
+          FindOrNull(view_orientations_, view_id);
       if (view_graph_->HasView(view_id) &&
-          view != nullptr &&
-          view->IsPositionDirectionInitialized() &&
-          orientation != nullptr) {
-        // Compute camera coordinates camera direction to world coordinates
-        // camera direction.
-        Eigen::Matrix3d orientation_mat;
-        ceres::AngleAxisToRotationMatrix(orientation->data(),
-            ceres::ColumnMajorAdapter3x3(orientation_mat.data()));
-        const Eigen::Vector3d world_coord_obj_to_cam_dir =
-            orientation_mat.inverse() * view->GetInitialPositionDirection();
-        constrained_position_dirs[view_id] = world_coord_obj_to_cam_dir;
+          view != nullptr && view->IsPositionDirectionInitialized()) {
+        object_view_position_directions[0][view_id] =
+            view->GetInitialPositionDirection();
       }
     }
-    CHECK(!constrained_position_dirs.empty())
+    CHECK(!object_view_position_directions[0].empty())
     << "No initial orientation is given. Re-run with 'NONLINEAR' option.";
 
     std::unique_ptr<ConstrainedNonlinearPositionEstimator> position_estimator(
@@ -468,10 +466,9 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
         options_.nonlinear_position_estimator_options, *reconstruction_,
         options_.position_estimation_constraint_weight));
 
-    return position_estimator->EstimatePositions(view_pairs,
-                                                 orientations_,
-                                                 constrained_position_dirs,
-                                                 &positions_);
+    return position_estimator->EstimatePositions(
+        view_pairs, view_orientations_, object_view_position_directions,
+        &view_positions_, &object_positions_);
   }
 
   std::unique_ptr<PositionEstimator> position_estimator;
@@ -501,8 +498,8 @@ bool GlobalReconstructionEstimator::EstimatePosition() {
   }
 
   return position_estimator->EstimatePositions(view_pairs,
-                                               orientations_,
-                                               &positions_);
+                                               view_orientations_,
+                                               &view_positions_);
 }
 
 void GlobalReconstructionEstimator::EstimateStructure() {
@@ -524,7 +521,7 @@ void GlobalReconstructionEstimator::EstimateStructure() {
 bool GlobalReconstructionEstimator::BundleAdjustment() {
   // Bundle adjustment.
   bundle_adjustment_options_ =
-      SetBundleAdjustmentOptions(options_, positions_.size());
+      SetBundleAdjustmentOptions(options_, view_positions_.size());
   const auto& bundle_adjustment_summary =
       BundleAdjustReconstruction(bundle_adjustment_options_, reconstruction_);
   return bundle_adjustment_summary.success;

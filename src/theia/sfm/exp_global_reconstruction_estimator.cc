@@ -111,8 +111,8 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   CHECK_NOTNULL(reconstruction);
   reconstruction_ = reconstruction;
   view_graph_ = view_graph;
-  orientations_.clear();
-  positions_.clear();
+  view_orientations_.clear();
+  view_positions_.clear();
 
   ReconstructionEstimatorSummary summary;
   ExpGlobalReconstructionEstimatorTimings global_estimator_timings;
@@ -189,7 +189,7 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
     summary.success = false;
     return summary;
   }
-  LOG(INFO) << positions_.size()
+  LOG(INFO) << view_positions_.size()
             << " camera positions were estimated successfully.";
   global_estimator_timings.position_estimation_time =
       timer.ElapsedTimeInSeconds();
@@ -202,8 +202,8 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
       global_estimator_timings.position_estimation_time;
 
   // Set the poses in the reconstruction object.
-  SetReconstructionFromEstimatedPoses(orientations_,
-                                      positions_,
+  SetReconstructionFromEstimatedPoses(view_orientations_,
+                                      view_positions_,
                                       reconstruction_);
 
   if (options_.exp_global_run_bundle_adjustment) {
