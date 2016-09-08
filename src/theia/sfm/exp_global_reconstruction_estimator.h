@@ -12,6 +12,8 @@
 #include "theia/sfm/types.h"
 #include "theia/solvers/sample_consensus_estimator.h"
 #include "theia/util/util.h"
+// @mhsung
+#include "theia/sfm/object_view_constraint.h"
 
 namespace theia {
 
@@ -28,6 +30,14 @@ class ExpGlobalReconstructionEstimator : public GlobalReconstructionEstimator {
 
 private:
   void FilterInitialOrientations();
+
+  virtual bool EstimateGlobalRotations();
+  virtual bool EstimatePosition();
+
+  std::unordered_map<ObjectId, ObjectViewOrientations>
+      object_view_orientations_;
+  std::unordered_map<ObjectId, ObjectViewPositionDirections>
+      object_view_position_directions_;
 
   DISALLOW_COPY_AND_ASSIGN(ExpGlobalReconstructionEstimator);
 };

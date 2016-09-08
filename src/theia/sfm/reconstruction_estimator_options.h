@@ -60,6 +60,7 @@ enum class GlobalRotationEstimatorType {
   NONLINEAR = 1,
   LINEAR = 2,
   // @mhsung
+  // Can be used only with 'EXP_GLOBAL' reconstruction estimator type.
   CONSTRAINED_ROBUST_L1L2 = 3
 };
 
@@ -76,6 +77,7 @@ enum class GlobalPositionEstimatorType {
   LINEAR_TRIPLET = 1,
   LEAST_UNSQUARED_DEVIATION = 2,
   // @mhsung
+  // Can be used only with 'EXP_GLOBAL' reconstruction estimator type.
   CONSTRAINED_NONLINEAR = 3,
 };
 

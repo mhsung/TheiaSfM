@@ -83,13 +83,16 @@ class GlobalReconstructionEstimator : public ReconstructionEstimator {
  protected:
   bool FilterInitialViewGraph();
   void CalibrateCameras();
-  bool EstimateGlobalRotations();
   void FilterRotations();
   void OptimizePairwiseTranslations();
   void FilterRelativeTranslation();
-  bool EstimatePosition();
   void EstimateStructure();
   bool BundleAdjustment();
+
+  // @mhsung
+  // Changed to virtual function.
+  virtual bool EstimateGlobalRotations();
+  virtual bool EstimatePosition();
 
   ViewGraph* view_graph_;
   Reconstruction* reconstruction_;
