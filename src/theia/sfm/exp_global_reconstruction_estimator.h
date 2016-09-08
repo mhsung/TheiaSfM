@@ -41,6 +41,10 @@ class ExpGlobalReconstructionEstimator : public GlobalReconstructionEstimator {
 private:
   virtual bool EstimateGlobalRotations();
   virtual bool EstimatePosition();
+
+  void ComputeRotationEstimationStatistics();
+  void ComputePositionEstimationStatistics();
+
   // void FilterInitialOrientations();
 
   // @mhsung

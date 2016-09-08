@@ -285,9 +285,6 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
 }
 
 bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
-  const auto& view_pairs = view_graph_->GetAllEdges();
-
-  // @mhsung
   if (options_.global_rotation_estimator_type !=
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
     GlobalReconstructionEstimator::EstimateGlobalRotations();
@@ -310,15 +307,17 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
 
   // FIXME:
   // Initialize object orientations before calling estimate function.
-  return constrained_rotation_estimator->EstimateRotations(
+  const auto& view_pairs = view_graph_->GetAllEdges();
+  const bool ret = constrained_rotation_estimator->EstimateRotations(
       view_pairs, *object_view_orientations_,
       &view_orientations_, &object_orientations_);
+  if (!ret) return false;
+
+  ComputeRotationEstimationStatistics();
+  return true;
 }
 
 bool ExpGlobalReconstructionEstimator::EstimatePosition() {
-  // Estimate position.
-  const auto& view_pairs = view_graph_->GetAllEdges();
-
   if (options_.global_position_estimator_type !=
       GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
     return ExpGlobalReconstructionEstimator::EstimatePosition();
@@ -329,9 +328,125 @@ bool ExpGlobalReconstructionEstimator::EstimatePosition() {
           options_.nonlinear_position_estimator_options, *reconstruction_,
           options_.position_estimation_constraint_weight));
 
-  return position_estimator->EstimatePositions(
+  const auto& view_pairs = view_graph_->GetAllEdges();
+  const bool ret = position_estimator->EstimatePositions(
       view_pairs, view_orientations_, *object_view_position_directions_,
       &view_positions_, &object_positions_);
+  if (!ret) return false;
+
+  ComputePositionEstimationStatistics();
+  return true;
+}
+
+void ExpGlobalReconstructionEstimator::ComputeRotationEstimationStatistics() {
+  double min_rotation_angle_error = std::numeric_limits<double>::max();
+  double max_rotation_angle_error = 0.0;
+
+  for (const auto& object : *object_view_orientations_) {
+    const ObjectId object_id = object.first;
+    const Eigen::Vector3d* object_orientation = FindOrNull
+        (object_orientations_, object_id);
+    if (!object_orientation) continue;
+    Eigen::Matrix3d object_orientation_matrix;
+    ceres::AngleAxisToRotationMatrix(
+        object_orientation->data(),
+        ceres::ColumnMajorAdapter3x3(object_orientation_matrix.data()));
+
+    for (const auto& orientation : object.second) {
+      const ViewId view_id = orientation.first;
+      const Eigen::Vector3d* view_orientation = FindOrNull
+          (view_orientations_, view_id);
+      if (!view_orientation) continue;
+      Eigen::Matrix3d view_orientation_matrix;
+      ceres::AngleAxisToRotationMatrix(
+          view_orientation->data(),
+          ceres::ColumnMajorAdapter3x3(view_orientation_matrix.data()));
+
+      Eigen::Matrix3d relative_orientation_matrix;
+      ceres::AngleAxisToRotationMatrix(
+          orientation.second.data(),
+          ceres::ColumnMajorAdapter3x3(relative_orientation_matrix.data()));
+
+      const double rotation_angle_error =
+          RelativeOrientationAbsAngleError(object_orientation_matrix,
+                                           view_orientation_matrix,
+                                           relative_orientation_matrix);
+      min_rotation_angle_error = std::min(rotation_angle_error,
+                                          min_rotation_angle_error);
+      max_rotation_angle_error = std::max(rotation_angle_error,
+                                          max_rotation_angle_error);
+
+      VLOG(2) << "Object view rotation difference with constraint ("
+              << "Object ID: " << object_id << ", "
+              << "View ID: " << view_id << ", "
+              << "Angle diff: " << rotation_angle_error << ")";
+    }
+  }
+
+  LOG(INFO) << "Object view rotation difference with constraint ("
+            << "Min: " << min_rotation_angle_error << ", "
+            << "Max: " << max_rotation_angle_error << ")";
+}
+
+void ExpGlobalReconstructionEstimator::ComputePositionEstimationStatistics() {
+  double min_distance = std::numeric_limits<double>::max();
+  double max_distance = 0.0;
+  double min_direction_angle_error = std::numeric_limits<double>::max();
+  double max_direction_angle_error = 0.0;
+
+  for (const auto& object : *object_view_position_directions_) {
+    const ObjectId object_id = object.first;
+    const Eigen::Vector3d* object_position = FindOrNull
+        (object_positions_, object_id);
+    if (!object_position) continue;
+
+    for (const auto& position_direction : object.second) {
+      const ViewId view_id = position_direction.first;
+      const Eigen::Vector3d* view_position = FindOrNull
+          (view_positions_, view_id);
+      if (!view_position) continue;
+
+      const Eigen::Vector3d* view_orientation = FindOrNull
+          (view_orientations_, view_id);
+      if (!view_orientation) continue;
+      Eigen::Matrix3d view_orientation_matrix;
+      ceres::AngleAxisToRotationMatrix(
+          view_orientation->data(),
+          ceres::ColumnMajorAdapter3x3(view_orientation_matrix.data()));
+
+      const Eigen::Vector3d relative_position =
+          (*object_position) - (*view_position);
+
+      // Convert camera coordinates camera to object direction to
+      // world coordinates direction.
+      const Eigen::Vector3d given_position_direction =
+          view_orientation_matrix.transpose() * position_direction.second;
+
+      const double distance = relative_position.norm();
+      min_distance = std::min(distance, min_distance);
+      max_distance = std::max(distance, max_distance);
+
+      const double dot_prod =
+          given_position_direction.dot(relative_position.normalized());
+      const double direction_angle_error = std::acos(dot_prod) / M_PI * 180.0;
+      min_direction_angle_error = std::min(direction_angle_error,
+                                           min_direction_angle_error);
+      max_direction_angle_error = std::max(direction_angle_error,
+                                           max_direction_angle_error);
+
+      VLOG(2) << "Object view translation difference with constraint ("
+              << "Object ID: " << object_id << ", "
+              << "View ID: " << view_id << ", "
+              << "Angle diff: " << direction_angle_error << ", "
+              << "Distance: " << distance << ")";
+    }
+  }
+
+  LOG(INFO) << "Object view translation difference with constraint ("
+            << "Angle diff Min: " << min_direction_angle_error << ", "
+            << "Angle diff Max: " << max_direction_angle_error << ", "
+            << "Distance Min: " << min_distance << ", "
+            << "Distance Max: " << max_distance << ")";
 }
 
 /*
