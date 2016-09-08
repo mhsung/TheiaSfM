@@ -47,6 +47,8 @@
 #include "theia/sfm/camera_intrinsics_prior.h"
 #include "theia/sfm/feature_extractor_and_matcher.h"
 #include "theia/sfm/reconstruction_estimator_options.h"
+// @mhsung
+#include "theia/sfm/object_view_constraint.h"
 
 namespace theia {
 
@@ -173,6 +175,16 @@ class ReconstructionBuilder {
   // successfully estimated.
   bool BuildReconstruction(std::vector<Reconstruction*>* reconstructions);
 
+  // @mhsung
+  void SetInitialObjectViewOrientation(
+      const ObjectId object_id, const ViewId view_id,
+      const Eigen::Vector3d& orientation);
+
+  // @mhsung
+  void SetInitialObjectViewPositionDirection(
+      const ObjectId object_id, const ViewId view_id,
+      const Eigen::Vector3d& position_direction);
+
  private:
   // Adds the given matches as edges in the view graph.
   void AddMatchToViewGraph(const ViewId view_id1,
@@ -200,6 +212,14 @@ class ReconstructionBuilder {
 
   // Module for performing feature extraction and matching.
   std::unique_ptr<FeatureExtractorAndMatcher> feature_extractor_and_matcher_;
+
+  // @mhsung
+  std::unordered_map<ObjectId, ObjectViewOrientations>
+      object_view_orientations_;
+
+  // @mhsung
+  std::unordered_map<ObjectId, ObjectViewPositionDirections>
+      object_view_position_directions_;
 
   DISALLOW_COPY_AND_ASSIGN(ReconstructionBuilder);
 };

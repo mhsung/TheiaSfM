@@ -113,40 +113,4 @@ bool View::RemoveFeature(const TrackId track_id) {
   return features_.erase(track_id) > 0;
 }
 
-// @mhsung
-void View::SetInitialOrientation(const Eigen::Vector3d& orientation) {
-  init_orientation_ = orientation;
-  is_orientation_initialized_ = true;
-}
-
-// @mhsung
-Eigen::Vector3d View::GetInitialOrientation() const {
-  CHECK(is_orientation_initialized_);
-  return init_orientation_;
-}
-
-// @mhsung
-void View::RemoveInitialOrientation() {
-  init_orientation_.setZero();
-  is_orientation_initialized_ = false;
-}
-
-// @mhsung
-void View::SetInitialPositionDirection(const Eigen::Vector3d& position_dir) {
-  init_position_dir_ = position_dir;
-  is_position_dir_initialized_ = true;
-}
-
-// @mhsung
-Eigen::Vector3d View::GetInitialPositionDirection() const {
-  CHECK(is_position_dir_initialized_);
-  return init_position_dir_;
-}
-
-// @mhsung
-void View::RemoveInitialPositionDirection() {
-  init_position_dir_.setZero();
-  is_position_dir_initialized_ = false;
-}
-
 }  // namespace theia

@@ -84,19 +84,6 @@ class View {
 
   bool RemoveFeature(const TrackId track_id);
 
-  // @mhsung
-  void SetInitialOrientation(const Eigen::Vector3d& orientation);
-  Eigen::Vector3d GetInitialOrientation() const;
-  bool IsOrientationInitialized() const { return is_orientation_initialized_; }
-  void RemoveInitialOrientation();
-
-  // @mhsung
-  void SetInitialPositionDirection(const Eigen::Vector3d& position_dir);
-  Eigen::Vector3d GetInitialPositionDirection() const;
-  bool IsPositionDirectionInitialized() const {
-    return is_position_dir_initialized_; }
-  void RemoveInitialPositionDirection();
-
  private:
   // Templated method for disk I/O with cereal. This method tells cereal which
   // data members should be used when reading/writing to/from disk.

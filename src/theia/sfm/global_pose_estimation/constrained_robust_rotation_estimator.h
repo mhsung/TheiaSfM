@@ -35,6 +35,12 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
       std::unordered_map<ViewId, Eigen::Vector3d>* global_object_orientations);
 
  protected:
+  // @mhsung
+  bool SetObjectViewConstraints(
+      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+      const std::unordered_map<ObjectId, ObjectViewOrientations>&
+      object_view_constraints);
+
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the
   // first-order approximation of the angle-axis rotations. This should only be
   // called once.
@@ -63,8 +69,7 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
   // Remove constant weight and use weight vector only.
   const double constraint_weight_;
 
-  const std::unordered_map<ObjectId, ObjectViewOrientations>*
-      object_view_constraints_;
+  std::unordered_map<ObjectId, ObjectViewOrientations> object_view_constraints_;
 
   // The global orientation estimates for each object.
   std::unordered_map<ObjectId, Eigen::Vector3d>* global_object_orientations_;

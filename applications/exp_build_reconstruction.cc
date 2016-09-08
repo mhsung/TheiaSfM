@@ -408,8 +408,6 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
   MapViewNamesToIds(*reconstruction_builder->GetReconstruction(),
                     init_orientations_with_names, &init_orientations);
 
-  // FIXME:
-  // This part must be moved to 'ReconstructionBuilder'.
   for (const auto& init_orientation : init_orientations) {
     const theia::ViewId view_id = init_orientation.first;
     theia::View* view = reconstruction_builder->GetMutableReconstruction()
@@ -420,7 +418,8 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
     ceres::RotationMatrixToAngleAxis(
         ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
         angle_axis.data());
-    view->SetInitialOrientation(angle_axis);
+    reconstruction_builder->SetInitialObjectViewOrientation(
+        0, view_id, angle_axis);
   }
 }
 
@@ -436,19 +435,18 @@ void SetInitialPositionDirections(ReconstructionBuilder*
   MapViewNamesToIds(*reconstruction_builder->GetReconstruction(),
                     init_bounding_boxes_with_names, &init_bounding_boxes);
 
-  // FIXME:
-  // This part must be moved to 'ReconstructionBuilder'.
   for (const auto& init_bounding_box : init_bounding_boxes) {
     const theia::ViewId view_id = init_bounding_box.first;
     theia::View* view = reconstruction_builder->GetMutableReconstruction()
         ->MutableView(view_id);
     CHECK(view) << "View does not exist (View ID = " << view_id << ").";
 
+    // Store camera(origin) to object direction.
     const Eigen::Vector3d cam_coord_cam_to_obj_dir =
         ComputeCameraToObjectDirections(
             init_bounding_box.second, view->CameraIntrinsicsPrior());
-    // Store camera(origin) to object direction.
-    view->SetInitialPositionDirection(cam_coord_cam_to_obj_dir);
+    reconstruction_builder->SetInitialObjectViewPositionDirection(
+        0, view_id, cam_coord_cam_to_obj_dir);
   }
 }
 

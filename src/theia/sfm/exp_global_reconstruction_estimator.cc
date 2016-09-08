@@ -88,6 +88,20 @@ Eigen::Vector3d ComputeRelativeRotationError(
 
 }  // namespace
 
+// @mhsung
+void ExpGlobalReconstructionEstimator::SetInitialObjectViewOrientation(
+    const std::unordered_map<ObjectId, ObjectViewOrientations>&
+    object_view_orientations) {
+  object_view_orientations_ = &object_view_orientations;
+}
+
+// @mhsung
+void ExpGlobalReconstructionEstimator::SetInitialObjectViewPositionDirection(
+    const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
+    object_view_position_directions) {
+  object_view_position_directions_ = &object_view_position_directions;
+}
+
 ExpGlobalReconstructionEstimator::ExpGlobalReconstructionEstimator(
     const ReconstructionEstimatorOptions& options)
     : GlobalReconstructionEstimator(options) {
@@ -270,6 +284,57 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   return summary;
 }
 
+bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
+  const auto& view_pairs = view_graph_->GetAllEdges();
+
+  // @mhsung
+  if (options_.global_rotation_estimator_type !=
+      GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
+    GlobalReconstructionEstimator::EstimateGlobalRotations();
+  }
+
+  // Initialize the orientation estimations by walking along the maximum
+  // spanning tree.
+  // FIXME:
+  // Initialize view orientation with the given object view orientations.
+  // const ObjectViewOrientations& constraints = object_view_orientations_->at(0);
+  // OrientationsFromMaximumSpanningTree(
+  //     *view_graph_, &view_orientations_, &constraints);
+  OrientationsFromMaximumSpanningTree(*view_graph_, &view_orientations_);
+
+  RobustRotationEstimator::Options robust_rotation_estimator_options;
+  std::unique_ptr<ConstrainedRobustRotationEstimator>
+      constrained_rotation_estimator(new ConstrainedRobustRotationEstimator(
+      robust_rotation_estimator_options,
+      options_.rotation_estimation_constraint_weight));
+
+  // FIXME:
+  // Initialize object orientations before calling estimate function.
+  return constrained_rotation_estimator->EstimateRotations(
+      view_pairs, *object_view_orientations_,
+      &view_orientations_, &object_orientations_);
+}
+
+bool ExpGlobalReconstructionEstimator::EstimatePosition() {
+  // Estimate position.
+  const auto& view_pairs = view_graph_->GetAllEdges();
+
+  if (options_.global_position_estimator_type !=
+      GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
+    return ExpGlobalReconstructionEstimator::EstimatePosition();
+  }
+
+  std::unique_ptr<ConstrainedNonlinearPositionEstimator> position_estimator(
+      new ConstrainedNonlinearPositionEstimator(
+          options_.nonlinear_position_estimator_options, *reconstruction_,
+          options_.position_estimation_constraint_weight));
+
+  return position_estimator->EstimatePositions(
+      view_pairs, view_orientations_, *object_view_position_directions_,
+      &view_positions_, &object_positions_);
+}
+
+/*
 void ExpGlobalReconstructionEstimator::FilterInitialOrientations() {
   const double KErrorThreshold = 20.0;
 
@@ -382,88 +447,6 @@ void ExpGlobalReconstructionEstimator::FilterInitialOrientations() {
   VLOG(2) << "Num unset initial orientations: "
           << num_unset_initial_orientations;
 }
-
-bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
-  const auto& view_pairs = view_graph_->GetAllEdges();
-
-  // @mhsung
-  if (options_.global_rotation_estimator_type !=
-      GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
-    GlobalReconstructionEstimator::EstimateGlobalRotations();
-  }
-
-  object_view_orientations_.clear();
-  object_view_orientations_.emplace(0, ObjectViewOrientations());
-  object_view_orientations_[0].reserve(view_graph_->NumViews());
-
-  for (const ViewId view_id : reconstruction_->ViewIds()) {
-    // Add a constrained view if it exists in the graph and it has initial
-    // orientation.
-    const View* view = reconstruction_->View(view_id);
-    if (view_graph_->HasView(view_id) &&
-        view != nullptr && view->IsOrientationInitialized()) {
-      object_view_orientations_[0][view_id] = view->GetInitialOrientation();
-    }
-  }
-  CHECK(!object_view_orientations_[0].empty())
-  << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
-
-  // FIXME:
-  // Modify this code.
-  // Initialize the orientation estimations by walking along the maximum
-  // spanning tree.
-  OrientationsFromMaximumSpanningTree(
-      *view_graph_, &view_orientations_, &object_view_orientations_[0]);
-
-  RobustRotationEstimator::Options robust_rotation_estimator_options;
-  std::unique_ptr<ConstrainedRobustRotationEstimator>
-      constrained_rotation_estimator(new ConstrainedRobustRotationEstimator(
-      robust_rotation_estimator_options,
-      options_.rotation_estimation_constraint_weight));
-
-  // FIXME:
-  // Initialize object orientations before calling estimate function.
-  return constrained_rotation_estimator->EstimateRotations(
-      view_pairs, object_view_orientations_,
-      &view_orientations_, &object_orientations_);
-}
-
-bool ExpGlobalReconstructionEstimator::EstimatePosition() {
-  // Estimate position.
-  const auto& view_pairs = view_graph_->GetAllEdges();
-
-  if (options_.global_position_estimator_type !=
-      GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
-    return ExpGlobalReconstructionEstimator::EstimatePosition();
-  }
-
-  object_view_position_directions_.clear();
-  object_view_position_directions_.emplace(0, ObjectViewOrientations());
-  object_view_position_directions_[0].reserve(view_graph_->NumViews());
-
-  for (const ViewId view_id : reconstruction_->ViewIds()) {
-    // Add a constrained view if it exists in the graph and it has initial
-    // position direction.
-    const View* view = reconstruction_->View(view_id);
-    const Eigen::Vector3d* orientation =
-        FindOrNull(view_orientations_, view_id);
-    if (view_graph_->HasView(view_id) &&
-        view != nullptr && view->IsPositionDirectionInitialized()) {
-      object_view_position_directions_[0][view_id] =
-          view->GetInitialPositionDirection();
-    }
-  }
-  CHECK(!object_view_position_directions_[0].empty())
-  << "No initial orientation is given. Re-run with 'NONLINEAR' option.";
-
-  std::unique_ptr<ConstrainedNonlinearPositionEstimator> position_estimator(
-      new ConstrainedNonlinearPositionEstimator(
-          options_.nonlinear_position_estimator_options, *reconstruction_,
-          options_.position_estimation_constraint_weight));
-
-  return position_estimator->EstimatePositions(
-      view_pairs, view_orientations_, object_view_position_directions_,
-      &view_positions_, &object_positions_);
-}
+*/
 
 }  // namespace theia

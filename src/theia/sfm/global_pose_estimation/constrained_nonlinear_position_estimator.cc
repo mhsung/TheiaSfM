@@ -28,6 +28,28 @@ using Eigen::Vector3d;
 
 }  // namespace
 
+bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
+    const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+    const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
+    object_view_constraints) {
+  int num_object_view_pairs = 0;
+  object_view_constraints_.clear();
+
+  for (const auto& object : object_view_constraints) {
+    const ObjectId object_id = object.first;
+
+    // Check whether the constrained views exist in the view orientation list.
+    for (const auto& constraint : object.second) {
+      if (ContainsKey(view_orientations, constraint.first)) {
+        object_view_constraints_[object_id].emplace(constraint);
+        ++num_object_view_pairs;
+      }
+    }
+  }
+
+  return (num_object_view_pairs > 0);
+}
+
 ConstrainedNonlinearPositionEstimator::ConstrainedNonlinearPositionEstimator(
     const NonlinearPositionEstimator::Options& options,
     const Reconstruction& reconstruction,
@@ -38,38 +60,26 @@ ConstrainedNonlinearPositionEstimator::ConstrainedNonlinearPositionEstimator(
 
 bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-    const std::unordered_map<ViewId, Vector3d>& view_orientation,
+    const std::unordered_map<ViewId, Vector3d>& view_orientations,
     const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
     object_view_constraints,
     std::unordered_map<ViewId, Vector3d>* view_positions,
     std::unordered_map<ViewId, Vector3d>* object_positions) {
   CHECK_NOTNULL(view_positions);
   CHECK_NOTNULL(object_positions);
-  if (view_pairs.empty() || view_orientation.empty()) {
+  if (view_pairs.empty() || view_orientations.empty()) {
     VLOG(2) << "Number of view_pairs = " << view_pairs.size()
-            << " Number of orientations = " << view_orientation.size();
+            << " Number of orientations = " << view_orientations.size();
     return false;
   }
 
   triangulated_points_.clear();
   problem_.reset(new ceres::Problem());
   view_pairs_ = &view_pairs;
-  object_view_constraints_ = &object_view_constraints;
-
-  size_t num_object_view_pairs = 0;
-  for (const auto& object : *object_view_constraints_) {
-    CHECK(!object.second.empty());
-    num_object_view_pairs += object.second.size();
-
-    // Check whether all constrained views exist in the given list.
-    for (const auto& orientation : object.second) {
-      FindOrDie(view_orientation, orientation.first);
-    }
-  }
 
   // @mhsung
-  // Use 'NonlinearPositionEstimator' if no constraint is given.
-  CHECK_GT(num_object_view_pairs, 0);
+  CHECK(SetObjectViewConstraints(view_orientations, object_view_constraints))
+  << "No initial position direction is given. Re-run with 'NONLINEAR' option.";
 
   // Iterative schur is only used if the problem is large enough, otherwise
   // sparse schur is used.
@@ -77,17 +87,18 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
 
   // Initialize positions to be random.
   // @mhsung
-  InitializeRandomPositions(view_orientation, view_positions, object_positions);
+  InitializeRandomPositions(view_orientations, view_positions,
+                            object_positions);
 
   // Add the constraints to the problem.
-  AddCameraToCameraConstraints(view_orientation, view_positions);
+  AddCameraToCameraConstraints(view_orientations, view_positions);
 
   // @mhsung
   AddObjectToCameraConstraints(
-      view_orientation, view_positions, object_positions);
+      view_orientations, view_positions, object_positions);
 
   if (options_.min_num_points_per_view > 0) {
-    AddPointToCameraConstraints(view_orientation, view_positions);
+    AddPointToCameraConstraints(view_orientations, view_positions);
 
     // @mhsung
     AddCamerasAndPointsToParameterGroups(view_positions, object_positions);
@@ -136,11 +147,11 @@ void ConstrainedNonlinearPositionEstimator::InitializeRandomPositions(
   NonlinearPositionEstimator::InitializeRandomPositions(
       view_orientations, view_positions);
 
-  object_positions->reserve(object_view_constraints_->size());
+  object_positions->reserve(object_view_constraints_.size());
 
   // Random seed is set in
   // 'NonlinearPositionEstimator::InitializeRandomPositions()'.
-  for (const auto& object : *object_view_constraints_) {
+  for (const auto& object : object_view_constraints_) {
     (*object_positions)[object.first] = 100.0 * RandVector3d();
   }
 }
@@ -151,7 +162,7 @@ void ConstrainedNonlinearPositionEstimator::AddObjectToCameraConstraints(
     std::unordered_map<ViewId, Vector3d>* object_positions) {
   int num_object_to_camera_constraints = 0;
 
-  for (const auto& object : *object_view_constraints_) {
+  for (const auto& object : object_view_constraints_) {
     const ObjectId object_id = object.first;
     Vector3d* object_position = FindOrNull(*object_positions, object_id);
     CHECK(object_position);

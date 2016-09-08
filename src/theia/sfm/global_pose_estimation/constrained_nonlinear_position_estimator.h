@@ -32,13 +32,19 @@ class ConstrainedNonlinearPositionEstimator
   // failure.
   bool EstimatePositions(
       const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
-      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientation,
+      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
       const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
           object_view_constraints,
       std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
       std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
 
  private:
+  // @mhsung
+  bool SetObjectViewConstraints(
+      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+      const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
+      object_view_constraints);
+
   // Initialize all cameras to be random.
   void InitializeRandomPositions(
       const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
@@ -61,7 +67,7 @@ class ConstrainedNonlinearPositionEstimator
   // Remove constant weight and use weight vector.
   const double constraint_weight_;
 
-  const std::unordered_map<ObjectId, ObjectViewPositionDirections>*
+  std::unordered_map<ObjectId, ObjectViewPositionDirections>
       object_view_constraints_;
 
   DISALLOW_COPY_AND_ASSIGN(ConstrainedNonlinearPositionEstimator);

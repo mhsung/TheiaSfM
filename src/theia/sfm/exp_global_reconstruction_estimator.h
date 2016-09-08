@@ -25,18 +25,30 @@ class ExpGlobalReconstructionEstimator : public GlobalReconstructionEstimator {
   ExpGlobalReconstructionEstimator(
       const ReconstructionEstimatorOptions& options);
 
+  // @mhsung
+  void SetInitialObjectViewOrientation(
+      const std::unordered_map<ObjectId, ObjectViewOrientations>&
+      object_view_orientations);
+
+  // @mhsung
+  void SetInitialObjectViewPositionDirection(
+      const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
+      object_view_position_directions);
+
   ReconstructionEstimatorSummary Estimate(ViewGraph* view_graph,
                                           Reconstruction* reconstruction);
 
 private:
-  void FilterInitialOrientations();
-
   virtual bool EstimateGlobalRotations();
   virtual bool EstimatePosition();
+  // void FilterInitialOrientations();
 
-  std::unordered_map<ObjectId, ObjectViewOrientations>
+  // @mhsung
+  const std::unordered_map<ObjectId, ObjectViewOrientations>*
       object_view_orientations_;
-  std::unordered_map<ObjectId, ObjectViewPositionDirections>
+
+  // @mhsung
+  const std::unordered_map<ObjectId, ObjectViewPositionDirections>*
       object_view_position_directions_;
 
   DISALLOW_COPY_AND_ASSIGN(ExpGlobalReconstructionEstimator);

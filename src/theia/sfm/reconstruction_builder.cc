@@ -47,6 +47,8 @@
 #include "theia/sfm/view.h"
 #include "theia/sfm/view_graph/view_graph.h"
 #include "theia/util/filesystem.h"
+// @mhsung
+#include "theia/sfm/exp_global_reconstruction_estimator.h"
 
 namespace theia {
 
@@ -355,6 +357,19 @@ bool ReconstructionBuilder::BuildReconstruction(
         ReconstructionEstimator::Create(
             options_.reconstruction_estimator_options));
 
+    // @mhsung
+    // Set initial orientations and position directions if the reconstruction
+    // estimator is 'EXP_GLOBAL'.
+    auto* exp_global_estimator =
+        dynamic_cast<ExpGlobalReconstructionEstimator*>(
+            reconstruction_estimator.get());
+    if (exp_global_estimator != nullptr) {
+      exp_global_estimator->SetInitialObjectViewOrientation(
+          object_view_orientations_);
+      exp_global_estimator->SetInitialObjectViewPositionDirection(
+          object_view_position_directions_);
+    }
+
     const auto& summary = reconstruction_estimator->Estimate(
         view_graph_.get(), reconstruction_.get());
 
@@ -418,6 +433,18 @@ void ReconstructionBuilder::AddTracksForMatch(const ViewId view_id1,
     track_builder_->AddFeatureCorrespondence(view_id1, match.feature1,
                                              view_id2, match.feature2);
   }
+}
+
+void ReconstructionBuilder::SetInitialObjectViewOrientation(
+    const ObjectId object_id, const ViewId view_id,
+    const Eigen::Vector3d& orientation) {
+  object_view_orientations_[object_id][view_id] = orientation;
+}
+
+void ReconstructionBuilder::SetInitialObjectViewPositionDirection(
+    const ObjectId object_id, const ViewId view_id,
+    const Eigen::Vector3d& position_direction) {
+  object_view_position_directions_[object_id][view_id] = position_direction;
 }
 
 }  // namespace theia

@@ -151,9 +151,10 @@ bool OrientationsFromMaximumSpanningTree(
     for (const auto& fixed_view : *fixed_views) {
       const ViewId view_id = fixed_view.first;
       const Eigen::Vector3d& orientation = fixed_view.second;
-      CHECK(view_graph.HasView(view_id));
-      (*orientations)[view_id] = orientation;
-      AddEdgesToHeap(mst_view_graph, *orientations, fixed_view.first, &heap);
+      if (view_graph.HasView(view_id)) {
+        (*orientations)[view_id] = orientation;
+        AddEdgesToHeap(mst_view_graph, *orientations, fixed_view.first, &heap);
+      }
     }
   }
 

@@ -17,6 +17,28 @@
 
 namespace theia {
 
+bool ConstrainedRobustRotationEstimator::SetObjectViewConstraints(
+    const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+    const std::unordered_map<ObjectId, ObjectViewOrientations>&
+    object_view_constraints) {
+  int num_object_view_pairs = 0;
+  object_view_constraints_.clear();
+
+  for (const auto& object : object_view_constraints) {
+    const ObjectId object_id = object.first;
+
+    // Check whether the constrained views exist in the view orientation list.
+    for (const auto& constraint : object.second) {
+      if (ContainsKey(view_orientations, constraint.first)) {
+        object_view_constraints_[object_id].emplace(constraint);
+        ++num_object_view_pairs;
+      }
+    }
+  }
+
+  return (num_object_view_pairs > 0);
+}
+
 bool ConstrainedRobustRotationEstimator::EstimateRotations(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     const std::unordered_map<ObjectId, ObjectViewOrientations>&
@@ -27,30 +49,22 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
   CHECK_NOTNULL(global_object_orientations);
 
   view_pairs_ = &view_pairs;
-  object_view_constraints_ = &object_view_constraints;
   global_view_orientations_ = global_view_orientations;
   global_object_orientations_ = global_object_orientations;
 
+  // @mhsung
+  CHECK(SetObjectViewConstraints(
+      *global_view_orientations, object_view_constraints))
+  << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
+
+  // Initialize object orientations.
+  // FIXME:
+  // Object orientations should be initialized before calling this function.
   global_object_orientations_->clear();
-  size_t num_object_view_pairs = 0;
-  for (const auto& object : *object_view_constraints_) {
+  for (const auto& object : object_view_constraints_) {
     CHECK(!object.second.empty());
-    num_object_view_pairs += object.second.size();
-
-    // Check whether all constrained views exist in the given list.
-    for (const auto& orientation : object.second) {
-      FindOrDie(*global_view_orientations_, orientation.first);
-    }
-
-    // Initialize object orientations.
-    // FIXME:
-    // Object orientations should be initialized before calling this function.
     (*global_object_orientations_)[object.first] = Eigen::Vector3d::Zero();
   }
-
-  // @mhsung
-  // Use 'RobustRotationEstimator' if no constraint is given.
-  CHECK_GT(num_object_view_pairs, 0);
 
   // @mhsung
   // Fix the orientation of the first object by assigning -1 index.
@@ -92,9 +106,9 @@ void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
   const size_t num_views = global_view_orientations_->size();
   const size_t num_view_pairs = view_pairs_->size();
 
-  const size_t num_objects = object_view_constraints_->size();
+  const size_t num_objects = object_view_constraints_.size();
   size_t num_object_view_pairs = 0;
-  for (const auto& object : *object_view_constraints_) {
+  for (const auto& object : object_view_constraints_) {
     num_object_view_pairs += object.second.size();
   }
 
@@ -127,7 +141,7 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
   int rotation_error_index = static_cast<int>(view_pairs_->size());
 
   // Add constraints.
-  for (const auto& object : *object_view_constraints_) {
+  for (const auto& object : object_view_constraints_) {
     const int object_index = FindOrDie(object_id_to_index_, object.first);
 
     for (const auto& orientation : object.second) {
@@ -168,7 +182,7 @@ void ConstrainedRobustRotationEstimator::ComputeRotationError() {
   int rotation_error_index = static_cast<int>(view_pairs_->size());
 
   // Add constraints.
-  for (const auto& object : *object_view_constraints_) {
+  for (const auto& object : object_view_constraints_) {
     for (const auto& orientation : object.second) {
       relative_rotation_error_.segment<3>(3 * rotation_error_index) =
           ComputeRelativeRotationError(
