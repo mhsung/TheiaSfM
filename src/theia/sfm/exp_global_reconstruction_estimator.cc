@@ -447,6 +447,50 @@ void ExpGlobalReconstructionEstimator::ComputePositionEstimationStatistics() {
             << "Angle diff Max: " << max_direction_angle_error << ", "
             << "Distance Min: " << min_distance << ", "
             << "Distance Max: " << max_distance << ")";
+
+
+  // For each view graph edge.
+  for (const auto& view_pair : view_graph_->GetAllEdges()) {
+    const ViewId view1_id = view_pair.first.first;
+    const ViewId view2_id = view_pair.first.second;
+    const Eigen::Vector3d* view1_position = FindOrNull(
+        view_positions_, view1_id);
+    const Eigen::Vector3d* view2_position = FindOrNull(
+        view_positions_, view2_id);
+    if (!view1_position || !view2_position) continue;
+
+    const View* view1 = reconstruction_->View(view1_id);
+    const View* view2 = reconstruction_->View(view2_id);
+    CHECK(view1 != nullptr);
+    CHECK(view2 != nullptr);
+
+    for (const auto& object : object_positions_) {
+      const ObjectId object_id = object.first;
+      const Eigen::Vector3d& object_position = object.second;
+
+      const double distance1 = ((*view1_position) - object_position).norm();
+      const double distance2 = ((*view2_position) - object_position).norm();
+      CHECK_GT(distance1, 0.0);
+      CHECK_GT(distance2, 0.0);
+
+      const Eigen::Vector3d position_direction =
+          ((*view2_position) - (*view1_position)).normalized();
+      const double dot_prod =
+          view_pair.second.position_2.dot(position_direction);
+      const double direction_angle_error = std::acos(dot_prod) / M_PI * 180.0;
+
+      const double kDistanceRatioTol = 10000.0;
+      if ((distance1 / distance2) > kDistanceRatioTol ||
+          (distance2 / distance1) > kDistanceRatioTol) {
+        LOG(WARNING) << "Distance ratio is too big ("
+            << "View1: " << view1->Name() << ", "
+            << "View2: " << view2->Name() << ", "
+            << "Distance1: " << distance1 << ", "
+            << "Distance2: " << distance2 << ", "
+            << "Angle diff: " << direction_angle_error;
+      }
+    }
+  }
 }
 
 /*
