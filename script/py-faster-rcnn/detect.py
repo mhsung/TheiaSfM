@@ -13,11 +13,11 @@ Demo script showing detections in sample images.
 See README.md for installation instructions before running.
 """
 
-import sys
-BASE_DIR = os.path.dirname(os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '../../3rdparty/py-faster_rcnn/'))
-sys.path.append(BASE_DIR)
-sys.path.append(os.path.dirname(BASE_DIR))
+import os, sys
+BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), '../../3rdparty/py-faster-rcnn'))
+sys.path.append(os.path.join(BASE_DIR, 'lib'))
+sys.path.append(os.path.join(BASE_DIR, 'tools'))
 
 import _init_paths
 from fast_rcnn.config import cfg
@@ -30,7 +30,7 @@ import gflags
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
-import caffe, os, sys, cv2
+import caffe, cv2
 import argparse
 
 CLASSES = ('__background__',

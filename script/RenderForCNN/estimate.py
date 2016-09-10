@@ -7,10 +7,9 @@ import os
 import sys
 import argparse
 
-BASE_DIR = os.path.dirname(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), '../../3rdparty/RenderForCNN/'))
+BASE_DIR = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), '../../3rdparty/RenderForCNN'))
 sys.path.append(BASE_DIR)
-sys.path.append(os.path.dirname(BASE_DIR))
 from global_variables import *
 sys.path.append(os.path.join(g_render4cnn_root_folder, 'view_estimation'))
 from evaluation_helper import viewpoint
