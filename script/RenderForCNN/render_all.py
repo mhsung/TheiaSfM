@@ -26,7 +26,7 @@ if __name__ == '__main__':
     FLAGS(sys.argv)
 
     model_obj_file = os.path.join(
-        g_render4cnn_root_folder, 'demo_render', 'sample_model',
+        os.path.dirname(os.path.abspath(__file__)), 'sample_model',
         FLAGS.target_class + '.obj')
 
     for dirname in os.listdir(os.path.join(FLAGS.data_dir, FLAGS.output_dir)):

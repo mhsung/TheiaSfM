@@ -1,0 +1,3 @@
+chair: shapenetcore/03001627/21bfb150cfc23accb01c58badc8bbc39
+car: 84ca8deefdd84f00f981837bbfaebe1f
+
