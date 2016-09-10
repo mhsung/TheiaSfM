@@ -37,6 +37,8 @@ if __name__ == '__main__':
 
         out_img_file = os.path.join(
             FLAGS.data_dir, FLAGS.render_dir, basename + '.png')
+        if os.path.exists(out_img_file):
+            continue
         print(out_img_file)
 
         if not os.path.exists(os.path.join(
@@ -61,7 +63,10 @@ if __name__ == '__main__':
         print ">> Running rendering command: \n \t %s" % (python_cmd)
         os.system('%s %s' % (python_cmd, io_redirect))
 
-        im2 = Image.open(out_img_file)
-        bbox = im2.getbbox()
-        im2 = im2.crop(bbox)
-        im2.save(out_img_file)
+        if os.path.exists(out_img_file):
+            im2 = Image.open(out_img_file)
+            bbox = im2.getbbox()
+            im2 = im2.crop(bbox)
+            im2.save(out_img_file)
+        else:
+            print('Warning: Rendering failed: ' + out_img_file)

@@ -125,10 +125,9 @@ int main(int argc, char *argv[]) {
   CHECK(ReadMatchPairs(FLAGS_match_pairs_file, &pairs_to_draw));
 
   // Empty directory.
-  if (stlplus::folder_exists(FLAGS_output_dir)) {
-    CHECK(stlplus::folder_delete(FLAGS_output_dir, true));
+  if (!stlplus::folder_exists(FLAGS_output_dir)) {
+    CHECK(stlplus::folder_create(FLAGS_output_dir));
   }
-  CHECK(stlplus::folder_create(FLAGS_output_dir));
   CHECK(stlplus::folder_writable(FLAGS_output_dir));
 
   DrawAllMatchedFeatures(image_matches, pairs_to_draw);
