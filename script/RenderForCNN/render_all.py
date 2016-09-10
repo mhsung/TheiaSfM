@@ -40,7 +40,7 @@ if __name__ == '__main__':
         for view_file in view_file_list:
             basename = os.path.splitext(os.path.basename(view_file))[0]
             # Remove postfix.
-            basename = basename[:len(basename)-len('_view.txt')]
+            basename = basename[:len(basename)-len('_view')]
 
             out_img_file = os.path.join(
                 FLAGS.data_dir, FLAGS.render_dir, dirname, basename + '.png')

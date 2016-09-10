@@ -28,9 +28,9 @@ gflags.DEFINE_string('param_data_dirs',
                      'sfm/orientation,sfm_track/orientation', '')
 gflags.DEFINE_string('convnet_dir', '', '')
 gflags.DEFINE_string('output_plot_file', 'plot.png', '')
-gflags.DEFINE_string('output_convnet_max_score', '', '')
+#gflags.DEFINE_string('output_convnet_max_score', '', '')
 gflags.DEFINE_string('output_convnet_seam_fitting',
-                     'convnet/seam_fitting_params', '')
+                     'convnet/fitted_params', '')
 
 
 def plot_data(data_name_list, data_x_list, data_y_list,
@@ -98,12 +98,14 @@ if __name__ == '__main__':
 
     # Read camera param data.
     data_name_list = []
+    data_dir_list =[]
     data_x_list = []
     data_y_list = []
 
-    data_name_list = FLAGS.param_data_names.split(',')
-    data_dir_list = FLAGS.param_data_dirs.split(',')
-    assert (len(data_name_list) == len(data_dir_list))
+    if FLAGS.param_data_names != '':
+        data_name_list = FLAGS.param_data_names.split(',')
+        data_dir_list = FLAGS.param_data_dirs.split(',')
+        assert (len(data_name_list) == len(data_dir_list))
 
     for i in range(len(data_dir_list)):
         data_path = os.path.join(FLAGS.data_dir, data_dir_list[i])
@@ -153,7 +155,7 @@ if __name__ == '__main__':
                 FLAGS.data_dir, FLAGS.output_convnet_seam_fitting)
             plot_utils.write_frame_values(
                 output_path, file_prefix, cn_seam_fitting_x, cn_seam_fitting_y)
-            print("Loaded '{}'.".format(output_path))
+            print("Saved '{}'.".format(output_path))
 
 
     print('Draw plots...')

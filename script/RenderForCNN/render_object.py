@@ -46,7 +46,7 @@ if __name__ == '__main__':
                 FLAGS.data_dir, FLAGS.render_dir))
 
         estimated_viewpoints = [[float(x) for x in line.rstrip().split(' ')]
-                                for line in open(view_file,'r')]
+                                for line in open(view_file, 'r')]
         v = estimated_viewpoints[0]
 
         # Change the model.obj file to render images of a different
