@@ -3,4 +3,4 @@
 	url = https://github.com/rbgirshick/py-faster-rcnn.git
 [submodule "3rdparty/RenderForCNN"]
 	path = 3rdparty/RenderForCNN
-	url = git@github.com:mhsung/RenderForCNN.git
+	url = https://github.com/mhsung/RenderForCNN.git
