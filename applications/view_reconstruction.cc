@@ -35,7 +35,11 @@
 #include <Eigen/Core>
 #include <glog/logging.h>
 #include <gflags/gflags.h>
+// @mhsung
+#include <iomanip>
 #include <theia/theia.h>
+// @mhsung
+#include <theia/image/image.h>
 #include <string>
 #include <vector>
 
@@ -356,19 +360,65 @@ void MouseMove(int x, int y) {
   }
 }
 
+// @mhsung
+void Snapshot(const std::string filepath) {
+  GLenum buffer(GL_BACK);
+  const uint32_t offset = 8;
+  uint32_t w = glutGet(GLUT_WINDOW_WIDTH) - offset;
+  uint32_t h = glutGet(GLUT_WINDOW_HEIGHT) - offset;
+
+  std::vector<GLubyte> fbuffer(w * h * 3);
+  glReadBuffer(buffer);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  RenderScene();
+  glReadPixels(0, 0, w, h, GL_RGB, GL_UNSIGNED_BYTE, &fbuffer[0]);
+
+  theia::Image<theia::uchar> image(w, h, 3);
+  for (uint32_t y = 0; y < h; ++y) {
+    for (uint32_t x = 0; x < w; ++x) {
+      int fbuffer_offset = 3 * (y * w + x);
+      int image_offset = 3 * ((h - y - 1 )* w + x);
+      for (uint32_t c = 0; c < 3; ++c)
+        // Flip y-axis.
+        image(x, h - y - 1, c) = fbuffer[fbuffer_offset + c];
+    }
+  }
+  image.Write(filepath);
+}
+
+// @mhsung
+void SnapshotRotatingAroundYAxis(const int num_samples) {
+  const float angle = 360.0f / num_samples;
+  const float original_rotation = navigation_rotation[1];
+  for (int i = 0; i < num_samples; ++i) {
+    std::stringstream sstr;
+    sstr << "snapshot_" << std::setfill('0') << std::setw(2) << i << ".png";
+    navigation_rotation[1] += angle;
+    Snapshot(sstr.str());
+  }
+  navigation_rotation[1] = original_rotation;
+  RenderScene();
+}
+
+// @mhsung
+void ResetViewpoint() {
+  viewer_position.setZero();
+  zoom = -50.0;
+  navigation_rotation.setZero();
+  mouse_pressed_x = 0;
+  mouse_pressed_y = 0;
+  last_x_offset = 0.0;
+  last_y_offset = 0.0;
+  left_mouse_button_active = 0;
+  right_mouse_button_active = 0;
+  point_size = 1.0;
+}
+
 void Keyboard(unsigned char key, int x, int y) {
   switch (key) {
     case 'r':  // reset viewpoint
-      viewer_position.setZero();
-      zoom = -50.0;
-      navigation_rotation.setZero();
-      mouse_pressed_x = 0;
-      mouse_pressed_y = 0;
-      last_x_offset = 0.0;
-      last_y_offset = 0.0;
-      left_mouse_button_active = 0;
-      right_mouse_button_active = 0;
-      point_size = 1.0;
+      ResetViewpoint();
       break;
     case 'z':
       zoom *= delta_zoom;
@@ -409,6 +459,18 @@ void Keyboard(unsigned char key, int x, int y) {
       if (anti_aliasing_blend < 1.0) {
         anti_aliasing_blend += 0.01;
       }
+    // @mhsung
+    case 'x':
+      navigation_rotation[0] = -90.0f;
+      break;
+    case 'y':
+      navigation_rotation[0] = 0.0f;
+      break;
+    case 's':
+      Snapshot("snapshot.png");
+      break;
+    case 'S':
+      SnapshotRotatingAroundYAxis(72);
       break;
   }
 }

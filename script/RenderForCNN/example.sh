@@ -40,7 +40,21 @@
 	--output_bbox_data_dir=convnet/largest/interp_bboxes
 
 # Render 3D model.
-./render_object.py --data_dir=/Users/msung/Developer/data/MVI_0219 \
+./render_object.py \
+    --data_dir=/Users/msung/Developer/data/MVI_0219 \
     --view_dir=convnet/largest/interp_fitted_views \
     --render_dir=convnet/largest/render_interp_fitted_views \
     --target_class=car
+
+# Composite images.
+./composite_object.py \
+    --data_dir=/Users/msung/Developer/data/MVI_0219 \
+    --render_dir=convnet/largest/render_interp_fitted_views \
+    --bbox_dir=convnet/largest/interp_bboxes \
+    --composite_dir=convnet/largest/composite_interp_fitted \
+    --target_class=car
+
+# Create video.
+ffmpeg -i /Users/msung/Developer/data/MVI_0219/convnet/largest/composite_interp_fitted/MVI_0219_%04d.png \
+    -pix_fmt yuv420p -r 24 -b:v 8000k -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+    /Users/msung/Developer/data/MVI_0219/convnet/largest/composite_interp_fitted.mp4
