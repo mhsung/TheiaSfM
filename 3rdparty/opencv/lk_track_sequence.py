@@ -59,8 +59,8 @@ feature_params = dict( maxCorners = 1000,
 
 class App:
     def __init__(self):
-        self.track_len = 10
-        # self.track_len = np.inf
+        # self.track_len = 10
+        self.track_len = np.inf
         self.detect_interval = 5
         self.tracks = []
         self.frame_idx = 0
@@ -129,8 +129,8 @@ class App:
 
                 # @mhsung
                 # Do not draw track lines and number of tracks.
-                cv2.polylines(vis, [np.int32(tr) for tr in self.tracks],
-                              False, (0, 255, 0))
+                # cv2.polylines(vis, [np.int32(tr) for tr in self.tracks],
+                #               False, (0, 255, 0))
                 # draw_str(vis, (20, 20), 'track count: %d' % len(self.tracks))
 
             if self.frame_idx % self.detect_interval == 0:

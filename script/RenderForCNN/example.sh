@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Detect objects.
 ../py-faster-rcnn/detect.py \
     --data_dir=/Users/msung/Developer/data/MVI_0219 \

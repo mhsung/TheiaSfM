@@ -12,6 +12,7 @@ namespace theia {
 // Bounding box format:
 // xmin, ymin, xmax, ymax.
 
+// (name, [xmin, ymin, xmax, ymax]).
 typedef std::unordered_map<std::string, Eigen::Vector4d> ViewBoundingBoxes;
 
 bool IsPointIncludedInBoundingBox(
