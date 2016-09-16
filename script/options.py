@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Author: Minhyuk Sung (mhsung@cs.stanford.edu)
 
 import gflags
