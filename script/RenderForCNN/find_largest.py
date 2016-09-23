@@ -25,7 +25,7 @@ gflags.DEFINE_string('largest_dir', 'convnet/largest', '')
 gflags.DEFINE_string('target_class', 'chair', '')
 
 
-def findLargestBbox(test_name):
+def find_largest_bbox(test_name):
     basepath = os.path.join(FLAGS.data_dir, FLAGS.output_dir, test_name)
     assert(os.path.isdir(basepath))
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         if not os.path.isdir(basepath):
             continue
 
-        max_bbox_name = findLargestBbox(image_name)
+        max_bbox_name = find_largest_bbox(image_name)
 
         # Copy view file.
         if not os.path.isdir(os.path.join(

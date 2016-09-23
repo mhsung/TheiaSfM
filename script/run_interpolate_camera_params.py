@@ -4,13 +4,8 @@
 from scipy import optimize
 
 import gflags
-import glob
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import plot_utils
-import shutil
 import sys
 
 

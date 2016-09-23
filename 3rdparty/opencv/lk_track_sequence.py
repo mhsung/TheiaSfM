@@ -24,11 +24,10 @@ from __future__ import print_function
 import numpy as np
 import cv2
 import gflags
-# import glog as log
 import glob
-import video
-from common import anorm2, draw_str
-from time import clock
+# import video
+# from common import anorm2, draw_str
+# from time import clock
 import os
 import sys
 
@@ -40,7 +39,7 @@ gflags.DEFINE_string('images', '', '')
 gflags.DEFINE_string('output_image_dir', '', '')
 gflags.DEFINE_string('output_image_list_file', '', '')
 gflags.DEFINE_string('output_feature_tracks_file', '', '')
-gflags.DEFINE_bool('show_images', False, '')
+gflags.DEFINE_bool('display', False, '')
 
 
 lk_params = dict( winSize  = (15, 15),
@@ -98,9 +97,9 @@ class App:
 
         for image_file in self.image_files:
             #ret, frame = self.cam.read()
-            frame = cv2.imread(image_file)
-            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            vis = frame.copy()
+            im = cv2.imread(image_file)
+            frame_gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+            vis = im.copy()
 
             # @mhsung
             image_name = os.path.splitext(os.path.basename(image_file))[0]
@@ -148,16 +147,16 @@ class App:
 
             self.frame_idx += 1
             self.prev_gray = frame_gray
-            if FLAGS.show_images:
+            if FLAGS.display:
                 cv2.imshow('lk_track', vis)
             # else:
             #     log.info('{}: track count = {}'.format(
             #         image_name, len(self.tracks)))
 
             # @mhsung
-            output_file = os.path.join(
-                FLAGS.output_image_dir, image_name + '.png')
-            cv2.imwrite(output_file, vis)
+            # output_file = os.path.join(
+            #     FLAGS.output_image_dir, image_name + '.png')
+            # cv2.imwrite(output_file, vis)
 
             # ch = 0xFF & cv2.waitKey(1)
             # if ch == 27:
@@ -171,7 +170,7 @@ def main():
 
     #print(__doc__)
     App().run()
-    if FLAGS.show_images:
+    if FLAGS.display:
         cv2.destroyAllWindows()
 
 if __name__ == '__main__':

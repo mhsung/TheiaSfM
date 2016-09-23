@@ -4,13 +4,9 @@
 from scipy import optimize
 
 import gflags
-import glob
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import plot_utils
-import shutil
 import sys
 
 
@@ -21,15 +17,10 @@ NUM_ANGLE_SAMPLES = 360
 
 
 # Set input files.
-# gflags.DEFINE_string('data_dir', '', '')
-# gflags.DEFINE_string('images', 'images/*.png', '')
-# gflags.DEFINE_string('input_bbox_data_dir', 'convnet/bboxes', '')
-# gflags.DEFINE_string('output_bbox_data_dir', 'convnet/interp_bboxes', '')
-
-gflags.DEFINE_string('data_dir', '/Users/msung/Developer/data/MVI_0206', '')
+gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('images', 'images/*.png', '')
-gflags.DEFINE_string('input_bbox_data_dir', 'convnet/output_bboxes', '')
-gflags.DEFINE_string('output_bbox_data_dir', 'convnet/interp_output_bboxes', '')
+gflags.DEFINE_string('input_bbox_data_dir', 'convnet/bboxes', '')
+gflags.DEFINE_string('output_bbox_data_dir', 'convnet/interp_bboxes', '')
 
 
 if __name__ == '__main__':
