@@ -52,6 +52,10 @@ gflags.DEFINE_integer('gpu_id', 0, 'GPU device id to use [0]')
 
 gflags.DEFINE_bool('cpu_mode', False, 'Use CPU mode (overrides --gpu)')
 gflags.DEFINE_string('demo_net', 'vgg16', 'Network to use [vgg16]')
+# gflags.DEFINE_double('conf_thresh', 0.8, '')
+gflags.DEFINE_float('conf_thresh', 0.5, '')
+gflags.DEFINE_float('nms_thresh', 0.3, '')
+
 
 '''
 def vis_detections(im, image_name, class_name, dets, thresh=0.5):
@@ -101,7 +105,7 @@ def write_cropped_images(imdata, image_name, class_name, dets, thresh=0.5):
         return
 
     basename = os.path.splitext(image_name)[0]
-    print(os.path.join(FLAGS.data_dir, FLAGS.output_dir, basename))
+    # print(os.path.join(FLAGS.data_dir, FLAGS.output_dir, basename))
     if not os.path.exists(os.path.join(FLAGS.data_dir, FLAGS.output_dir, basename)):
         os.makedirs(os.path.join(FLAGS.data_dir, FLAGS.output_dir, basename))
 
@@ -136,8 +140,9 @@ def demo(net, image_name):
     print ('Target class: {}'.format(FLAGS.target_class))
 
     # Visualize detections for each class
-    CONF_THRESH = 0.8
-    NMS_THRESH = 0.3
+    # FLAGS.conf_thresh = 0.8
+    FLAGS.conf_thresh = 0.5
+    FLAGS.nms_thresh = 0.3
     for cls_ind, cls in enumerate(CLASSES[1:]):
         #
         if cls != FLAGS.target_class:
@@ -148,10 +153,10 @@ def demo(net, image_name):
         cls_scores = scores[:, cls_ind]
         dets = np.hstack((cls_boxes,
                           cls_scores[:, np.newaxis])).astype(np.float32)
-        keep = nms(dets, NMS_THRESH)
+        keep = nms(dets, FLAGS.nms_thresh)
         dets = dets[keep, :]
-        write_cropped_images(im, image_name, cls, dets, thresh=CONF_THRESH)
-        #vis_detections(im, image_name, cls, dets, thresh=CONF_THRESH)
+        write_cropped_images(im, image_name, cls, dets, thresh=FLAGS.conf_thresh)
+        #vis_detections(im, image_name, cls, dets, thresh=FLAGS.conf_thresh)
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
@@ -185,6 +190,7 @@ if __name__ == '__main__':
     #im_names = ['MVI_0018_001.png']
     im_names = [os.path.basename(x) for x in
             glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
+    im_names.sort()
 
     for im_name in im_names:
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'

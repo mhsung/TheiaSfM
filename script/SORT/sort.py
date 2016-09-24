@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import gflags
 import glob
-from numba import jit
+#from numba import jit
 import os
 import sys
 import numpy as np
@@ -42,7 +42,7 @@ gflags.DEFINE_string('output_file', '', '')
 gflags.DEFINE_bool('display', True, '')
 
 
-@jit
+#@jit
 def iou(bb_test, bb_gt):
     """
     Computes IUO between two bboxes in the form [x1,y1,x2,y2].
