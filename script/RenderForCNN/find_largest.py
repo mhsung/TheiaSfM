@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 
-import argparse
-import gflags
-import glob
-import math
-import matplotlib.pyplot as plt
-import numpy as np
-import os
-import shutil
-import sys
-from PIL import Image
-
+import os, sys
 BASE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../3rdparty/RenderForCNN'))
 sys.path.append(BASE_DIR)
 from global_variables import *
 sys.path.append(os.path.join(g_render4cnn_root_folder, 'render_pipeline'))
+
+import argparse
+import gflags
+import glob
+import math
+import numpy as np
+import shutil
+import sys
+from PIL import Image
+
 
 # 'data_dir' must have 'images' directory including *.png files.
 FLAGS = gflags.FLAGS

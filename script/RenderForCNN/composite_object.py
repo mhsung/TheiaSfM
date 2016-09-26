@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
 from PIL import Image
+import cv2
 import gflags
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import scipy.io as sio
-import os, sys, cv2
+import sys
+
 
 # 'data_dir' must have 'images' directory including *.png files.
 FLAGS = gflags.FLAGS

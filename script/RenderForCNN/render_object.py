@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 
-import gflags
-import glob
-import os
-import sys
-import argparse
-from PIL import Image
-
+import os, sys
 BASE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../3rdparty/RenderForCNN'))
 sys.path.append(BASE_DIR)
 from global_variables import *
 sys.path.append(os.path.join(g_render4cnn_root_folder, 'render_pipeline'))
+
+import gflags
+import glob
+from PIL import Image
+
 
 # 'data_dir' must have 'images' directory including *.png files.
 FLAGS = gflags.FLAGS
@@ -61,6 +60,7 @@ if __name__ == '__main__':
         print ">> Running rendering command: \n \t %s" % (python_cmd)
         os.system('%s %s' % (python_cmd, io_redirect))
 
+        # Remove background margin.
         if os.path.exists(out_img_file):
             im2 = Image.open(out_img_file)
             bbox = im2.getbbox()

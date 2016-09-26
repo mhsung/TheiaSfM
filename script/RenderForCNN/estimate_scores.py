@@ -5,12 +5,11 @@ BASE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../3rdparty/RenderForCNN'))
 sys.path.append(BASE_DIR)
 from global_variables import *
-sys.path.append(os.path.join(g_render4cnn_root_folder, 'view_estimation'))
-from evaluation_helper import viewpoint
+sys.path.append(os.path.join(g_render4cnn_root_folder, 'view_estimation_score'))
+from evaluation_helper import viewpoint_scores
 
 import gflags
 import glob
-import numpy as np
 
 
 # 'data_dir' must have 'images' directory including *.png files.
@@ -28,6 +27,7 @@ if __name__ == '__main__':
     # Collect images.
     img_filenames = []
     class_idxs = []
+    out_filenames = []
 
     for dirname in os.listdir(os.path.join(FLAGS.data_dir, FLAGS.output_dir)):
         basepath = os.path.join(FLAGS.data_dir, FLAGS.output_dir, dirname)
@@ -39,17 +39,11 @@ if __name__ == '__main__':
             for img_file in img_files:
                 img_filenames.append(img_file)
                 class_idxs.append(class_idx)
+                # NOTE:
+                # Will be stored as 'npy' file.
+                out_filenames.append(
+                    os.path.splitext(img_file)[0] + '_pred')
 
-    # Estimate viewpoints.
-    preds = viewpoint(img_filenames, class_idxs)
-
-    # Save results.
-    num_images = len(img_filenames)
-    for i in range(num_images):
-        image_filename = img_filenames[i]
-        output_file = os.path.splitext(img_filename)[0] + '_view.txt'
-        print 'Saving "' + output_file + '"'
-        fout = open(output_file, 'w')
-        fout.write('%d %d %d\n' % (preds[i][0], preds[i][1], preds[i][2]))
-        fout.close()
+    # Estimate viewpoint scores.
+    viewpoint_scores(img_filenames, class_idxs. out_filenames)
 

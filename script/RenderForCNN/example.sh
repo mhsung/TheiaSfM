@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 # Change variables.
-DATA_DIR=/Users/msung/Developer/data/MVI_0219
-TARGET_CLASS=car
+DATA_DIR=$HOME/home/data/sfm/MVI_0206
+TARGET_CLASS=chair
 
 # Detect objects.
-../py-faster-rcnn/detect.py
+../py-faster-rcnn/detect.py \
     --data_dir=${DATA_DIR} \
     --target_class=${TARGET_CLASS}
 
@@ -15,23 +15,23 @@ TARGET_CLASS=car
     --target_class=${TARGET_CLASS}
 
 # Estimate orientation scores.
-./estimate_pred.py \
+./estimate_scores.py \
     --data_dir=${DATA_DIR} \
     --target_class=${TARGET_CLASS}
 
 # Find the largest bounding box.
 ./find_largest.py \
     --data_dir=${DATA_DIR} \
-    -target_class=${TARGET_CLASS}
+    --target_class=${TARGET_CLASS}
 
 # Fit orientation in the time sequence.
 ../run_plot.py \
     --data_dir=${DATA_DIR} \
-	--param_data_names=''\
-	--param_data_dirs='' \
-	--convnet_dir=convnet/largest/preds \
-	--output_plot_file=convnet/largest/fitted_views.png \
-	--output_convnet_seam_fitting=convnet/largest/fitted_views
+    --param_data_names=''\
+    --param_data_dirs='' \
+    --convnet_dir=convnet/largest/preds \
+    --output_plot_file=convnet/largest/fitted_views.png \
+    --output_convnet_seam_fitting=convnet/largest/fitted_views
 
 # Interpolate orientations.
 ../run_interpolate_camera_params.py \
@@ -42,8 +42,8 @@ TARGET_CLASS=car
 # Interpolate bounding boxes.
 ../run_interpolate_bboxes.py \
     --data_dir=${DATA_DIR} \
-	--input_bbox_data_dir=convnet/largest/bboxes \
-	--output_bbox_data_dir=convnet/largest/interp_bboxes
+    --input_bbox_data_dir=convnet/largest/bboxes \
+    --output_bbox_data_dir=convnet/largest/interp_bboxes
 
 # Render 3D model.
 ./render_object.py \

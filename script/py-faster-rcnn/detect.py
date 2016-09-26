@@ -25,13 +25,14 @@ from fast_rcnn.test import im_detect
 from fast_rcnn.nms_wrapper import nms
 from PIL import Image
 from utils.timer import Timer
+import caffe
+import cv2
 import glob
 import gflags
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.io as sio
-import caffe, cv2
-import argparse
+
 
 CLASSES = ('__background__',
            'aeroplane', 'bicycle', 'bird', 'boat',
@@ -97,7 +98,7 @@ def vis_detections(im, image_name, class_name, dets, thresh=0.5):
     plt.close(fig)
 '''
 
-def write_cropped_images(imdata, image_name, class_name, dets, thresh=0.5):
+def write_cropped_images(imdata, image_name, class_name, dets, thresh):
     """Write cropped images."""
     inds = np.where(dets[:, -1] >= thresh)[0]
     print ('{} {}(s) are detected.'.format(len(inds), FLAGS.target_class))
@@ -140,9 +141,6 @@ def demo(net, image_name):
     print ('Target class: {}'.format(FLAGS.target_class))
 
     # Visualize detections for each class
-    # FLAGS.conf_thresh = 0.8
-    FLAGS.conf_thresh = 0.5
-    FLAGS.nms_thresh = 0.3
     for cls_ind, cls in enumerate(CLASSES[1:]):
         #
         if cls != FLAGS.target_class:
