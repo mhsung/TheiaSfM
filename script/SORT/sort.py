@@ -296,7 +296,7 @@ class Sort(object):
 def read_dets(dir, image_filenames):
     seq_dets = np.ndarray(shape=(0, 6))
 
-    for frame, image_filename in image_filenames.iteritems():
+    for frame, image_filename in enumerate(image_filenames):
         image_name = os.path.splitext(image_filename)[0]
         bbox_files = glob.glob(os.path.join(dir, image_name, '*_bbox.txt'))
         for bbox_file in bbox_files:
@@ -329,7 +329,7 @@ if __name__ == '__main__':
     mot_tracker = Sort()
 
     with open(FLAGS.output_file, 'w') as out_file:
-        for frame, image_filename in image_filenames.iteritems():
+        for frame, image_filename in enumerate(image_filenames):
             dets = seq_dets[seq_dets[:, 0] == frame, 1:6]
             total_frames += 1
 

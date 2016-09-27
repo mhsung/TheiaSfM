@@ -18,6 +18,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+# Python 2/3 compatibility
+from __future__ import print_function
 
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(
@@ -25,9 +27,9 @@ BASE_DIR = os.path.normpath(os.path.join(
 sys.path.append(os.path.join(BASE_DIR, 'script'))
 sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
 
-# Python 2/3 compatibility
-from __future__ import print_function
-
+from filterpy.kalman import KalmanFilter
+from skimage import io
+from sklearn.utils.linear_assignment_ import linear_assignment
 import cnn_utils
 import gflags
 import glob
@@ -37,10 +39,8 @@ import image_list
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from skimage import io
-from sklearn.utils.linear_assignment_ import linear_assignment
+import pandas as pd
 import time
-from filterpy.kalman import KalmanFilter
 
 
 FLAGS = gflags.FLAGS
@@ -298,7 +298,7 @@ class Sort(object):
 def read_dets(df, image_filenames):
     seq_dets = np.ndarray(shape=(0, 7))
 
-    for frame, image_filename in image_filenames.iteritems():
+    for frame, image_filename in enumerate(image_filenames):
         subset_df = df[df['image_name'] == image_filename]
         for _, row in subset_df.iterrows():
             det = np.array([
@@ -317,10 +317,10 @@ if __name__ == '__main__':
         os.path.join(FLAGS.data_dir, 'images', '*.png'))
 
     # Read bounding boxes.
-    df = cnn_utils.read_bboxes(
+    df, _ = cnn_utils.read_bboxes(
         os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
-    assert (len(df.index) == len(image_filenames))
 
+    # Get bounding boxes in image sequence.
     seq_dets = read_dets(df, image_filenames)
 
     total_time = 0.0
@@ -338,14 +338,15 @@ if __name__ == '__main__':
     mot_tracker = Sort()
 
     with open(FLAGS.out_object_track_file, 'w') as out_file:
-        for frame, image_filename in image_filenames.iteritems():
+        for frame, image_filename in enumerate(image_filenames):
             dets = seq_dets[seq_dets[:, 0] == frame, 1:6]
             total_frames += 1
 
             if FLAGS.display:
                 ax1 = fig.add_subplot(111, aspect='equal')
                 image_file = os.path.join(
-                    os.path.dirname(FLAGS.images), image_filename)
+                        os.path.dirname(data_dir, 'images', image_filename)
+                print(image_file)
                 im = io.imread(image_file)
                 ax1.imshow(im)
                 plt.title('Tracked Targets')
