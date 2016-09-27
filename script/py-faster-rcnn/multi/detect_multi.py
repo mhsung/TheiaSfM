@@ -15,10 +15,10 @@ See README.md for installation instructions before running.
 
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
-    os.path.abspath(__file__)), '../../../3rdparty/py-faster-rcnn'))
-sys.path.append(os.path.join(BASE_DIR, 'lib'))
-sys.path.append(os.path.join(BASE_DIR, 'tools'))
-sys.path.append('../../RenderForCNN/multi')
+    os.path.abspath(__file__)), '../../../'))
+sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'lib'))
+sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'tools'))
+sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
 
 import _init_paths
 from fast_rcnn.config import cfg

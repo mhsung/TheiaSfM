@@ -1,12 +1,5 @@
 #!/usr/bin/env python
 
-import os, sys
-BASE_DIR = os.path.normpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), '../../../3rdparty/RenderForCNN'))
-sys.path.append(BASE_DIR)
-from global_variables import *
-sys.path.append(os.path.join(g_render4cnn_root_folder, 'render_pipeline'))
-
 from joblib import Parallel, delayed
 import cnn_utils
 import cv2
@@ -14,6 +7,7 @@ import gflags
 import glob
 import multiprocessing
 import numpy as np
+import os, sys
 
 
 # 'data_dir' must have 'images' directory including *.png files.

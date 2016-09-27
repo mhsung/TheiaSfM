@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 
+
 def read_class_names(filename):
     with open(filename) as f:
         class_names = f.read().splitlines()

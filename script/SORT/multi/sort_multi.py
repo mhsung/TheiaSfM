@@ -23,10 +23,12 @@ import os, sys
 BASE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../../'))
 sys.path.append(os.path.join(BASE_DIR, 'script'))
+sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
 
 # Python 2/3 compatibility
 from __future__ import print_function
 
+import cnn_utils
 import gflags
 import glob
 #from numba import jit
@@ -44,9 +46,9 @@ from filterpy.kalman import KalmanFilter
 FLAGS = gflags.FLAGS
 
 # Set input files.
-gflags.DEFINE_string('images', '', '')
-gflags.DEFINE_string('bbox_dir', '', '')
-gflags.DEFINE_string('output_file', '', '')
+gflags.DEFINE_string('data_dir', '', '')
+gflags.DEFINE_string('bbox_file', 'convnet/bboxes.csv', '')
+gflags.DEFINE_string('out_object_track_file', 'convnet/objects.txt', '')
 gflags.DEFINE_bool('display', True, '')
 
 
@@ -292,17 +294,17 @@ class Sort(object):
 
 
 # @mhsung
-# output: [frame, x1, y1, x2, y2, score]
-def read_dets(dir, image_filenames):
-    seq_dets = np.ndarray(shape=(0, 6))
+# output: [frame, x1, y1, x2, y2, score, class_index]
+def read_dets(df, image_filenames):
+    seq_dets = np.ndarray(shape=(0, 7))
 
     for frame, image_filename in image_filenames.iteritems():
-        image_name = os.path.splitext(image_filename)[0]
-        bbox_files = glob.glob(os.path.join(dir, image_name, '*_bbox.txt'))
-        for bbox_file in bbox_files:
-            dets = np.loadtxt(bbox_file, delimiter=' ')
-            dets = np.insert(dets, 0, frame)
-            seq_dets = np.vstack([seq_dets, dets])
+        subset_df = df[df['image_name'] == image_filename]
+        for _, row in subset_df.iterrows():
+            det = np.array([
+                frame, row['x1'], row['y1'], row['x2'], row['y2'],
+                row['score'], row['class_index']])
+            seq_dets = np.vstack([seq_dets, det])
 
     return seq_dets
 
@@ -310,9 +312,16 @@ def read_dets(dir, image_filenames):
 if __name__ == '__main__':
     FLAGS(sys.argv)
 
-    # @mhsung
-    image_filenames = image_list.get_image_filenames(FLAGS.images)
-    seq_dets = read_dets(FLAGS.bbox_dir, image_filenames)
+    # Read image file names.
+    image_filenames = image_list.get_image_filenames(
+        os.path.join(FLAGS.data_dir, 'images', '*.png'))
+
+    # Read bounding boxes.
+    df = cnn_utils.read_bboxes(
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+    assert (len(df.index) == len(image_filenames))
+
+    seq_dets = read_dets(df, image_filenames)
 
     total_time = 0.0
     total_frames = 0
@@ -322,13 +331,13 @@ if __name__ == '__main__':
         plt.ion()
         fig = plt.figure()
 
-    if not os.path.exists(os.path.dirname(FLAGS.output_file)):
-        os.makedirs(os.path.dirname(FLAGS.output_file))
+    if not os.path.exists(os.path.dirname(FLAGS.out_object_track_file)):
+        os.makedirs(os.path.dirname(FLAGS.out_object_track_file))
 
     # Create instance of the SORT tracker
     mot_tracker = Sort()
 
-    with open(FLAGS.output_file, 'w') as out_file:
+    with open(FLAGS.out_object_track_file, 'w') as out_file:
         for frame, image_filename in image_filenames.iteritems():
             dets = seq_dets[seq_dets[:, 0] == frame, 1:6]
             total_frames += 1

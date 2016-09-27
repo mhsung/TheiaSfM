@@ -18,6 +18,11 @@ Keys
 ESC - exit
 '''
 
+import os, sys
+BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), '../../'))
+sys.path.append(os.path.join(BASE_DIR, 'script'))
+
 # Python 2/3 compatibility
 from __future__ import print_function
 
@@ -25,11 +30,10 @@ import numpy as np
 import cv2
 import gflags
 import glob
+import image_list
 # import video
 # from common import anorm2, draw_str
 # from time import clock
-import os
-import sys
 
 
 FLAGS = gflags.FLAGS
@@ -64,10 +68,6 @@ class App:
         self.tracks = []
         self.frame_idx = 0
 
-        # @mhsung
-        self.image_files = glob.glob(FLAGS.images)
-        self.image_files.sort()
-
 
     def write_track(self, file, track, end_frame_idx):
         track_length = len(track)
@@ -86,23 +86,20 @@ class App:
         if not os.path.exists(FLAGS.output_image_dir):
             os.makedirs(FLAGS.output_image_dir)
 
-        # @mhsung
-        image_filenames = [os.path.basename(x) for x in self.image_files]
-        image_list_file = open(FLAGS.output_image_list_file, 'w')
-        for image_filename in image_filenames:
-            image_list_file.write('{}\n'.format(image_filename))
+        # Read image file names.
+        image_filenames = image_list.get_image_filenames(FLAGS.images)
 
         track_file = open(FLAGS.output_feature_tracks_file, 'w')
         assert(track_file)
 
-        for image_file in self.image_files:
+        for image_filename in image_filenames:
+            image_file = os.path.join(
+                os.path.dirname(FLAGS.images), image_filename)
+
             #ret, frame = self.cam.read()
             im = cv2.imread(image_file)
             frame_gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
             vis = im.copy()
-
-            # @mhsung
-            image_name = os.path.splitext(os.path.basename(image_file))[0]
 
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray

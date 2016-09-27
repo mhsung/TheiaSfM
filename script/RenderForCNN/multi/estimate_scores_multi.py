@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 import os, sys
-BASE_DIR = os.path.normpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), '../../../3rdparty/RenderForCNN'))
-sys.path.append(BASE_DIR)
+BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
+    os.path.abspath(__file__)), '../../../'))
+sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'RenderForCNN'))
 from global_variables import *
 sys.path.append(os.path.join(g_render4cnn_root_folder, 'view_estimation'))
 from evaluation_helper import viewpoint_scores
