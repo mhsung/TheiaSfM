@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     # Read bounding boxes.
     df, num_digits = cnn_utils.read_bboxes(
-            os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
 
     # Collect images.
     img_filenames = []
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     for bbox_idx, row in df.iterrows():
         crop_im_file = os.path.join(FLAGS.data_dir, FLAGS.crop_dir,
-                str(bbox_idx).zfill(num_digits) + '.png')
+                                    str(bbox_idx).zfill(num_digits) + '.png')
         img_filenames.append(crop_im_file)
 
         class_name = class_names[int(row['class_index'])]
@@ -52,5 +52,4 @@ if __name__ == '__main__':
 
     # Save results.
     np.savetxt(os.path.join(FLAGS.data_dir, FLAGS.out_best_orientation_file),
-            preds, fmt='%i', delimiter=",")
-
+               preds, fmt='%i', delimiter=",")

@@ -3,8 +3,6 @@
 
 import numpy as np
 import pandas as pd
-import os
-import sys
 
 def read_class_names(filename):
     with open(filename) as f:
@@ -17,14 +15,14 @@ def read_class_names(filename):
 
 def create_bbox_data_frame():
     header = ('image_name', 'class_index',
-            'x1', 'y1', 'x2', 'y2', 'score')
+              'x1', 'y1', 'x2', 'y2', 'score')
     df = pd.DataFrame(columns=header)
     return df
 
 
 def read_bboxes(filename):
     header = ('image_name', 'class_index',
-            'x1', 'y1', 'x2', 'y2', 'score')
+              'x1', 'y1', 'x2', 'y2', 'score')
     df = pd.read_csv(filename, names=header)
     num_bboxes = len(df.index)
     print ('{:d} bounding box(es) are loaded.'.format(num_bboxes))
@@ -35,4 +33,3 @@ def read_bboxes(filename):
 def read_orientations(filename):
     preds = np.genfromtxt(filename, delimiter=',')
     return preds
-

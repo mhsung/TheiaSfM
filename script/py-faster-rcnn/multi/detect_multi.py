@@ -24,7 +24,6 @@ import _init_paths
 from fast_rcnn.config import cfg
 from fast_rcnn.test import im_detect
 from fast_rcnn.nms_wrapper import nms
-from PIL import Image
 from utils.timer import Timer
 import caffe
 import cv2
@@ -33,7 +32,6 @@ import glob
 import gflags
 import numpy as np
 import pandas as pd
-import scipy.io as sio
 
 
 CLASSES = ('__background__',
@@ -80,8 +78,8 @@ def detect_bboxes(net, im_names, subset_classes):
         scores, boxes = im_detect(net, im)
         timer.toc()
         print ('Detection took {:.3f}s for '
-                '{:d} object proposals').format(
-                        timer.total_time, boxes.shape[0])
+               '{:d} object proposals').format(
+            timer.total_time, boxes.shape[0])
 
         # Detect for each class
         for subset_cls_ind in range(len(class_names_to_be_detected)):
@@ -90,13 +88,13 @@ def detect_bboxes(net, im_names, subset_classes):
                 cls_ind = CLASSES.index(cls)
             except:
                 print('error: class does not exist in training data: '
-                        '{0}'.format(cls))
+                      '{0}'.format(cls))
                 exit(-1)
 
             cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
             cls_scores = scores[:, cls_ind]
             dets = np.hstack((cls_boxes,
-                            cls_scores[:, np.newaxis])).astype(np.float32)
+                              cls_scores[:, np.newaxis])).astype(np.float32)
             keep = nms(dets, FLAGS.nms_thresh)
             dets = dets[keep, :]
             inds = np.where(dets[:, -1] >= FLAGS.conf_thresh)[0]
@@ -106,9 +104,9 @@ def detect_bboxes(net, im_names, subset_classes):
             for i in inds:
                 # Append a row.
                 df.loc[len(df)] = [
-                        im_name, subset_cls_ind,
-                        dets[i, 0], dets[i, 1], dets[i, 2], dets[i, 3],
-                        dets[i, -1]]
+                    im_name, subset_cls_ind,
+                    dets[i, 0], dets[i, 1], dets[i, 2], dets[i, 3],
+                    dets[i, -1]]
 
     return df
 
@@ -144,11 +142,11 @@ if __name__ == '__main__':
 
     # Read class names to be detected.
     class_names_to_be_detected = cnn_utils.read_class_names(
-            FLAGS.class_name_file)
+        FLAGS.class_name_file)
 
     # Read image names.
     im_names = [os.path.basename(x) for x in
-            glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
+                glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
     im_names.sort()
 
     # Detect and save bounding boxes.

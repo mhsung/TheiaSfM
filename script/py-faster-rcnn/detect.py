@@ -31,7 +31,6 @@ import glob
 import gflags
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy.io as sio
 
 
 CLASSES = ('__background__',
@@ -118,11 +117,11 @@ def write_cropped_images(imdata, image_name, class_name, dets, thresh):
         im = Image.fromarray(imdata, 'RGB')
         cropped_im = im.crop((bbox[0], bbox[1], bbox[2], bbox[3]))
         cropped_im_file = os.path.join(FLAGS.data_dir, FLAGS.output_dir, basename,
-                class_name + '_' + str(i))
+                                       class_name + '_' + str(i))
         print(cropped_im_file)
         cropped_im.save(cropped_im_file + '.png')
         np.savetxt(cropped_im_file + '_bbox.txt',
-                dets[i, :].reshape(1, 5), delimiter=' ', fmt='%f')
+                   dets[i, :].reshape(1, 5), delimiter=' ', fmt='%f')
 
 def demo(net, image_name):
     """Detect object classes in an image using pre-computed object proposals."""
@@ -187,7 +186,7 @@ if __name__ == '__main__':
 
     #im_names = ['MVI_0018_001.png']
     im_names = [os.path.basename(x) for x in
-            glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
+                glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
     im_names.sort()
 
     for im_name in im_names:

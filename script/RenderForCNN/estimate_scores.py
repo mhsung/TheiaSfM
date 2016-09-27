@@ -46,4 +46,3 @@ if __name__ == '__main__':
 
     # Estimate viewpoint scores.
     viewpoint_scores(img_filenames, class_idxs. out_filenames)
-

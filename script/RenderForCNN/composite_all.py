@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
-from PIL import Image
 import cv2
 import gflags
 import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import scipy.io as sio
 import sys
 
 
@@ -118,7 +116,7 @@ def vis_estimations(image_name):
                               bbox[2] - bbox[0],
                               bbox[3] - bbox[1], fill=False,
                               edgecolor='red', linewidth=3.5)
-                )
+            )
 
             ax.text(bbox[0], bbox[1] - 2,
                     '{:s} {:.3f}'.format(FLAGS.target_class, score),
@@ -139,7 +137,7 @@ if __name__ == '__main__':
     FLAGS(sys.argv)
 
     im_names = [os.path.basename(x) for x in
-            glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
+                glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
 
     for im_name in im_names:
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'

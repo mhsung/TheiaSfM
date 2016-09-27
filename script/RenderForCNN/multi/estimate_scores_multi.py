@@ -11,7 +11,6 @@ from evaluation_helper import viewpoint_scores
 import cnn_utils
 import gflags
 import glob
-import numpy as np
 
 
 # 'data_dir' must have 'images' directory including *.png files.
@@ -32,10 +31,10 @@ if __name__ == '__main__':
 
     # Read bounding boxes.
     df, num_digits = cnn_utils.read_bboxes(
-            os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
 
     if not os.path.exists(os.path.join(
-        FLAGS.data_dir, FLAGS.out_orientation_score_dir)):
+            FLAGS.data_dir, FLAGS.out_orientation_score_dir)):
         os.makedirs(os.path.join(
             FLAGS.data_dir, FLAGS.out_orientation_score_dir))
 
@@ -46,7 +45,7 @@ if __name__ == '__main__':
 
     for bbox_idx, row in df.iterrows():
         crop_im_file = os.path.join(FLAGS.data_dir, FLAGS.crop_dir,
-                str(bbox_idx).zfill(num_digits) + '.png')
+                                    str(bbox_idx).zfill(num_digits) + '.png')
         img_filenames.append(crop_im_file)
 
         class_name = class_names[int(row['class_index'])]
@@ -56,10 +55,9 @@ if __name__ == '__main__':
         # NOTE:
         # Will be stored as 'npy' file.
         out_file = os.path.join(FLAGS.data_dir,
-                FLAGS.out_orientation_score_dir,
-                str(bbox_idx).zfill(num_digits))
+                                FLAGS.out_orientation_score_dir,
+                                str(bbox_idx).zfill(num_digits))
         out_filenames.append(out_file)
 
     # Estimate viewpoint scores.
     viewpoint_scores(img_filenames, class_idxs, out_filenames)
-

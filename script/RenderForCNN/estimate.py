@@ -52,4 +52,3 @@ if __name__ == '__main__':
         fout = open(output_file, 'w')
         fout.write('%d %d %d\n' % (preds[i][0], preds[i][1], preds[i][2]))
         fout.close()
-

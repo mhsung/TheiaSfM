@@ -1,18 +1,5 @@
 #!/usr/bin/env python
 
-# --------------------------------------------------------
-# Faster R-CNN
-# Copyright (c) 2015 Microsoft
-# Licensed under The MIT License [see LICENSE for details]
-# Written by Ross Girshick
-# --------------------------------------------------------
-
-"""
-Demo script showing detections in sample images.
-
-See README.md for installation instructions before running.
-"""
-
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../../3rdparty/py-faster-rcnn'))
@@ -25,9 +12,7 @@ from PIL import Image
 from utils.timer import Timer
 import cnn_utils
 import gflags
-import numpy as np
 import multiprocessing
-import pandas as pd
 
 
 # 'data_dir' must have 'images' directory including *.png files.
@@ -48,7 +33,7 @@ def crop_image(bbox_idx, row, num_digits):
     im = Image.open(im_file)
     crop_im = im.crop((x1, y1, x2, y2))
     crop_im_file = os.path.join(FLAGS.data_dir, FLAGS.out_crop_dir,
-            str(bbox_idx).zfill(num_digits) + '.png')
+                                str(bbox_idx).zfill(num_digits) + '.png')
     crop_im.save(crop_im_file)
     print('Saved %s.' % crop_im_file)
 
@@ -58,7 +43,7 @@ if __name__ == '__main__':
 
     # Read bounding boxes.
     df, num_digits = cnn_utils.read_bboxes(
-            os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
 
     if not os.path.exists(os.path.join(FLAGS.data_dir, FLAGS.out_crop_dir)):
         os.makedirs(os.path.join(FLAGS.data_dir, FLAGS.out_crop_dir))
@@ -73,9 +58,8 @@ if __name__ == '__main__':
     num_cores = multiprocessing.cpu_count()
     results = Parallel(n_jobs=num_cores)(delayed(
         crop_image)(bbox_idx, row, num_digits)
-        for bbox_idx, row in df.iterrows())
+                                         for bbox_idx, row in df.iterrows())
 
     timer.toc()
     print ('Cropping took {:.3f}s for '
            '{:d} object proposals').format(timer.total_time, len(df.index))
-

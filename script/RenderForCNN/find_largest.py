@@ -7,14 +7,10 @@ sys.path.append(BASE_DIR)
 from global_variables import *
 sys.path.append(os.path.join(g_render4cnn_root_folder, 'render_pipeline'))
 
-import argparse
 import gflags
 import glob
-import math
-import numpy as np
 import shutil
 import sys
-from PIL import Image
 
 
 # 'data_dir' must have 'images' directory including *.png files.
@@ -100,4 +96,3 @@ if __name__ == '__main__':
         out_pred_file = os.path.join(FLAGS.data_dir, FLAGS.largest_dir,
                                      'preds', image_name + '.npy')
         shutil.copy(pred_file, out_pred_file)
-

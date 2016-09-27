@@ -8,15 +8,12 @@ from global_variables import *
 sys.path.append(os.path.join(g_render4cnn_root_folder, 'render_pipeline'))
 
 from joblib import Parallel, delayed
-#from PIL import Image
 import cnn_utils
 import cv2
 import gflags
 import glob
-#import matplotlib.pyplot as plt
 import multiprocessing
 import numpy as np
-import scipy.io as sio
 
 
 # 'data_dir' must have 'images' directory including *.png files.
@@ -35,7 +32,7 @@ gflags.DEFINE_bool('half_size_output', True, '')
 
 def composite_rendered_images(im, bbox_idx, row, num_digits):
     render_im_file = os.path.join(FLAGS.data_dir, FLAGS.render_dir,
-            str(bbox_idx).zfill(num_digits) + '.png')
+                                  str(bbox_idx).zfill(num_digits) + '.png')
     # print(render_im_file)
     assert (os.path.exists(render_im_file))
 
@@ -82,7 +79,7 @@ def draw_bboxes(im, row, class_names, colors):
 
     bbox_thickness = 8
     cv2.rectangle(im, (sx, sy), (ex, ey), colors[class_idx, :],
-            bbox_thickness)
+                  bbox_thickness)
 
     label = '{:s} {:.3f}'.format(class_name, row['score'])
     fontface = cv2.FONT_HERSHEY_SIMPLEX
@@ -91,10 +88,10 @@ def draw_bboxes(im, row, class_names, colors):
     label_size = cv2.getTextSize(label, fontface, scale, text_thickness)[0]
     # Fill background of label (-1 thickness).
     cv2.rectangle(im, (sx - bbox_thickness / 2,
-        sy - bbox_thickness - label_size[1]),
-        (ex + bbox_thickness / 2, sy), colors[class_idx, :], -1)
+                       sy - bbox_thickness - label_size[1]),
+                  (ex + bbox_thickness / 2, sy), colors[class_idx, :], -1)
     cv2.putText(im, label, (sx, sy - bbox_thickness / 2), fontface, scale,
-            (255, 255, 255, 255), text_thickness, cv2.CV_AA)
+                (255, 255, 255, 255), text_thickness, cv2.CV_AA)
 
     return im
 
@@ -133,7 +130,7 @@ def generate_output_images(im_name, df, class_names, colors, num_digits):
     if FLAGS.half_size_output:
         height, width = im.shape[:2]
         im = cv2.resize(im, (width/2, height/2),
-                interpolation = cv2.INTER_CUBIC)
+                        interpolation = cv2.INTER_CUBIC)
 
     cv2.imwrite(out_im_file, im)
     print('Saved %s.' % out_im_file)
@@ -144,7 +141,7 @@ if __name__ == '__main__':
 
     # Read image names.
     im_names = [os.path.basename(x) for x in
-            glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
+                glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
     im_names.sort()
 
     # Read class names to be detected.
@@ -152,7 +149,7 @@ if __name__ == '__main__':
 
     # Read bounding boxes.
     df, num_digits = cnn_utils.read_bboxes(
-            os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
 
     if not os.path.exists(os.path.join(
             FLAGS.data_dir, FLAGS.out_composite_dir)):
@@ -172,5 +169,4 @@ if __name__ == '__main__':
     num_cores = multiprocessing.cpu_count()
     results = Parallel(n_jobs=num_cores)(delayed(
         generate_output_images)(im_name, df, class_names, colors, num_digits)
-        for im_name in im_names)
-
+                                         for im_name in im_names)
