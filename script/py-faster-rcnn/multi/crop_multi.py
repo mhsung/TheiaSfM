@@ -50,7 +50,7 @@ def crop_image(bbox_idx, row, num_digits):
     crop_im_file = os.path.join(FLAGS.data_dir, FLAGS.out_crop_dir,
             str(bbox_idx).zfill(num_digits) + '.png')
     crop_im.save(crop_im_file)
-    # print('Saved {0}.'.format(crop_im_file))
+    print('Saved %s.' % crop_im_file)
 
 
 if __name__ == '__main__':
