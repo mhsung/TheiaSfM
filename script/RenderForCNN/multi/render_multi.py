@@ -21,7 +21,7 @@ gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
     BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
 gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
-gflags.DEFINE_string('best_orientation_file',
+gflags.DEFINE_string('orientation_file',
     'convnet/object_orientations_fitted.csv', '')
 gflags.DEFINE_string('out_render_dir', 'convnet/object_render_fitted', '')
 
@@ -82,7 +82,7 @@ if __name__ == '__main__':
 
     # Read estimated best orientations.
     preds = cnn_utils.read_orientations(
-        os.path.join(FLAGS.data_dir, FLAGS.best_orientation_file))
+        os.path.join(FLAGS.data_dir, FLAGS.orientation_file))
     assert (len(df.index) == preds.shape[0])
 
     if not os.path.exists(os.path.join(
