@@ -3,6 +3,8 @@
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../../'))
+sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'lib'))
+sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'tools'))
 sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
 
 from joblib import Parallel, delayed
@@ -11,13 +13,16 @@ from utils.timer import Timer
 import cnn_utils
 import gflags
 import multiprocessing
+import time
 
 
 # 'data_dir' must have 'images' directory including *.png files.
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
-gflags.DEFINE_string('bbox_file', 'convnet/bboxes.csv', '')
-gflags.DEFINE_string('out_crop_dir', 'convnet/crop', '')
+gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
+gflags.DEFINE_string('out_crop_dir', 'convnet/object_crop', '')
+
+gflags.DEFINE_bool('with_object_index', True, '')
 
 
 def crop_image(bbox_idx, row, num_digits):
@@ -41,7 +46,8 @@ if __name__ == '__main__':
 
     # Read bounding boxes.
     df, num_digits = cnn_utils.read_bboxes(
-        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file),
+        FLAGS.with_object_index)
 
     if not os.path.exists(os.path.join(FLAGS.data_dir, FLAGS.out_crop_dir)):
         os.makedirs(os.path.join(FLAGS.data_dir, FLAGS.out_crop_dir))

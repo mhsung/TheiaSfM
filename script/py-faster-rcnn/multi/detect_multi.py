@@ -49,8 +49,8 @@ NETS = {'vgg16': ('VGG16', 'VGG16_faster_rcnn_final.caffemodel'),
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
-    BASE_DIR, '../../script/RenderForCNN/multi/class_names.txt'), '')
-gflags.DEFINE_string('out_bbox_file', 'convnet/bboxes.csv', '')
+    BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
+gflags.DEFINE_string('out_bbox_file', 'convnet/raw_bboxes.csv', '')
 
 gflags.DEFINE_integer('gpu_id', 0, 'GPU device id to use [0]')
 gflags.DEFINE_bool('cpu_mode', False, 'Use CPU mode (overrides --gpu)')
@@ -103,6 +103,7 @@ def detect_bboxes(net, im_names, subset_classes):
 
             for i in inds:
                 # Append a row.
+                # ['image_name', 'class_index', 'x1', 'y1', 'x2', 'y2', 'score']
                 df.loc[len(df)] = [
                     im_name, subset_cls_ind,
                     dets[i, 0], dets[i, 1], dets[i, 2], dets[i, 3],
@@ -158,3 +159,6 @@ if __name__ == '__main__':
     # Save class indices as integer.
     df['class_index'] = df['class_index'].map(lambda x: '%i' % x)
     df.to_csv(out_file, header=False)
+    num_bboxes = len(df.index)
+    print ('{:d} bounding box(es) are saved.'.format(num_bboxes))
+

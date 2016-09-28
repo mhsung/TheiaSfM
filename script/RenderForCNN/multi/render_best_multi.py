@@ -19,11 +19,13 @@ import multiprocessing
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
-    BASE_DIR, '../../script/RenderForCNN/multi/class_names.txt'), '')
-gflags.DEFINE_string('bbox_file', 'convnet/bboxes.csv', '')
-gflags.DEFINE_string('best_orientation_file', 'convnet/orientations_best.csv', '')
-gflags.DEFINE_string('out_render_dir', 'convnet/render_best', '')
+    BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
+gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
+gflags.DEFINE_string('best_orientation_file',
+    'convnet/object_orientations_best.csv', '')
+gflags.DEFINE_string('out_render_dir', 'convnet/object_render_best', '')
 
+gflags.DEFINE_bool('with_object_index', True, '')
 gflags.DEFINE_bool('use_opengl', True, '')
 
 
@@ -75,7 +77,8 @@ if __name__ == '__main__':
 
     # Read bounding boxes.
     df, num_digits = cnn_utils.read_bboxes(
-        os.path.join(FLAGS.data_dir, FLAGS.bbox_file))
+        os.path.join(FLAGS.data_dir, FLAGS.bbox_file),
+        FLAGS.with_object_index)
 
     # Read estimated best orientations.
     preds = cnn_utils.read_orientations(

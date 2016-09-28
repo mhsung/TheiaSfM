@@ -14,16 +14,27 @@ def read_class_names(filename):
     print(class_names)
     return class_names
 
-def create_bbox_data_frame():
-    header = ('image_name', 'class_index',
-              'x1', 'y1', 'x2', 'y2', 'score')
+
+def create_bbox_data_frame(with_object_index):
+    if with_object_index:
+        header = ('image_name', 'class_index',
+                'x1', 'y1', 'x2', 'y2', 'score', 'object_index')
+    else:
+        header = ('image_name', 'class_index',
+                'x1', 'y1', 'x2', 'y2', 'score')
+
     df = pd.DataFrame(columns=header)
     return df
 
 
-def read_bboxes(filename):
-    header = ('image_name', 'class_index',
-              'x1', 'y1', 'x2', 'y2', 'score')
+def read_bboxes(filename, with_object_index):
+    if with_object_index:
+        header = ('image_name', 'class_index',
+                'x1', 'y1', 'x2', 'y2', 'score', 'object_index')
+    else:
+        header = ('image_name', 'class_index',
+                'x1', 'y1', 'x2', 'y2', 'score')
+
     df = pd.read_csv(filename, names=header)
     num_bboxes = len(df.index)
     print ('{:d} bounding box(es) are loaded.'.format(num_bboxes))
