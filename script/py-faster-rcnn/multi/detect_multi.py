@@ -62,7 +62,7 @@ gflags.DEFINE_float('nms_thresh', 0.3, '')
 
 def detect_bboxes(net, im_names, subset_classes):
     """Detect object classes in an image using pre-computed object proposals."""
-    df = cnn_utils.create_bbox_data_frame()
+    df = cnn_utils.create_bbox_data_frame(with_object_index=False)
 
     for im_name in im_names:
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'

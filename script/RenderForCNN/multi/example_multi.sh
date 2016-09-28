@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 # Change variables.
-DATA_DIR=$HOME/home/data/sfm/MVI_0206
+# DATA_DIR=$HOME/home/data/sfm/MVI_0206
+DATA_DIR=$HOME/home/data/sun3d.cs.princeton.edu/data/hotel_umd/maryland_hotel3
 
 # Detect objects.
-../../py-faster-rcnn/multi/detect_multi.py --data_dir=${DATA_DIR}
+../../py-faster-rcnn/multi/detect_multi.py --data_dir=${DATA_DIR} --gpu_id=1
 
 # Track objects.
 ../../SORT/multi/sort_multi.py --data_dir=${DATA_DIR}
@@ -13,10 +14,10 @@ DATA_DIR=$HOME/home/data/sfm/MVI_0206
 ../../py-faster-rcnn/multi/crop_multi.py --data_dir=${DATA_DIR}
 
 # Estimate best orientation.
-./estimate_best_multi.py --data_dir=${DATA_DIR}
+./estimate_best_multi.py --data_dir=${DATA_DIR} --gpu_id=1
 
 # Estimate orientation scores.
-./estimate_scores_multi.py --data_dir=${DATA_DIR}
+./estimate_scores_multi.py --data_dir=${DATA_DIR} --gpu_id=1
 
 # Do seam fitting in camera parameter space.
 ./seam_fitting_multi.py --data_dir=${DATA_DIR}

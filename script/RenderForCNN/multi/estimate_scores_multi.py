@@ -23,6 +23,7 @@ gflags.DEFINE_string('crop_dir', 'convnet/object_crop', '')
 gflags.DEFINE_string('out_orientation_score_dir', 'convnet/object_score', '')
 
 gflags.DEFINE_bool('with_object_index', True, '')
+gflags.DEFINE_integer('gpu_id', 0, 'GPU device id to use [0]')
 
 
 if __name__ == '__main__':
@@ -63,4 +64,5 @@ if __name__ == '__main__':
         out_filenames.append(out_file)
 
     # Estimate viewpoint scores.
+    cfg.GPU_ID = FLAGS.gpu_id
     viewpoint_scores(img_filenames, class_idxs, out_filenames)

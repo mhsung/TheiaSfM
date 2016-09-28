@@ -25,6 +25,7 @@ gflags.DEFINE_string('out_best_orientation_file',
     'convnet/object_orientations_best.csv', '')
 
 gflags.DEFINE_bool('with_object_index', True, '')
+gflags.DEFINE_integer('gpu_id', 0, 'GPU device id to use [0]')
 
 
 if __name__ == '__main__':
@@ -52,6 +53,7 @@ if __name__ == '__main__':
         class_idxs.append(class_idx)
 
     # Estimate viewpoints.
+    cfg.GPU_ID = FLAGS.gpu_id
     preds = viewpoint(img_filenames, class_idxs)
 
     # Save results.
