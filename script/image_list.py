@@ -13,6 +13,7 @@ def get_image_filenames(images_wildcard):
         with open(out_filename, 'r') as f:
             image_filenames = f.read().splitlines()
     else:
+        print(images_wildcard)
         image_filenames = [os.path.basename(x)
                            for x in glob.glob(images_wildcard)]
 

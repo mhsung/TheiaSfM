@@ -44,7 +44,7 @@ FLAGS = gflags.FLAGS
 
 # Set input files.
 gflags.DEFINE_string('data_dir', '', '')
-gflags.DEFINE_string('raw_bbox_file', 'convnet/bboxes.csv', '')
+gflags.DEFINE_string('raw_bbox_file', 'convnet/raw_bboxes.csv', '')
 gflags.DEFINE_string('out_object_bbox_file', 'convnet/object_bboxes.csv', '')
 
 
