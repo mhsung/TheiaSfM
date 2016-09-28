@@ -22,8 +22,8 @@ gflags.DEFINE_string('class_name_file', os.path.join(
     BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
 gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
 gflags.DEFINE_string('best_orientation_file',
-    'convnet/object_orientations_best.csv', '')
-gflags.DEFINE_string('out_render_dir', 'convnet/object_render_best', '')
+    'convnet/object_orientations_fitted.csv', '')
+gflags.DEFINE_string('out_render_dir', 'convnet/object_render_fitted', '')
 
 gflags.DEFINE_bool('with_object_index', True, '')
 gflags.DEFINE_bool('use_opengl', True, '')

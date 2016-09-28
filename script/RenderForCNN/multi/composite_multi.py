@@ -3,12 +3,14 @@
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../../'))
+sys.path.append(os.path.join(BASE_DIR, 'script'))
 
 from joblib import Parallel, delayed
 import cnn_utils
 import cv2
 import gflags
 import glob
+import image_list
 import multiprocessing
 import numpy as np
 
@@ -20,7 +22,7 @@ gflags.DEFINE_string('class_name_file', os.path.join(
     BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
 gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
 gflags.DEFINE_string('render_dir', 'convnet/object_render_best', '')
-gflags.DEFINE_string('out_composite_dir', 'convnet/object_composite_best', '')
+gflags.DEFINE_string('out_composite_dir', 'convnet/object_composite_fitted', '')
 
 gflags.DEFINE_bool('with_object_index', True, '')
 gflags.DEFINE_bool('composite_rendered', True, '')
@@ -148,9 +150,8 @@ if __name__ == '__main__':
     FLAGS(sys.argv)
 
     # Read image names.
-    im_names = [os.path.basename(x) for x in
-                glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
-    im_names.sort()
+    im_names = image_list.get_image_filenames(
+            os.path.join(FLAGS.data_dir, 'images', '*.png'))
 
     # Read class names to be detected.
     class_names = cnn_utils.read_class_names(FLAGS.class_name_file)

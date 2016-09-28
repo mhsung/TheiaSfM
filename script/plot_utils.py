@@ -157,7 +157,7 @@ def compute_max_score_angles(scores):
 # Compute the 'maximum' score seam from ConvNet distribution.
 # Use dynamic programming inspired by seam carving.
 # @scores: (frame_index, angle_index)
-def compute_seam_fitting_angles(scores, neighbor_range=10, distance_weight=0.5):
+def compute_seam_fitting_angles(scores, neighbor_range=10, distance_weight=0.1):
     num_frames = scores.shape[0]
     num_angles = scores.shape[1]
 
@@ -184,7 +184,7 @@ def compute_seam_fitting_angles(scores, neighbor_range=10, distance_weight=0.5):
                 list(range(i + 1, i + neighbor_range, +1))
 
             for j in sample_neighbors:
-                distance_penalty = distance_weight * abs(j - i)
+                distance_penalty = distance_weight * (j - i) * (j - i)
 
                 # NOTE:
                 # The angle index is 'circular'.

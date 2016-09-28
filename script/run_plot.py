@@ -118,14 +118,14 @@ if __name__ == '__main__':
     # Read ConvNet outputs if exist.
     if FLAGS.convnet_dir:
         convnet_path = os.path.join(FLAGS.data_dir, FLAGS.convnet_dir)
-        cn_pred_x, cn_pred_y, cn_pred_z, cv_loaded_frame_indices = \
+        cn_pred_x, cn_pred_y, cn_pred_z, cn_loaded_frame_indices = \
             plot_utils.read_convnet_preds(
                 convnet_path, file_prefix, min_frame, max_frame)
         print("Loaded '{}'.".format(convnet_path))
 
         # print('Compute max score curves...')
         # cn_max_score_x, cn_max_score_y = plot_utils.compute_max_score_curve(
-        #         cn_pred_z, min_frame, max_frame, cv_loaded_frame_indices)
+        #         cn_pred_z, min_frame, max_frame, cn_loaded_frame_indices)
         # data_name_list.append('ConvNetMaxScore')
         # data_x_list.append(cn_max_score_x)
         # data_y_list.append(cn_max_score_y)
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         print('Compute seam fitting curves...')
         cn_seam_fitting_x, cn_seam_fitting_y =\
             plot_utils.compute_seam_fitting_curve(
-            cn_pred_z, min_frame, max_frame, cv_loaded_frame_indices)
+            cn_pred_z, min_frame, max_frame, cn_loaded_frame_indices)
         data_name_list.append('ConvNetSeamFitting')
         data_x_list.append(cn_seam_fitting_x)
         data_y_list.append(cn_seam_fitting_y)
