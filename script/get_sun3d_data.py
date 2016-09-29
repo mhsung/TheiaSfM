@@ -1,20 +1,47 @@
 #!/usr/bin/env python
 # Author: Minhyuk Sung (mhsung@cs.stanford.edu)
 
+from bs4 import BeautifulSoup
+from joblib import Parallel, delayed
 import gflags
 import glob
 import os
-import shutil
+import multiprocessing
+import requests
 import sys
 
 
 FLAGS = gflags.FLAGS
 
 # Set input files.
-gflags.DEFINE_string('data_dir',
-                     '/afs/cs.stanford.edu/u/mhsung/home/data/sun3d.cs.princeton.edu/', '')
-gflags.DEFINE_string('domain_address', 'http://sun3d.cs.princeton.edu', '')
-gflags.DEFINE_string('data_address', '/data/hotel_umd/maryland_hotel3', '')
+gflags.DEFINE_string('data_root_dir',
+                     os.path.expanduser("~") +
+                     '/home/data/sun3d.cs.princeton.edu/', '')
+gflags.DEFINE_string('domain_address', 'http://sun3d.cs.princeton.edu/', '')
+gflags.DEFINE_string('data_address',
+                     'data/mit_dorm_mcc_eflr6/dorm_mcc_eflr6_oct_31_2012_scan1_erika', '')
+
+
+def listFD(url, ext):
+    page = requests.get(url).text
+    soup = BeautifulSoup(page, 'html.parser')
+    return [url + '/' + node.get('href') for node in soup.find_all('a')
+            if node.get('href').endswith(ext)]
+
+
+def download_file(file_url, out_dir):
+    cmd = 'wget ' + file_url + ' -P ' + out_dir
+    print(cmd)
+    os.system(cmd)
+
+
+def convert_jpg_to_png(image_name):
+    frame = image_names.split('-')
+    in_file = os.path.join('jpg', image_name + '.jpg')
+    out_file = os.path.join('images', frame + '.png')
+    cmd = 'convert ' + in_file + ' ' + out_file
+    print(cmd)
+    os.system(cmd)
 
 
 if __name__ == '__main__':
@@ -23,34 +50,38 @@ if __name__ == '__main__':
     cwd = os.getcwd()
 
     # Move to the data root directory.
-    os.chdir(FLAGS.data_dir)
-    print(os.getcwd())
+    url = FLAGS.domain_address + FLAGS.data_address
+    data_dir = os.path.join(FLAGS.data_root_dir, FLAGS.data_address)
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+    os.chdir(data_dir)
+    print('Source: {}'.format(url))
+    print('Destination: {}'.format(os.getcwd()))
+
+    # Get jpg file list.
+    jpg_files = listFD(url + '/image', 'jpg')
+    print(jpg_files)
+    if not os.path.exists('jpg'):
+        os.makedirs('jpg')
 
     # Download data.
-    cmd = "wget -r -nH --no-parent -R index.html*,*.gif "
-    cmd += (FLAGS.domain_address + os.path.join(FLAGS.data_address, 'image'))
-    print(cmd)
-    os.system(cmd)
+    # for f in jpg_files:
+    #     download_file(f, 'jpg')
+    num_cores = multiprocessing.cpu_count()
+    results = Parallel(n_jobs=num_cores)(delayed(
+        download_file)(f, 'jpg') for f in jpg_files)
 
-    # Move to the specific data directory.
-    os.chdir(FLAGS.data_dir + '/' + FLAGS.data_address)
-    print(os.getcwd())
+    # Convert jpg to png.
+    if not os.path.exists('images'):
+        os.makedirs('images')
 
     image_names = [os.path.splitext(os.path.basename(x))[0]
-                   for x in glob.glob(os.path.join('image', '*.jpg'))]
-    num_images = len(image_names)
+                   for x in glob.glob(os.path.join('jpg', '*.jpg'))]
 
-    frames = [x.split('-')[0] for x in image_names]
-
-    shutil.move('image', 'jpg')
-    out_dir = 'images'
-    os.makedirs(out_dir)
-
-    for i in range(num_images):
-        in_file = os.path.join('jpg', image_names[i] + '.jpg')
-        out_file = os.path.join('images', frames[i] + '.png')
-        cmd = 'convert ' + in_file + ' ' + out_file
-        print(cmd)
-        os.system(cmd)
+    # for image_name in image_names:
+    #     convert_jpg_to_png(image_name)
+    num_cores = multiprocessing.cpu_count()
+    results = Parallel(n_jobs=num_cores)(delayed(
+        convert_jpg_to_png)(image_name) for image_name in image_names)
 
     os.chdir(cwd)
