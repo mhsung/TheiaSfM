@@ -2,7 +2,7 @@
 
 # Change variables.
 # DATA_DIR=$HOME/home/data/sfm/MVI_0206
-DATA_DIR=$HOME/home/data/sun3d.cs.princeton.edu/data/hotel_umd/maryland_hotel3
+DATA_DIR=$HOME/home/data/sun3d.cs.princeton.edu/data/harvard_c2/hv_c2_1
 
 # Detect objects.
 ../../py-faster-rcnn/multi/detect_multi.py --data_dir=${DATA_DIR} --gpu_id=1
@@ -14,10 +14,10 @@ DATA_DIR=$HOME/home/data/sun3d.cs.princeton.edu/data/hotel_umd/maryland_hotel3
 ../../py-faster-rcnn/multi/crop_multi.py --data_dir=${DATA_DIR}
 
 # Estimate best orientation.
-./estimate_best_multi.py --data_dir=${DATA_DIR} --gpu_id=1
+# ./estimate_best_multi.py --data_dir=${DATA_DIR}
 
 # Estimate orientation scores.
-./estimate_scores_multi.py --data_dir=${DATA_DIR} --gpu_id=1
+./estimate_scores_multi.py --data_dir=${DATA_DIR}
 
 # Do seam fitting in camera parameter space.
 ./seam_fitting_multi.py --data_dir=${DATA_DIR}
@@ -29,6 +29,7 @@ DATA_DIR=$HOME/home/data/sun3d.cs.princeton.edu/data/hotel_umd/maryland_hotel3
 ./composite_multi.py --data_dir=${DATA_DIR}
 
 # Create video.
-ffmpeg -i ${DATA_DIR}/convnet/object_composite_fitted/MVI_0206_%04d.png \
-    -pix_fmt yuv420p -r 24 -b:v 8000k -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+ffmpeg -i ${DATA_DIR}/convnet/object_composite_fitted/%07d.png \
+    #-pix_fmt yuv420p -r 24 -b:v 8000k -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
+    -pix_fmt yuv420p -r 24 -b:v 8000k \
     ${DATA_DIR}/convnet/composite_fitted.mp4

@@ -53,7 +53,6 @@ if __name__ == '__main__':
         class_idxs.append(class_idx)
 
     # Estimate viewpoints.
-    cfg.GPU_ID = FLAGS.gpu_id
     preds = viewpoint(img_filenames, class_idxs)
 
     # Save results.

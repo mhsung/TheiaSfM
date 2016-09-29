@@ -12,9 +12,9 @@ FLAGS = gflags.FLAGS
 
 # Set input files.
 gflags.DEFINE_string('data_dir',
-                     '/Users/msung/Developer/data/sun3d.cs.princeton.edu/', '')
+                     '/afs/cs.stanford.edu/u/mhsung/home/data/sun3d.cs.princeton.edu/', '')
 gflags.DEFINE_string('domain_address', 'http://sun3d.cs.princeton.edu', '')
-gflags.DEFINE_string('data_address', '/data/harvard_c2/hv_c2_1', '')
+gflags.DEFINE_string('data_address', '/data/hotel_umd/maryland_hotel3', '')
 
 
 if __name__ == '__main__':
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     cmd = "wget -r -nH --no-parent -R index.html*,*.gif "
     cmd += (FLAGS.domain_address + os.path.join(FLAGS.data_address, 'image'))
     print(cmd)
-    # os.system(cmd)
+    os.system(cmd)
 
     # Move to the specific data directory.
     os.chdir(FLAGS.data_dir + '/' + FLAGS.data_address)

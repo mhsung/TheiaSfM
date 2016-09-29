@@ -44,32 +44,33 @@ def composite_rendered_images(im, bbox_idx, row, num_digits):
     render_im_size_y = render_im.shape[0]
     resize_ratio = min(bbox_size_x / render_im_size_x,
                        bbox_size_y / render_im_size_y)
+    resized_half_size_x = int(round(0.5 * render_im_size_x * resize_ratio))
+    resized_half_size_y = int(round(0.5 * render_im_size_y * resize_ratio))
     resized_render_im = cv2.resize(
-        render_im, None, fx=resize_ratio, fy=resize_ratio,
+        render_im, (2 * resized_half_size_x, 2 * resized_half_size_y),
         interpolation=cv2.INTER_CUBIC)
 
     # Compute offsets.
-    bbox_center_x = 0.5 * (row['x1'] + row['x2'])
-    bbox_center_y = 0.5 * (row['y1'] + row['y2'])
-    resized_size_x = render_im.shape[1]
-    resized_size_y = render_im.shape[0]
     im_size_x = im.shape[1]
     im_size_y = im.shape[0]
-    sx = int(round(bbox_center_x - 0.5 * resized_size_x))
-    sy = int(round(bbox_center_y - 0.5 * resized_size_y))
-    ex = int(round(bbox_center_x + 0.5 * resized_size_x))
-    ey = int(round(bbox_center_y + 0.5 * resized_size_y))
+    bbox_center_x = int(round(0.5 * (row['x1'] + row['x2'])))
+    bbox_center_y = int(round(0.5 * (row['y1'] + row['y2'])))
+    sx = bbox_center_x - resized_half_size_x
+    sy = bbox_center_y - resized_half_size_y
+    ex = bbox_center_x + resized_half_size_x
+    ey = bbox_center_y + resized_half_size_y
     offset_sx = max(0 - sx, 0)
     offset_sy = max(0 - sy, 0)
     offset_ex = max(ex - im_size_x, 0)
     offset_ey = max(ey - im_size_y, 0)
-    sx += offset_sx
-    sy += offset_sy
-    ex -= offset_ex
-    ey -= offset_ey
+
     resized_render_im = resized_render_im[
-                        offset_sy:(resized_size_y - offset_ey),
-                        offset_sx:(resized_size_x - offset_ex)]
+                        offset_sy:(2 * resized_half_size_y - offset_ey),
+                        offset_sx:(2 * resized_half_size_x - offset_ex), :]
+    sx = sx + offset_sx
+    sy = sy + offset_sy
+    ex = ex - offset_ex
+    ey = ey - offset_ey
 
     # Create mask
     (_, _, _, A) = cv2.split(resized_render_im)
