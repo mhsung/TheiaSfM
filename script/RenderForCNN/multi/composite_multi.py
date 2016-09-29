@@ -31,23 +31,48 @@ gflags.DEFINE_bool('half_size_output', True, '')
 
 
 def composite_rendered_images(im, bbox_idx, row, num_digits):
-    sx = max(int(round(row['x1'])), 0)
-    sy = max(int(round(row['y1'])), 0)
-    ex = min(int(round(row['x2'])), np.size(im, 1))
-    ey = min(int(round(row['y2'])), np.size(im, 0))
-
     render_im_file = os.path.join(FLAGS.data_dir, FLAGS.render_dir,
                                   str(bbox_idx).zfill(num_digits) + '.png')
     # print(render_im_file)
     assert (os.path.exists(render_im_file))
-
     render_im = cv2.imread(render_im_file, cv2.IMREAD_UNCHANGED)
-    bbox_width = ex - sx
-    bbox_height = ey - sy
-    resized_model_im = cv2.resize(render_im, (bbox_width, bbox_height))
+
+    # Resize the rendered image.
+    bbox_size_x = row['x2'] - row['x1']
+    bbox_size_y = row['y2'] - row['y1']
+    render_im_size_x = render_im.shape[1]
+    render_im_size_y = render_im.shape[0]
+    resize_ratio = min(bbox_size_x / render_im_size_x,
+                       bbox_size_y / render_im_size_y)
+    resized_render_im = cv2.resize(
+        render_im, None, fx=resize_ratio, fy=resize_ratio,
+        interpolation=cv2.INTER_CUBIC)
+
+    # Compute offsets.
+    bbox_center_x = 0.5 * (row['x1'] + row['x2'])
+    bbox_center_y = 0.5 * (row['y1'] + row['y2'])
+    resized_size_x = render_im.shape[1]
+    resized_size_y = render_im.shape[0]
+    im_size_x = im.shape[1]
+    im_size_y = im.shape[0]
+    sx = int(round(bbox_center_x - 0.5 * resized_size_x))
+    sy = int(round(bbox_center_y - 0.5 * resized_size_y))
+    ex = int(round(bbox_center_x + 0.5 * resized_size_x))
+    ey = int(round(bbox_center_y + 0.5 * resized_size_y))
+    offset_sx = max(0 - sx, 0)
+    offset_sy = max(0 - sy, 0)
+    offset_ex = max(ex - im_size_x, 0)
+    offset_ey = max(ey - im_size_y, 0)
+    sx += offset_sx
+    sy += offset_sy
+    ex -= offset_ex
+    ey -= offset_ey
+    resized_render_im = resized_render_im[
+                        offset_sy:(resized_size_y - offset_ey),
+                        offset_sx:(resized_size_x - offset_ex)]
 
     # Create mask
-    (_, _, _, A) = cv2.split(resized_model_im)
+    (_, _, _, A) = cv2.split(resized_render_im)
     mask = A
     mask_inv = cv2.bitwise_not(mask)
 
@@ -55,7 +80,7 @@ def composite_rendered_images(im, bbox_idx, row, num_digits):
     roi = im[sy:ey, sx:ex]
     img1_bg = cv2.bitwise_and(roi, roi, mask=mask_inv)
     img2_fg = cv2.bitwise_and(
-        resized_model_im, resized_model_im, mask=mask)
+        resized_render_im, resized_render_im, mask=mask)
     dst = cv2.add(img1_bg, img2_fg)
     im[sy:ey, sx:ex] = dst
     return im
