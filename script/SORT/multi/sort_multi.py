@@ -47,6 +47,10 @@ gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('raw_bbox_file', 'convnet/raw_bboxes.csv', '')
 gflags.DEFINE_string('out_object_bbox_file', 'convnet/object_bboxes.csv', '')
 
+gflags.DEFINE_integer('max_age', 10, '')
+gflags.DEFINE_integer('min_hits', 3, '')
+gflags.DEFINE_float('iou_threshold', 0.3, '')
+
 
 #@jit
 def iou(bb_test, bb_gt):
@@ -179,7 +183,7 @@ class KalmanBoxTracker(object):
         return convert_x_to_bbox(self.kf.x)
 
 
-def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
+def associate_detections_to_trackers(detections, trackers):
     """
     Assigns detections to tracked object (both represented as bounding boxes)
     Returns 3 lists of matches, unmatched_detections and unmatched_trackers
@@ -206,7 +210,7 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
     # filter out matched with low IOU
     matches = []
     for m in matched_indices:
-        is_matched = (iou_matrix[m[0], m[1]] < iou_threshold)
+        is_matched = (iou_matrix[m[0], m[1]] < FLAGS.iou_threshold)
 
         # @mhsung
         # det: [x0, y0, x1, y2, score, class_index, ...]
@@ -234,9 +238,9 @@ class Sort(object):
     """
     Sets key parameters for SORT
     """
-    def __init__(self, max_age=1, min_hits=3):
-        self.max_age = max_age
-        self.min_hits = min_hits
+    def __init__(self):
+        self.max_age = FLAGS.max_age
+        self.min_hits = FLAGS.min_hits
         self.trackers = []
         self.frame_count = 0
 

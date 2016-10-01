@@ -71,6 +71,8 @@ def composite_rendered_images(im, bbox_idx, row, num_digits):
     sy = sy + offset_sy
     ex = ex - offset_ex
     ey = ey - offset_ey
+    if sx >= ex or sy >= ey:
+        return im
 
     # Create mask
     (_, _, _, A) = cv2.split(resized_render_im)

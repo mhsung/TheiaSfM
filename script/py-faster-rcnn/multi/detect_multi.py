@@ -55,8 +55,8 @@ gflags.DEFINE_string('out_bbox_file', 'convnet/raw_bboxes.csv', '')
 gflags.DEFINE_integer('gpu_id', 0, 'GPU device id to use [0]')
 gflags.DEFINE_bool('cpu_mode', False, 'Use CPU mode (overrides --gpu)')
 gflags.DEFINE_string('demo_net', 'vgg16', 'Network to use [vgg16]')
-# gflags.DEFINE_double('conf_thresh', 0.8, '')
-gflags.DEFINE_float('conf_thresh', 0.5, '')
+gflags.DEFINE_float('conf_thresh', 0.8, '')
+# gflags.DEFINE_float('conf_thresh', 0.5, '')
 gflags.DEFINE_float('nms_thresh', 0.3, '')
 
 
@@ -150,11 +150,12 @@ if __name__ == '__main__':
                 glob.glob(os.path.join(FLAGS.data_dir, 'images', '*.png'))]
     im_names.sort()
 
-    # Detect and save bounding boxes.
-    df = detect_bboxes(net, im_names, class_names_to_be_detected)
+    # Detect and save bounding boxes
     out_file = os.path.join(FLAGS.data_dir, FLAGS.out_bbox_file)
+    print('Output file: {}'.format(out_file))
     if not os.path.exists(os.path.dirname(out_file)):
         os.makedirs(os.path.dirname(out_file))
+    df = detect_bboxes(net, im_names, class_names_to_be_detected)
 
     # Save class indices as integer.
     df['class_index'] = df['class_index'].map(lambda x: '%i' % x)

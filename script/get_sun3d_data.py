@@ -30,13 +30,13 @@ def listFD(url, ext):
 
 
 def download_file(file_url, out_dir):
-    cmd = 'wget ' + file_url + ' -P ' + out_dir
+    cmd = 'wget -q ' + file_url + ' -P ' + out_dir
     print(cmd)
     os.system(cmd)
 
 
 def convert_jpg_to_png(image_name):
-    frame = image_names.split('-')
+    frame = image_name.split('-')[0]
     in_file = os.path.join('jpg', image_name + '.jpg')
     out_file = os.path.join('images', frame + '.png')
     cmd = 'convert ' + in_file + ' ' + out_file
@@ -64,12 +64,22 @@ if __name__ == '__main__':
     if not os.path.exists('jpg'):
         os.makedirs('jpg')
 
-    # Download data.
+    # Download images.
     # for f in jpg_files:
     #     download_file(f, 'jpg')
     num_cores = multiprocessing.cpu_count()
     results = Parallel(n_jobs=num_cores)(delayed(
         download_file)(f, 'jpg') for f in jpg_files)
+
+    # Get extrinsic file list.
+    jpg_files = listFD(url + '/extrinsics', 'txt')
+    print(jpg_files)
+    if not os.path.exists('extrinsics'):
+        os.makedirs('extrinsics')
+
+    # Download extrinsics file.
+    for f in jpg_files:
+        download_file(f, 'extrinsics')
 
     # Convert jpg to png.
     if not os.path.exists('images'):

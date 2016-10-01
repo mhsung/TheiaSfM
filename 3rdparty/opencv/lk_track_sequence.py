@@ -18,13 +18,12 @@ Keys
 ESC - exit
 '''
 
+# Python 2/3 compatibility
+from __future__ import print_function
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, 'script'))
-
-# Python 2/3 compatibility
-from __future__ import print_function
 
 import numpy as np
 import cv2
@@ -95,6 +94,7 @@ class App:
         for image_filename in image_filenames:
             image_file = os.path.join(
                 os.path.dirname(FLAGS.images), image_filename)
+            image_name = os.path.basename(image_file)
 
             #ret, frame = self.cam.read()
             im = cv2.imread(image_file)
@@ -146,9 +146,8 @@ class App:
             self.prev_gray = frame_gray
             if FLAGS.display:
                 cv2.imshow('lk_track', vis)
-            # else:
-            #     log.info('{}: track count = {}'.format(
-            #         image_name, len(self.tracks)))
+            else:
+                print ('{}: track count = {}'.format(image_name, len(self.tracks)))
 
             # @mhsung
             # output_file = os.path.join(
