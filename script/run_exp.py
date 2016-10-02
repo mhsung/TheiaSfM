@@ -121,7 +121,7 @@ def set_paths():
         if not os.path.isdir(PATHS.feature_track_path):
             os.makedirs(PATHS.feature_track_path)
         PATHS.image_filenames_path = \
-            os.path.join(PATHS.feature_track_path, 'image_filenames.txt')
+            os.path.join(FLAGS.data_dir, 'image_filenames.txt')
         PATHS.feature_track_info_path =\
             os.path.join(PATHS.feature_track_path, 'feature_tracks.txt')
 
