@@ -50,10 +50,10 @@ def set_output_name():
     if FLAGS.seq_range > 0: output_name += ('_seq_' + str(FLAGS.seq_range))
 
     if FLAGS.track_features:            output_name += '_track'
-    if FLAGS.less_num_inliers:          output_name += '_lni'
-    if FLAGS.less_sampson_error:        output_name += '_lse'
-    if FLAGS.no_two_view_bundle:        output_name += '_ntb'
-    if FLAGS.no_only_symmetric:         output_name += '_nos'
+    # if FLAGS.less_num_inliers:          output_name += '_lni'
+    # if FLAGS.less_sampson_error:        output_name += '_lse'
+    # if FLAGS.no_two_view_bundle:        output_name += '_ntb'
+    # if FLAGS.no_only_symmetric:         output_name += '_nos'
     if FLAGS.use_initial_orientations:  output_name += '_uio'
     return output_name
 
@@ -140,9 +140,9 @@ def print_paths():
     if PATHS.ground_truth_bbox_path:
         print('Ground truth bounding box directory: ' +
               PATHS.ground_truth_bbox_path)
-    if PATHS.ground_orientation_bbox_path:
+    if PATHS.ground_truth_orientation_path:
         print('Ground truth orientation directory: ' +
-              PATHS.ground_orientation_bbox_path)
+              PATHS.ground_truth_orientation_path)
     # print('Matches info directory: ' + PATHS.matches_info_path)
     # print('Orientation directory: ' + PATHS.orientation_path)
 

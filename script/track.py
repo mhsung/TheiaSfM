@@ -46,21 +46,25 @@ def extract_matches(FLAGS, PATHS):
         print("Warning: 'seq_range' option is not supported "
               "when tracking features.")
         raw_input('Press Enter to continue...')
-    if FLAGS.less_num_inliers:
-        cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'
-    if FLAGS.less_sampson_error:
-        cmd += '--max_sampson_error_for_verified_match=10.0' + ' \\\n'
-    if FLAGS.no_two_view_bundle:
-        cmd += '--bundle_adjust_two_view_geometry=false' + ' \\\n'
-    if FLAGS.no_only_symmetric:
-        print("Warning: 'no_only_symmetric' option is not supported "
-              "when tracking features.")
-        raw_input('Press Enter to continue...')
+    # if FLAGS.less_num_inliers:
+    #     cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'
+    # if FLAGS.less_sampson_error:
+    #     cmd += '--max_sampson_error_for_verified_match=10.0' + ' \\\n'
+    # if FLAGS.no_two_view_bundle:
+    #     cmd += '--bundle_adjust_two_view_geometry=false' + ' \\\n'
+    # if FLAGS.no_only_symmetric:
+    #     print("Warning: 'no_only_symmetric' option is not supported "
+    #           "when tracking features.")
+    #     raw_input('Press Enter to continue...')
+
+    # FIXME: Remove this.
+    '''
     if FLAGS.use_initial_orientations:
         cmd += '--initial_orientations_data_type=' + \
                FLAGS.ground_truth_type + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
                PATHS.ground_truth_path + ' \\\n'
+    '''
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(

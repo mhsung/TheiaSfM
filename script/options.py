@@ -15,8 +15,8 @@ def initialize():
     gflags.DEFINE_bool('track_features', False, 'track')
     # gflags.DEFINE_bool('less_num_inliers', False, 'lni')
     # gflags.DEFINE_bool('less_sampson_error', False, 'lse')
-    gflags.DEFINE_bool('no_two_view_bundle', False, 'ntb')
-    gflags.DEFINE_bool('no_only_symmetric', False, 'nos')
+    # gflags.DEFINE_bool('no_two_view_bundle', False, 'ntb')
+    # gflags.DEFINE_bool('no_only_symmetric', False, 'nos')
     gflags.DEFINE_bool('use_initial_orientations', False, 'uio')
 
 
@@ -32,14 +32,15 @@ def show(FLAGS, PATHS):
     #     print('--min_num_inliers_for_valid_match=10')
     # if FLAGS.less_sampson_error:
     #     print('--max_sampson_error_for_verified_match=10.0')
-    if FLAGS.no_two_view_bundle:
-        print('--bundle_adjust_two_view_geometry=false')
-    if FLAGS.no_only_symmetric:
-        print('--keep_only_symmetric_matches=false')
+    # if FLAGS.no_two_view_bundle:
+    #     print('--bundle_adjust_two_view_geometry=false')
+    # if FLAGS.no_only_symmetric:
+    #     print('--keep_only_symmetric_matches=false')
 
-    if PATHS.ground_truth_path:
-        print('--initial_orientations_data_type=' +
-              FLAGS.ground_truth_type)
+    if PATHS.ground_truth_bbox_path:
+        print('--initial_bounding_boxes_filepath=' +
+              PATHS.ground_truth_bbox_path)
+    if PATHS.ground_truth_orientation_path:
         print('--initial_orientations_filepath=' +
-              PATHS.ground_truth_path)
+              PATHS.ground_truth_orientation_path)
     print('')
