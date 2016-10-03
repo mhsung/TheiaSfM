@@ -1,36 +1,4 @@
-// Copyright (C) 2014 The Regents of the University of California (Regents).
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are
-// met:
-//
-//     * Redistributions of source code must retain the above copyright
-//       notice, this list of conditions and the following disclaimer.
-//
-//     * Redistributions in binary form must reproduce the above
-//       copyright notice, this list of conditions and the following
-//       disclaimer in the documentation and/or other materials provided
-//       with the distribution.
-//
-//     * Neither the name of The Regents or University of California nor the
-//       names of its contributors may be used to endorse or promote products
-//       derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-//
-// Please contact the author of this library if you have any questions.
-// Author: Chris Sweeney (cmsweeney@cs.ucsb.edu)
+// Author: Minhyuk Sung (mhsung@cs.stanford.edu)
 
 #include <Eigen/Core>
 #include <glog/logging.h>
@@ -40,6 +8,8 @@
 #include <theia/theia.h>
 // @mhsung
 #include <theia/image/image.h>
+// @mhsung
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -63,10 +33,20 @@
 #endif  // _WIN32
 #endif  // __APPLE__
 
-DEFINE_string(reconstruction, "", "Reconstruction file to be viewed.");
+#include "exp_camera_param_utils.h"
+#include "exp_camera_param_io.h"
+
+DEFINE_string(data_type_list, "", "comma-seperated.");
+DEFINE_string(filepath_list, "", "comma-seperated.");
+DEFINE_string(calibration_file, "",
+              "Calibration file containing image calibration data.");
+DEFINE_double(robust_alignment_threshold, 0.0,
+              "If greater than 0.0, this threshold sets determines inliers for "
+                "RANSAC alignment of reconstructions. The inliers are then used "
+                "for a least squares alignment.");
 
 // Containers for the data.
-std::vector<theia::Camera> cameras_list;
+std::vector< std::vector<theia::Camera> > cameras_list;
 std::vector<Eigen::Vector3d> world_points;
 std::vector<Eigen::Vector3f> point_colors;
 std::vector<int> num_views_for_track;
@@ -90,7 +70,6 @@ float last_x_offset = 0.0, last_y_offset = 0.0;
 int left_mouse_button_active = 0, right_mouse_button_active = 0;
 
 // Visualization parameters.
-bool draw_cameras = true;
 bool draw_axes = false;
 float point_size = 1.0;
 float normalized_focal_length = 1.0;
@@ -153,7 +132,7 @@ void DrawAxes(float length) {
   glLineWidth(1.0);
 }
 
-void DrawCamera(const theia::Camera& camera) {
+void DrawCamera(const theia::Camera& camera, const Eigen::Vector3f& color) {
   glPushMatrix();
   Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Zero();
   transformation_matrix.block<3, 3>(0, 0) =
@@ -165,7 +144,7 @@ void DrawCamera(const theia::Camera& camera) {
   glMultMatrixd(reinterpret_cast<GLdouble*>(transformation_matrix.data()));
 
   // Draw Cameras.
-  glColor3f(1.0, 0.0, 0.0);
+  glColor3f(color[0], color[1], color[2]);
 
   // Create the camera wireframe. If intrinsic parameters are not set then use
   // the focal length as a guess.
@@ -279,9 +258,17 @@ void RenderScene() {
   DrawPoints(large_point_scale, large_color_scale, large_alpha_scale);
 
   // Draw the cameras.
-  if (draw_cameras) {
-    for (int i = 0; i < cameras_list.size(); i++) {
-      DrawCamera(cameras_list[i]);
+  theia::InitRandomGenerator();
+
+  for (int k = 0; k < cameras_list.size(); k++) {
+    // Set random color.
+    const Eigen::Vector3f color(
+      static_cast<float>(theia::RandDouble(0.0, 1.0)),
+      static_cast<float>(theia::RandDouble(0.0, 1.0)),
+      static_cast<float>(theia::RandDouble(0.0, 1.0)) );
+
+    for (int i = 0; i < cameras_list[k].size(); i++) {
+      DrawCamera(cameras_list[k][i], color);
     }
   }
 
@@ -438,9 +425,9 @@ void Keyboard(unsigned char key, int x, int y) {
     case 'F':
       normalized_focal_length *= 1.2;
       break;
-    case 'c':
-      draw_cameras = !draw_cameras;
-      break;
+//    case 'c':
+//      draw_cameras = !draw_cameras;
+//      break;
     case 'a':
       draw_axes = !draw_axes;
       break;
@@ -475,43 +462,126 @@ void Keyboard(unsigned char key, int x, int y) {
   }
 }
 
-int main(int argc, char* argv[]) {
-  THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
+void ReadCalibrationFiles(
+  const std::string& calibration_file,
+  std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*
+  camera_intrinsics_priors) {
+  CHECK_NOTNULL(camera_intrinsics_priors);
 
-  // Output as a binary file.
-  std::unique_ptr<theia::Reconstruction> reconstruction(
-      new theia::Reconstruction());
-  CHECK(ReadReconstruction(FLAGS_reconstruction, reconstruction.get()))
-      << "Could not read reconstruction file.";
+  // Load calibration file with filename extensions.
+  std::unordered_map<std::string, theia::CameraIntrinsicsPrior>
+    camera_intrinsics_priors_with_ext;
+  CHECK(theia::ReadCalibration(calibration_file,
+                               &camera_intrinsics_priors_with_ext))
+  << "Could not read calibration file.";
 
-  // Centers the reconstruction based on the absolute deviation of 3D points.
-  reconstruction->Normalize();
+  // Remove extensions.
+  camera_intrinsics_priors->clear();
+  camera_intrinsics_priors->reserve(camera_intrinsics_priors_with_ext.size());
+  for (const auto& camera_intrinsics_prior :
+    camera_intrinsics_priors_with_ext) {
+    const std::string basename = stlplus::basename_part
+      (camera_intrinsics_prior.first);
+    camera_intrinsics_priors->emplace(basename, camera_intrinsics_prior.second);
+  }
+}
+
+std::unique_ptr<Reconstruction> AddCameraList(
+  const std::string& data_type, const std::string filepath,
+  const std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*
+  camera_intrinsics_priors,
+  theia::Reconstruction* reference_reconstruction = nullptr) {
+
+  // Load modelview matrices.
+  std::unordered_map<std::string, Eigen::Affine3d> modelviews;
+  CHECK(ReadModelviews(data_type, filepath, &modelviews));
+
+  // Create reconstruction.
+  std::unique_ptr<theia::Reconstruction> reconstruction =
+    CreateTheiaReconstructionFromModelviews(
+      modelviews, camera_intrinsics_priors);
+
+  if (reference_reconstruction) {
+    if (FLAGS_robust_alignment_threshold > 0.0) {
+      // Align the reconstruction to ground truth.
+      AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
+                                 *reference_reconstruction,
+                                 reconstruction.get());
+    } else {
+      AlignReconstructions(*reference_reconstruction, reconstruction.get());
+    }
+  } else {
+    // Centers the reconstruction based on the absolute deviation of 3D points.
+    reconstruction->Normalize();
+  }
 
   // Set up camera drawing.
-  cameras_list.reserve(reconstruction->NumViews());
+  cameras_list.emplace_back();
+  std::vector<theia::Camera>& cameras = cameras_list.back();
+
+  cameras.reserve(reconstruction->NumViews());
   for (const theia::ViewId view_id : reconstruction->ViewIds()) {
     const auto* view = reconstruction->View(view_id);
     if (view == nullptr || !view->IsEstimated()) {
       continue;
     }
-    cameras_list.emplace_back(view->Camera());
+    cameras.emplace_back(view->Camera());
   }
 
-  // Set up world points and colors.
-  world_points.reserve(reconstruction->NumTracks());
-  point_colors.reserve(reconstruction->NumTracks());
-  for (const theia::TrackId track_id : reconstruction->TrackIds()) {
-    const auto* track = reconstruction->Track(track_id);
-    if (track == nullptr || !track->IsEstimated()) {
-      continue;
+  return std::move(reconstruction);
+}
+
+void SplitString(const std::string& str, const char delimiter,
+                 std::vector<std::string>* tokens) {
+  CHECK_NOTNULL(tokens)->clear();
+
+  std::stringstream sstr(str);
+  std::string token;
+  while (std::getline(sstr, token, delimiter)) {
+    if (token.empty() || token == " ") break;
+    tokens->push_back(token);
+  }
+}
+
+int main(int argc, char* argv[]) {
+  THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+
+//  // Output as a binary file.
+//  std::unique_ptr<theia::Reconstruction> reconstruction(
+//      new theia::Reconstruction());
+//  CHECK(ReadReconstruction(FLAGS_reconstruction, reconstruction.get()))
+//      << "Could not read reconstruction file.";
+
+  std::vector<std::string> data_type_list;
+  std::vector<std::string> filepath_list;
+  SplitString(FLAGS_data_type_list, ',', &data_type_list);
+  SplitString(FLAGS_filepath_list, ',', &filepath_list);
+  CHECK_EQ(data_type_list.size(), filepath_list.size());
+  const int num_reconstructions = filepath_list.size();
+
+  // Read camera intrinsics if provided.
+  std::unordered_map<std::string, theia::CameraIntrinsicsPrior>
+    camera_intrinsics_priors;
+  if (FLAGS_calibration_file.size() != 0) {
+    ReadCalibrationFiles(FLAGS_calibration_file, &camera_intrinsics_priors);
+  }
+
+  std::unique_ptr<theia::Reconstruction> reference_reconstruction(nullptr);
+  for (int i = 0; i < num_reconstructions; i++) {
+    LOG(INFO) << "Load '" << filepath_list[i] << "'.";
+    std::unique_ptr<theia::Reconstruction> reconstruction =
+      AddCameraList(data_type_list[i], filepath_list[i],
+                    &camera_intrinsics_priors, reference_reconstruction.get());
+
+    // Consider the first one as reference.
+    if (i == 0) {
+      reference_reconstruction = std::move(reconstruction);
+    } else {
+      reconstruction.release();
     }
-    world_points.emplace_back(track->Point().hnormalized());
-    point_colors.emplace_back(track->Color().cast<float>());
-    num_views_for_track.emplace_back(track->NumViews());
   }
 
-  reconstruction.release();
 
   // Set up opengl and glut.
   glutInit(&argc, argv);

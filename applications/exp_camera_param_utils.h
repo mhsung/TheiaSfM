@@ -1,8 +1,9 @@
 // Author: Minhyuk Sung (mhsung@cs.stanford.edu)
 
+#include <memory>
 #include <Eigen/Core>
-#include <theia/theia.h>
 #include <Eigen/Geometry>
+#include <theia/theia.h>
 #include <vector>
 
 // 'CameraParams': Azimuth, elevation, and theta.
@@ -20,6 +21,8 @@ Eigen::Matrix3d ComputeModelviewRotationFromTheiaCamera(
     const Eigen::Matrix3d& theia_camera_rotation);
 Eigen::Matrix3d ComputeTheiaCameraRotationFromModelview(
     const Eigen::Matrix3d& modelview_rotation);
+void ComputeTheiaCameraFromModelview(
+  const Eigen::Affine3d& modelview, theia::Camera* camera);
 
 // Camera parameter <-> Modelview.
 Eigen::Vector3d ComputeCameraParamsFromModelviewRotation(

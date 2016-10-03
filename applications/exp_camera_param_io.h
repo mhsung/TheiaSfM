@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <stlplus3/file_system.hpp>
 #include <unordered_map>
@@ -164,6 +165,15 @@ void SyncModelviewSequences(
 bool ReadSequenceIndices(
     const std::string filepath,
     std::unordered_map<std::string, int>* _seq_indices);
+
+void SetCameraIntrinsics(
+  const theia::CameraIntrinsicsPrior& camera_intrinsic_prior,
+  theia::Camera* camera);
+
+std::unique_ptr<Reconstruction> CreateTheiaReconstructionFromModelviews(
+  const std::unordered_map<std::string, Eigen::Affine3d>& modelviews,
+  const std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*
+  camera_intrinsics_priors = nullptr);
 
 
 // -- Template function implementation -- //

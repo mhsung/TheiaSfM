@@ -579,3 +579,73 @@ bool ReadSequenceIndices(
   file.close();
   return true;
 }
+
+void SetCameraIntrinsics(
+  const theia::CameraIntrinsicsPrior& camera_intrinsic_prior,
+  theia::Camera* camera) {
+  CHECK_NOTNULL(camera);
+
+  camera->SetImageSize(
+    camera_intrinsic_prior.image_width,
+    camera_intrinsic_prior.image_height);
+
+  if (camera_intrinsic_prior.focal_length.is_set) {
+    camera->SetFocalLength(camera_intrinsic_prior.focal_length.value);
+  }
+
+  if (camera_intrinsic_prior.principal_point[0].is_set &&
+      camera_intrinsic_prior.principal_point[1].is_set) {
+    camera->SetPrincipalPoint(
+      camera_intrinsic_prior.principal_point[0].value,
+      camera_intrinsic_prior.principal_point[1].value);
+  }
+
+  if (camera_intrinsic_prior.aspect_ratio.is_set) {
+    camera->SetAspectRatio(camera_intrinsic_prior.aspect_ratio.value);
+  }
+
+  if (camera_intrinsic_prior.skew.is_set) {
+    camera->SetSkew(camera_intrinsic_prior.skew.value);
+  }
+
+
+  if (camera_intrinsic_prior.radial_distortion[0].is_set &&
+      camera_intrinsic_prior.radial_distortion[1].is_set) {
+    camera->SetRadialDistortion(
+      camera_intrinsic_prior.radial_distortion[0].value,
+      camera_intrinsic_prior.radial_distortion[1].value);
+  }
+}
+
+std::unique_ptr<Reconstruction> CreateTheiaReconstructionFromModelviews(
+  const std::unordered_map<std::string, Eigen::Affine3d>& modelviews,
+  const std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*
+  camera_intrinsics_priors) {
+  std::unique_ptr<Reconstruction> reconstruction(new Reconstruction());
+
+  for (const auto& modelview : modelviews) {
+    const ViewId view_id = reconstruction->AddView(modelview.first);
+    View* view = reconstruction->MutableView(view_id);
+
+    // Set camera intrinsics if provieded.
+    if (camera_intrinsics_priors) {
+      CameraIntrinsicsPrior* camera_intrinsics_prior =
+        view->MutableCameraIntrinsicsPrior();
+
+      const CameraIntrinsicsPrior* retrieved_camera_intrinsics_prior =
+        FindOrNull(*camera_intrinsics_priors, modelview.first);
+      if (retrieved_camera_intrinsics_prior) {
+        (*camera_intrinsics_prior) = (*retrieved_camera_intrinsics_prior);
+      }
+    }
+
+    // Set camera extrinsics.
+    Camera* camera = view->MutableCamera();
+    ComputeTheiaCameraFromModelview(modelview.second, camera);
+
+    // Set view as estimated.
+    view->SetEstimated(true);
+  }
+
+  return std::move(reconstruction);
+}

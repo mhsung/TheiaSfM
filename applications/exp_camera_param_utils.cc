@@ -43,6 +43,23 @@ Eigen::Matrix3d ComputeTheiaCameraRotationFromModelview(
   return theia_camera_rotation;
 }
 
+void ComputeTheiaCameraFromModelview(
+  const Eigen::Affine3d& modelview, theia::Camera* camera) {
+  CHECK_NOTNULL(camera);
+
+  const Eigen::Matrix3d axes_converter = GetVisionToOpenGLAxesConverter();
+  const Eigen::Affine3d theia_camera_matrix =
+    axes_converter.inverse() * modelview;
+
+  const Eigen::Matrix3d theia_camera_rotation =
+    theia_camera_matrix.linear();
+  const Eigen::Vector3d theia_camera_position =
+    -(theia_camera_rotation.transpose() * theia_camera_matrix.translation());
+
+  camera->SetOrientationFromRotationMatrix(theia_camera_rotation);
+  camera->SetPosition(theia_camera_position);
+}
+
 Eigen::Vector3d ComputeCameraParamsFromModelviewRotation(
     const Eigen::Matrix3d& modelview_rotation) {
 

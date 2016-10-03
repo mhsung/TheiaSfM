@@ -156,3 +156,13 @@ add_executable(exp_match_objects_using_feature_tracks exp_match_objects_using_fe
   exp_feature_track_io.h exp_feature_track_io.cc)
 target_link_libraries(exp_match_objects_using_feature_tracks theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
+add_executable(exp_create_reconstruction_from_modelviews exp_create_reconstruction_from_modelviews.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_create_reconstruction_from_modelviews theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
+add_executable(exp_view_cameras exp_view_cameras.cc
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc)
+target_link_libraries(exp_view_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+  ${EXTRA_GL_LIBRARIES})
+
