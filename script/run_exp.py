@@ -21,10 +21,6 @@ FLAGS = gflags.FLAGS
 
 # Set input files.
 gflags.DEFINE_string('data_dir', '', '')
-
-gflags.DEFINE_string('ground_truth_type', 'pose', '')
-gflags.DEFINE_string('ground_truth_filename', 'poses', '')
-
 gflags.DEFINE_string('bin_dir', os.path.join('..', 'build', 'bin'), '')
 
 
@@ -40,9 +36,8 @@ PATHS = namedtuple('PATHS', [
     'matches_file',
     'matches_info_path',
     'reconstruction_file',
-    'ground_truth_path',
-    'ground_truth_camera_param_path',
-    'orientation_path',
+    'ground_truth_bbox_path',
+    'ground_truth_orientation_path',
     'feature_track_path',
     'image_filenames_path',
     'feature_track_info_path',
@@ -99,21 +94,25 @@ def set_paths():
     PATHS.matches_file = os.path.join(PATHS.output_path, 'matches.bin')
     PATHS.reconstruction_file = os.path.join(PATHS.output_path, 'output')
 
-    PATHS.ground_truth_path = ''
-    if FLAGS.ground_truth_filename:
-        PATHS.ground_truth_path = \
-            os.path.join(FLAGS.data_dir, FLAGS.ground_truth_filename)
-        if not os.path.exists(PATHS.ground_truth_path):
-            print("Warning: Ground truth does not exist: '"
-                  + PATHS.ground_truth_path + "'")
-            PATHS.ground_truth_path = ''
-        else:
-            PATHS.ground_truth_camera_param_path = \
-                os.path.join(FLAGS.data_dir, 'camera_params')
-            PATHS.matches_info_path = \
-                os.path.join(PATHS.output_path, 'matches')
-            PATHS.orientation_path = \
-                os.path.join(PATHS.output_path, 'orientation')
+    PATHS.ground_truth_bbox_path = os.path.join(
+        FLAGS.data_dir, 'convnet', 'object_bboxes.csv')
+    PATHS.ground_truth_orientation_path = os.path.join(
+        FLAGS.data_dir, 'convnet', 'object_orientations_fitted.csv')
+
+    if not os.path.exists(PATHS.ground_truth_bbox_path) or \
+        not os.path.exists(PATHS.ground_truth_orientation_path):
+        print("Warning: Ground truth does not exist: '"
+              + PATHS.ground_truth_bbox_path + ", "
+              + PATHS.ground_truth_orientation_path + "'")
+        PATHS.ground_truth_bbox_path = ''
+        PATHS.ground_truth_orientation_path = ''
+
+    # PATHS.ground_truth_camera_param_path = \
+    #     os.path.join(FLAGS.data_dir, 'camera_params')
+    # PATHS.matches_info_path = \
+    #     os.path.join(PATHS.output_path, 'matches')
+    # PATHS.orientation_path = \
+    #     os.path.join(PATHS.output_path, 'orientation')
 
     if FLAGS.track_features:
         PATHS.feature_track_path = \
@@ -138,11 +137,14 @@ def print_paths():
 
     print('Matches file: ' + PATHS.matches_file)
 
-    if PATHS.ground_truth_path:
-        print('Ground truth camera param directory: ' +\
-                PATHS.ground_truth_camera_param_path)
-        print('Matches info directory: ' + PATHS.matches_info_path)
-        print('Orientation directory: ' + PATHS.orientation_path)
+    if PATHS.ground_truth_bbox_path:
+        print('Ground truth bounding box directory: ' +
+              PATHS.ground_truth_bbox_path)
+    if PATHS.ground_orientation_bbox_path:
+        print('Ground truth orientation directory: ' +
+              PATHS.ground_orientation_bbox_path)
+    # print('Matches info directory: ' + PATHS.matches_info_path)
+    # print('Orientation directory: ' + PATHS.orientation_path)
 
     print('Reconstruction file: ' + PATHS.reconstruction_file)
     print('')
@@ -158,10 +160,10 @@ def clean_files():
     match.clean(FLAGS, PATHS)
     reconstruction.clean(FLAGS, PATHS)
 
-    if PATHS.ground_truth_path:
-        orientation.clean_ground_truth_camera_param(FLAGS, PATHS)
-        match_info.clean(FLAGS, PATHS)
-        orientation.clean(FLAGS, PATHS)
+    # if PATHS.ground_truth_path:
+    #     orientation.clean_ground_truth_camera_param(FLAGS, PATHS)
+    #     match_info.clean(FLAGS, PATHS)
+    #     orientation.clean(FLAGS, PATHS)
 
 
 if __name__ == '__main__':

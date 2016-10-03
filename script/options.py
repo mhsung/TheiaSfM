@@ -13,8 +13,8 @@ def initialize():
     gflags.DEFINE_integer('seq_range', 0, '') # '<= 0' indicates all pair matches.
 
     gflags.DEFINE_bool('track_features', False, 'track')
-    gflags.DEFINE_bool('less_num_inliers', False, 'lni')
-    gflags.DEFINE_bool('less_sampson_error', False, 'lse')
+    # gflags.DEFINE_bool('less_num_inliers', False, 'lni')
+    # gflags.DEFINE_bool('less_sampson_error', False, 'lse')
     gflags.DEFINE_bool('no_two_view_bundle', False, 'ntb')
     gflags.DEFINE_bool('no_only_symmetric', False, 'nos')
     gflags.DEFINE_bool('use_initial_orientations', False, 'uio')
@@ -28,10 +28,10 @@ def show(FLAGS, PATHS):
     if FLAGS.seq_range > 0: print('Sequence range: ' + str(FLAGS.seq_range))
     if FLAGS.track_features: print('Track features: On (OpenCV Lukas-Kanade)')
 
-    if FLAGS.less_num_inliers:
-        print('--min_num_inliers_for_valid_match=10')
-    if FLAGS.less_sampson_error:
-        print('--max_sampson_error_for_verified_match=10.0')
+    # if FLAGS.less_num_inliers:
+    #     print('--min_num_inliers_for_valid_match=10')
+    # if FLAGS.less_sampson_error:
+    #     print('--max_sampson_error_for_verified_match=10.0')
     if FLAGS.no_two_view_bundle:
         print('--bundle_adjust_two_view_geometry=false')
     if FLAGS.no_only_symmetric:

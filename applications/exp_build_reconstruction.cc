@@ -162,8 +162,8 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
 
 // @mhsung
 // ---- //
-DEFINE_string(initial_orientations_filepath, "", "");
 DEFINE_string(initial_bounding_boxes_filepath, "", "");
+DEFINE_string(initial_orientations_filepath, "", "");
 
 // Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
 DEFINE_bool(exp_global_run_bundle_adjustment, true, "");

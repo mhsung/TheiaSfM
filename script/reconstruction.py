@@ -33,10 +33,13 @@ def run(FLAGS, PATHS):
     cmd += '--shared_calibration=true' + ' \\\n'
 
     ############### Global SfM Options ###############
-    cmd += '--global_position_estimator=LEAST_UNSQUARED_DEVIATION' + ' \\\n'
     if FLAGS.use_initial_orientations:
+        cmd += '--global_position_estimator=CONSTRAINED_NONLINEAR' + ' \\\n'
         cmd += '--global_rotation_estimator=CONSTRAINED_ROBUST_L1L2' + ' \\\n'
     else:
+        # cmd += '--global_position_estimator=LEAST_UNSQUARED_DEVIATION' + '
+        # \\\n'
+        cmd += '--global_position_estimator=NONLINEAR' + ' \\\n'
         cmd += '--global_rotation_estimator=ROBUST_L1L2' + ' \\\n'
 
     cmd += '--post_rotation_filtering_degrees=20.0' + ' \\\n'
@@ -60,22 +63,35 @@ def run(FLAGS, PATHS):
     #cmd += '--intrinsics_to_optimize=FOCAL_LENGTH|RADIAL_DISTORTION' +
     # ' \\\n'
     cmd += '--intrinsics_to_optimize=FOCAL_LENGTH' + ' \\\n'
-    cmd += '--max_reprojection_error_pixels=6.0' + ' \\\n'
+
+    if FLAGS.use_initial_orientations:
+        cmd += '--max_reprojection_error_pixels=100000.0' + ' \\\n'
+    else:
+        cmd += '--max_reprojection_error_pixels=6.0' + ' \\\n'
 
     ############### Triangulation Options ###############
-    cmd += '--min_triangulation_angle_degrees=4.0' + ' \\\n'
-    cmd += '--triangulation_reprojection_error_pixels=10.0' + ' \\\n'
+    if FLAGS.use_initial_orientations:
+        cmd += '--min_triangulation_angle_degrees=100000.0' + ' \\\n'
+        cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
+    else:
+        cmd += '--min_triangulation_angle_degrees=4.0' + ' \\\n'
+        cmd += '--triangulation_reprojection_error_pixels=10.0' + ' \\\n'
+
     cmd += '--bundle_adjust_tracks=true' + ' \\\n'
 
-    if FLAGS.less_num_inliers:
-        cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'
-    if FLAGS.less_sampson_error:
-        cmd += '--max_sampson_error_for_verified_match=10.0' + ' \\\n'
+    # if FLAGS.less_num_inliers:
+    #     cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'
+    # if FLAGS.less_sampson_error:
+    #     cmd += '--max_sampson_error_for_verified_match=10.0' + ' \\\n'
+
     if FLAGS.use_initial_orientations:
-        cmd += '--initial_orientations_data_type=' + \
-               FLAGS.ground_truth_type + ' \\\n'
+        cmd += '--initial_bounding_boxes_filepath=' + \
+               PATHS.ground_truth_bbox_path + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
-               PATHS.ground_truth_path + ' \\\n'
+               PATHS.ground_truth_orientation_path + ' \\\n'
+        cmd += '--exp_global_run_bundle_adjustment=true' + ' \\\n'
+        cmd += '--rotation_estimation_constraint_weight=50.0' + ' \\\n'
+        cmd += '--position_estimation_constraint_weight=50.0' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(
