@@ -211,8 +211,8 @@ if __name__ == '__main__':
         reconstruction.run(FLAGS, PATHS)
 
     # Extract additional information.
-    if PATHS.ground_truth_path:
-        if not os.path.exists(PATHS.ground_truth_camera_param_path):
-            orientation.convert_ground_truth(FLAGS, PATHS)
-        match_info.run(FLAGS, PATHS)
-        orientation.run(FLAGS, PATHS)
+    # if PATHS.ground_truth_path:
+    #     if not os.path.exists(PATHS.ground_truth_camera_param_path):
+    #         orientation.convert_ground_truth(FLAGS, PATHS)
+    #     match_info.run(FLAGS, PATHS)
+    #     orientation.run(FLAGS, PATHS)

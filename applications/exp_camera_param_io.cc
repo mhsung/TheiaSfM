@@ -9,6 +9,7 @@
 #include <sstream>
 
 #include "exp_camera_param_utils.h"
+#include "exp_matrix_utils.h"
 #include "unsupported/Eigen/MatrixFunctions"
 
 

@@ -15,6 +15,7 @@
 #include "applications/exp_bounding_box_utils.h"
 #include "applications/exp_camera_param_io.h"
 #include "applications/exp_camera_param_utils.h"
+#include "applications/exp_neural_net_output_reader.h"
 
 // Input/output files.
 DEFINE_string(images, "", "Wildcard of images to reconstruct.");
@@ -161,7 +162,6 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
 
 // @mhsung
 // ---- //
-DEFINE_string(initial_orientations_data_type, "", "");
 DEFINE_string(initial_orientations_filepath, "", "");
 DEFINE_string(initial_bounding_boxes_filepath, "", "");
 
@@ -397,6 +397,7 @@ void GetConsecutivePairsToMatch(
   LOG(INFO) << "# of consecutive pairs: " << pairs_to_match->size();
 }
 
+/*
 // @mhsung
 void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
   // Read orientation.
@@ -447,6 +448,43 @@ void SetInitialPositionDirections(ReconstructionBuilder*
             init_bounding_box.second, view->CameraIntrinsicsPrior());
     reconstruction_builder->SetInitialObjectViewPositionDirection(
         0, view_id, cam_coord_cam_to_obj_dir);
+  }
+}
+*/
+
+void SetInitialOrientationsAndPositions(ReconstructionBuilder*
+    reconstruction_builder) {
+  // Read bounding box information.
+  std::unordered_map<ObjectId, DetectedBBoxPtrList> object_bboxes;
+  ReadDetectedBBoxes(FLAGS_initial_bounding_boxes_filepath,
+                     FLAGS_initial_orientations_filepath, &object_bboxes);
+
+  for (const auto& object : object_bboxes) {
+    const theia::ObjectId object_id = object.first;
+    for (const auto& bbox : object.second) {
+      Reconstruction* reconstruction =
+        reconstruction_builder->GetMutableReconstruction();
+      const theia::ViewId view_id =
+        reconstruction->ViewIdFromName(bbox->view_name_);
+      theia::View* view = reconstruction->MutableView(view_id);
+      CHECK(view) << "View does not exist (View ID = " << view_id << ").";
+
+      // Set orientation
+      Eigen::Vector3d angle_axis;
+      const Eigen::Matrix3d orientation =
+        ComputeTheiaCameraRotationFromCameraParams(bbox->camera_param_);
+      ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(orientation.data()), angle_axis.data());
+      reconstruction_builder->SetInitialObjectViewOrientation(
+        object_id, view_id, angle_axis);
+
+      // Set position.
+      const Eigen::Vector3d cam_coord_cam_to_obj_dir =
+        ComputeCameraToObjectDirections(
+          bbox->bbox_, view->CameraIntrinsicsPrior());
+      reconstruction_builder->SetInitialObjectViewPositionDirection(
+        object_id, view_id, cam_coord_cam_to_obj_dir);
+    }
   }
 }
 
@@ -564,6 +602,7 @@ int main(int argc, char *argv[]) {
         << "You must specify either images to reconstruct or a match file.";
   }
 
+  /*
   // @mhsung
   if (FLAGS_initial_orientations_filepath != "") {
     SetInitialOrientations(&reconstruction_builder);
@@ -572,6 +611,13 @@ int main(int argc, char *argv[]) {
   // @mhsung
   if (FLAGS_initial_bounding_boxes_filepath != "") {
     SetInitialPositionDirections(&reconstruction_builder);
+  }
+  */
+
+  // @mhsung
+  if (FLAGS_initial_orientations_filepath != "" &&
+    FLAGS_initial_bounding_boxes_filepath != "") {
+    SetInitialOrientationsAndPositions(&reconstruction_builder);
   }
 
   std::vector<Reconstruction*> reconstructions;
