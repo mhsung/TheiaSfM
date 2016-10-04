@@ -50,6 +50,7 @@ gflags.DEFINE_string('out_object_bbox_file', 'convnet/object_bboxes.csv', '')
 gflags.DEFINE_integer('max_age', 10, '')
 gflags.DEFINE_integer('min_hits', 3, '')
 gflags.DEFINE_float('iou_threshold', 0.3, '')
+gflags.DEFINE_float('measurement_noise', 1000.0, '')
 
 
 #@jit
@@ -111,24 +112,38 @@ class KalmanBoxTracker(object):
         Initialises a tracker using initial bounding box.
         """
         # define constant velocity model
-        self.kf = KalmanFilter(dim_x=7, dim_z=4)
-        self.kf.F = np.array([[1, 0, 0, 0, 1, 0, 0],
-                              [0, 1, 0, 0, 0, 1, 0],
-                              [0, 0, 1, 0, 0, 0, 1],
-                              [0, 0, 0, 1, 0, 0, 0],
-                              [0, 0, 0, 0, 1, 0, 0],
-                              [0, 0, 0, 0, 0, 1, 0],
-                              [0, 0, 0, 0, 0, 0, 1]])
+        # self.kf = KalmanFilter(dim_x=7, dim_z=4)
+        # self.kf.F = np.array([[1, 0, 0, 0, 1, 0, 0],
+        #                       [0, 1, 0, 0, 0, 1, 0],
+        #                       [0, 0, 1, 0, 0, 0, 1],
+        #                       [0, 0, 0, 1, 0, 0, 0],
+        #                       [0, 0, 0, 0, 1, 0, 0],
+        #                       [0, 0, 0, 0, 0, 1, 0],
+        #                       [0, 0, 0, 0, 0, 0, 1]])
+        # self.kf.H = np.array(
+        #     [[1, 0, 0, 0, 0, 0, 0],
+        #      [0, 1, 0, 0, 0, 0, 0],
+        #      [0, 0, 1, 0, 0, 0, 0],
+        #      [0, 0, 0, 1, 0, 0, 0]])
+        self.kf = KalmanFilter(dim_x=8, dim_z=4)
+        self.kf.F = np.array([[1, 0, 0, 0, 1, 0, 0, 0],
+                              [0, 1, 0, 0, 0, 1, 0, 0],
+                              [0, 0, 1, 0, 0, 0, 1, 0],
+                              [0, 0, 0, 1, 0, 0, 0, 1],
+                              [0, 0, 0, 0, 1, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 1, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 1, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 1]])
         self.kf.H = np.array(
-            [[1, 0, 0, 0, 0, 0, 0],
-             [0, 1, 0, 0, 0, 0, 0],
-             [0, 0, 1, 0, 0, 0, 0],
-             [0, 0, 0, 1, 0, 0, 0]])
+            [[1, 0, 0, 0, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0, 0, 0],
+             [0, 0, 1, 0, 0, 0, 0, 0],
+             [0, 0, 0, 1, 0, 0, 0, 0]])
 
-        self.kf.R[2:, 2:] *= 10.
+        # self.kf.R[2:, 2:] *= 10.
+        self.kf.R[:, :] *= FLAGS.measurement_noise
         # Give high uncertainty to the unobservable initial velocities.
-        self.kf.P[4:, 4:] *= 1000.
-        self.kf.P *= 10.
+        self.kf.P[4:, 4:] *= 10000.
         self.kf.Q[-1, -1] *= 0.01
         self.kf.Q[4:, 4:] *= 0.01
 

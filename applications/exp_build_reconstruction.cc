@@ -466,8 +466,12 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
         reconstruction_builder->GetMutableReconstruction();
       const theia::ViewId view_id =
         reconstruction->ViewIdFromName(bbox->view_name_);
+      if (view_id == kInvalidViewId) {
+        LOG(WARNING) << "View does not exist (View ID = " << view_id << ").";
+        continue;
+      }
       theia::View* view = reconstruction->MutableView(view_id);
-      CHECK(view) << "View does not exist (View ID = " << view_id << ").";
+      CHECK(view != nullptr);
 
       // Set orientation
       Eigen::Vector3d angle_axis;

@@ -129,7 +129,7 @@ def draw_bboxes(im, row, class_names):
                        sy - bbox_thickness - label_size[1]),
                   (ex + bbox_thickness / 2, sy), bbox_color, -1)
     cv2.putText(im, label, (sx, sy - bbox_thickness / 2), fontface, scale,
-                (255, 255, 255, 255), text_thickness, cv2.CV_AA)
+                (255, 255, 255, 255), text_thickness, cv2.LINE_AA)
 
     return im
 

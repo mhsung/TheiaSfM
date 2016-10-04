@@ -35,7 +35,7 @@ bool ReadDetectedBBoxes(
     // const int bbox_id = std::stoi(token);
 
     CHECK(std::getline(sstr, token, ','));
-    bbox->view_name_ = stlplus::basename_part(token);
+    bbox->view_name_ = token;
 
     CHECK(std::getline(sstr, token, ','));
     bbox->category_id_ = std::stoi(token);
