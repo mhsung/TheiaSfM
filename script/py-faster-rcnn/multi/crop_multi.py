@@ -23,14 +23,15 @@ gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
 gflags.DEFINE_string('out_crop_dir', 'convnet/object_crop', '')
 
 gflags.DEFINE_bool('with_object_index', True, '')
+gflags.DEFINE_integer('crop_offset', 10, '')
 
 
 def crop_image(bbox_idx, row, num_digits):
     im_name = str(row['image_name'])
-    x1 = int(round(row['x1']))
-    y1 = int(round(row['y1']))
-    x2 = int(round(row['x2']))
-    y2 = int(round(row['y2']))
+    x1 = int(round(row['x1'])) - FLAGS.crop_offset
+    y1 = int(round(row['y1'])) - FLAGS.crop_offset
+    x2 = int(round(row['x2'])) + FLAGS.crop_offset
+    y2 = int(round(row['y2'])) + FLAGS.crop_offset
 
     im_file = os.path.join(FLAGS.data_dir, 'images', im_name)
     im = Image.open(im_file)

@@ -128,8 +128,18 @@ def draw_bboxes(im, row, class_names):
     cv2.rectangle(im, (sx - bbox_thickness / 2,
                        sy - bbox_thickness - label_size[1]),
                   (ex + bbox_thickness / 2, sy), bbox_color, -1)
+
+    (major, minor, _) = cv2.__version__.split(".")
+    if major == '2':
+        cv_text_option = cv2.CV_AA
+    elif major == '3':
+        cv_text_option = cv2.LINE_AA
+    else:
+        print('Error: Unrecognized OpenCV version ({}.{}).'.format(
+            major, minor))
+        assert(major == '2' or major == '3')
     cv2.putText(im, label, (sx, sy - bbox_thickness / 2), fontface, scale,
-                (255, 255, 255, 255), text_thickness, cv2.LINE_AA)
+                (255, 255, 255, 255), text_thickness, cv_text_option)
 
     return im
 
