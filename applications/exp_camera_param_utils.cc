@@ -134,8 +134,7 @@ Eigen::Affine3d ComputeModelviewFromCameraParams(
 
   // X-axis (Elevation, [R_x | 0])
   const double elevation = (double) elevation_deg / 180.0 * M_PI;
-  modelview.prerotate(
-      Eigen::AngleAxisd(elevation, Eigen::Vector3d::UnitX()));
+  modelview.prerotate(Eigen::AngleAxisd(elevation, Eigen::Vector3d::UnitX()));
 
   // Translation ([I | t])
   modelview.pretranslate(Eigen::Vector3d(0, 0, -kTranslationDistance));

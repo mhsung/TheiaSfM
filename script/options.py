@@ -37,10 +37,10 @@ def show(FLAGS, PATHS):
     # if FLAGS.no_only_symmetric:
     #     print('--keep_only_symmetric_matches=false')
 
-    if PATHS.ground_truth_bbox_path:
+    if PATHS.init_bbox_path:
         print('--initial_bounding_boxes_filepath=' +
-              PATHS.ground_truth_bbox_path)
-    if PATHS.ground_truth_orientation_path:
+              PATHS.init_bbox_path)
+    if PATHS.init_orientation_path:
         print('--initial_orientations_filepath=' +
-              PATHS.ground_truth_orientation_path)
+              PATHS.init_orientation_path)
     print('')

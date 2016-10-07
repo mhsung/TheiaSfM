@@ -467,7 +467,8 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
       const theia::ViewId view_id =
         reconstruction->ViewIdFromName(bbox->view_name_);
       if (view_id == kInvalidViewId) {
-        LOG(WARNING) << "View does not exist (View ID = " << view_id << ").";
+        LOG(WARNING) << "View does not exist (View ID = "
+                     << bbox->view_name_ << ").";
         continue;
       }
       theia::View* view = reconstruction->MutableView(view_id);

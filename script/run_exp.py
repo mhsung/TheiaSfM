@@ -8,6 +8,7 @@ import shutil
 import sys
 
 import calibration
+import evaluation
 import feature
 import match
 import match_info
@@ -36,11 +37,13 @@ PATHS = namedtuple('PATHS', [
     'matches_file',
     'matches_info_path',
     'reconstruction_file',
-    'ground_truth_bbox_path',
-    'ground_truth_orientation_path',
+    'init_bbox_path',
+    'init_orientation_path',
     'feature_track_path',
     'image_filenames_path',
     'feature_track_info_path',
+    'ground_truth_pose_path'
+    'ground_truth_reconstruction_path'
     ])
 
 
@@ -94,18 +97,18 @@ def set_paths():
     PATHS.matches_file = os.path.join(PATHS.output_path, 'matches.bin')
     PATHS.reconstruction_file = os.path.join(PATHS.output_path, 'output')
 
-    PATHS.ground_truth_bbox_path = os.path.join(
+    PATHS.init_bbox_path = os.path.join(
         FLAGS.data_dir, 'convnet', 'object_bboxes.csv')
-    PATHS.ground_truth_orientation_path = os.path.join(
+    PATHS.init_orientation_path = os.path.join(
         FLAGS.data_dir, 'convnet', 'object_orientations_fitted.csv')
 
-    if not os.path.exists(PATHS.ground_truth_bbox_path) or \
-        not os.path.exists(PATHS.ground_truth_orientation_path):
-        print("Warning: Ground truth does not exist: '"
-              + PATHS.ground_truth_bbox_path + ", "
-              + PATHS.ground_truth_orientation_path + "'")
-        PATHS.ground_truth_bbox_path = ''
-        PATHS.ground_truth_orientation_path = ''
+    if not os.path.exists(PATHS.init_bbox_path) or \
+        not os.path.exists(PATHS.init_orientation_path):
+        print("Warning: Initial object poses do not exist: '"
+              + PATHS.init_bbox_path + ", "
+              + PATHS.init_orientation_path + "'")
+        PATHS.init_bbox_path = ''
+        PATHS.init_orientation_path = ''
 
     # PATHS.ground_truth_camera_param_path = \
     #     os.path.join(FLAGS.data_dir, 'camera_params')
@@ -124,6 +127,11 @@ def set_paths():
         PATHS.feature_track_info_path =\
             os.path.join(PATHS.feature_track_path, 'feature_tracks.txt')
 
+    # Ground truth path.
+    PATHS.ground_truth_pose_path = os.path.join(FLAGS.data_dir, 'pose')
+    PATHS.ground_truth_reconstruction_path =\
+        os.path.join(FLAGS.data_dir, 'ground_truth.bin')
+
 
 def print_paths():
     print('== Paths ==')
@@ -137,16 +145,20 @@ def print_paths():
 
     print('Matches file: ' + PATHS.matches_file)
 
-    if PATHS.ground_truth_bbox_path:
-        print('Ground truth bounding box directory: ' +
-              PATHS.ground_truth_bbox_path)
-    if PATHS.ground_truth_orientation_path:
-        print('Ground truth orientation directory: ' +
-              PATHS.ground_truth_orientation_path)
+    if PATHS.init_bbox_path:
+        print('Initial bounding box directory: ' +
+              PATHS.init_bbox_path)
+    if PATHS.init_orientation_path:
+        print('Initial orientation directory: ' +
+              PATHS.init_orientation_path)
     # print('Matches info directory: ' + PATHS.matches_info_path)
     # print('Orientation directory: ' + PATHS.orientation_path)
 
     print('Reconstruction file: ' + PATHS.reconstruction_file)
+
+    if os.path.exists(PATHS.ground_truth_pose_path):
+        print('Reconstruction file: ' + PATHS.ground_truth_pose_path)
+
     print('')
 
 
@@ -218,3 +230,8 @@ if __name__ == '__main__':
     #         orientation.convert_ground_truth(FLAGS, PATHS)
     #     match_info.run(FLAGS, PATHS)
     #     orientation.run(FLAGS, PATHS)
+
+    # Compare with ground truth if exists.
+    if os.path.exists(PATHS.ground_truth_pose_path):
+        evaluation.run(FLAGS, PATHS)
+
