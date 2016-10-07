@@ -225,7 +225,7 @@ def associate_detections_to_trackers(detections, trackers):
     # filter out matched with low IOU
     matches = []
     for m in matched_indices:
-        is_matched = (iou_matrix[m[0], m[1]] < FLAGS.iou_threshold)
+        is_unmatched = (iou_matrix[m[0], m[1]] < FLAGS.iou_threshold)
 
         # @mhsung
         # det: [x0, y0, x1, y2, score, class_index, ...]
@@ -234,9 +234,9 @@ def associate_detections_to_trackers(detections, trackers):
         if (detections.shape[1] >= 6 and trackers.shape[1] >= 6):
             det_cls = detections[m[0], 5]
             trk_cls = trackers[m[1], 5]
-            is_matched = is_matched and (det_cls == trk_cls)
+            is_unmatched = is_unmatched or (det_cls != trk_cls)
 
-        if is_matched:
+        if is_unmatched:
             unmatched_detections.append(m[0])
             unmatched_trackers.append(m[1])
         else:
