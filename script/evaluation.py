@@ -23,9 +23,9 @@ def run(FLAGS, PATHS):
         cmd += FLAGS.bin_dir + '/exp_create_reconstruction_from_modelviews'\
                + ' \\\n'
 
-        cmd += '--images=' + PATHS.image_path + ' \\\n'
+        cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
         cmd += '--data_type=modelview \\\n'
-        cmd += '--file_path=' + PATHS.ground_truth_pose_path + ' \\\n'
+        cmd += '--filepath=' + PATHS.ground_truth_pose_path + ' \\\n'
         cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
         cmd += '--output_reconstruction='\
                + PATHS.ground_truth_reconstruction_path + ' \\\n'
@@ -40,7 +40,8 @@ def run(FLAGS, PATHS):
 
     cmd += '--reference_reconstruction='\
            + PATHS.ground_truth_reconstruction_path + ' \\\n'
-    cmd += '--reconstruction_to_align=' + PATHS.output_path + ' \\\n'
+    cmd += '--reconstruction_to_align=' + PATHS.reconstruction_file\
+        + '-0' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
@@ -52,7 +53,7 @@ def run(FLAGS, PATHS):
 
     cmd += '--data_type_list=reconstruction,reconstruction' + ' \\\n'
     cmd += '--filepath_list=' + PATHS.ground_truth_reconstruction_path\
-           + ',' + PATHS.output_path + ' \\\n'
+           + ',' + PATHS.reconstruction_file + '-0' +' \\\n'
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
