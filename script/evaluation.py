@@ -55,7 +55,8 @@ def run(FLAGS, PATHS):
     cmd += '--filepath_list=' + PATHS.ground_truth_reconstruction_path\
            + ',' + PATHS.reconstruction_file + '-0' +' \\\n'
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
+    cmd += '--snapshot_file=' + PATHS.snapshot_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
-        PATHS.script_path, 'evaluate.sh'))
+        PATHS.script_path, 'visualize.sh'))

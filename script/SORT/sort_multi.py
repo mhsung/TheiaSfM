@@ -23,7 +23,7 @@ from __future__ import print_function
 
 import os, sys
 BASE_DIR = os.path.normpath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), '../../../'))
+    os.path.dirname(os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, 'script'))
 sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
 

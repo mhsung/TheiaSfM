@@ -73,9 +73,6 @@ def run(FLAGS, PATHS):
     if FLAGS.use_initial_orientations:
         cmd += '--min_triangulation_angle_degrees=100000.0' + ' \\\n'
         cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
-        # FIXME:
-        # Make this as option.
-        cmd += '--exp_global_run_bundle_adjustment=false' + ' \\\n'
     else:
         cmd += '--min_triangulation_angle_degrees=4.0' + ' \\\n'
         cmd += '--triangulation_reprojection_error_pixels=10.0' + ' \\\n'
@@ -92,7 +89,9 @@ def run(FLAGS, PATHS):
                PATHS.init_bbox_path + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
                PATHS.init_orientation_path + ' \\\n'
-        cmd += '--exp_global_run_bundle_adjustment=true' + ' \\\n'
+        # FIXME:
+        # Make this as option.
+        cmd += '--exp_global_run_bundle_adjustment=false' + ' \\\n'
         cmd += '--rotation_estimation_constraint_weight=50.0' + ' \\\n'
         cmd += '--position_estimation_constraint_weight=50.0' + ' \\\n'
 

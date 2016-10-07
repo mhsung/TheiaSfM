@@ -287,7 +287,7 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
 bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
   if (options_.global_rotation_estimator_type !=
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
-    GlobalReconstructionEstimator::EstimateGlobalRotations();
+    return GlobalReconstructionEstimator::EstimateGlobalRotations();
   }
 
   // Initialize the orientation estimations by walking along the maximum

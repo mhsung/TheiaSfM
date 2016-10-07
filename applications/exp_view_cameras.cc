@@ -40,6 +40,7 @@ DEFINE_string(data_type_list, "", "comma-seperated.");
 DEFINE_string(filepath_list, "", "comma-seperated.");
 DEFINE_string(calibration_file, "",
               "Calibration file containing image calibration data.");
+DEFINE_string(snapshot_file, "", "");
 DEFINE_double(robust_alignment_threshold, 0.0,
               "If greater than 0.0, this threshold sets determines inliers for "
                 "RANSAC alignment of reconstructions. The inliers are then used "
@@ -57,7 +58,7 @@ int height = 800;
 
 // OpenGL camera parameters.
 Eigen::Vector3f viewer_position(0.0, 0.0, 0.0);
-float zoom = -50.0;
+float zoom = -100.0;
 float delta_zoom = 1.1;
 
 // Rotation values for the navigation
@@ -391,7 +392,7 @@ void SnapshotRotatingAroundYAxis(const int num_samples) {
 // @mhsung
 void ResetViewpoint() {
   viewer_position.setZero();
-  zoom = -50.0;
+  zoom = -100.0;
   navigation_rotation.setZero();
   mouse_pressed_x = 0;
   mouse_pressed_y = 0;
@@ -400,6 +401,15 @@ void ResetViewpoint() {
   left_mouse_button_active = 0;
   right_mouse_button_active = 0;
   point_size = 1.0;
+}
+
+// @mhsung
+void Idle() {
+  // If snapshot file name is given, save a snapshot and close application.
+  if (FLAGS_snapshot_file != "") {
+    Snapshot(FLAGS_snapshot_file);
+    exit(-1);
+  }
 }
 
 void Keyboard(unsigned char key, int x, int y) {
@@ -486,6 +496,111 @@ void ReadCalibrationFiles(
   }
 }
 
+double Median(std::vector<double>* data) {
+  int n = data->size();
+  std::vector<double>::iterator mid_point = data->begin() + n / 2;
+  std::nth_element(data->begin(), mid_point, data->end());
+  return *mid_point;
+}
+
+void NormalizeCameraPoses(
+  theia::Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  // Compute the marginal median of the 3D points.
+  std::vector<std::vector<double> > points(3);
+  Eigen::Vector3d median;
+  for (const theia::ViewId view_id : reconstruction->ViewIds()) {
+    const auto* view = reconstruction->View(view_id);
+    if (view == nullptr || !view->IsEstimated()) {
+      continue;
+    }
+    const Eigen::Vector3d point = view->Camera().GetPosition();
+    points[0].push_back(point[0]);
+    points[1].push_back(point[1]);
+    points[2].push_back(point[2]);
+  }
+  median(0) = Median(&points[0]);
+  median(1) = Median(&points[1]);
+  median(2) = Median(&points[2]);
+
+  // Apply position transformation.
+  TransformReconstruction(
+    Eigen::Matrix3d::Identity(), -median, 1.0, reconstruction);
+
+  // Find the median absolute deviation of the points from the median.
+  std::vector<double> distance_to_median;
+  distance_to_median.reserve(reconstruction->NumViews());
+  for (const theia::ViewId view_id : reconstruction->ViewIds()) {
+    const auto* view = reconstruction->View(view_id);
+    if (view == nullptr || !view->IsEstimated()) {
+      continue;
+    }
+    const Eigen::Vector3d point = view->Camera().GetPosition();
+    distance_to_median.emplace_back((point - median).lpNorm<1>());
+  }
+  // This will scale the reconstruction so that the median absolute deviation of
+  // the points is 100.
+  const double scale = 100.0 / Median(&distance_to_median);
+
+  TransformReconstruction(Eigen::Matrix3d::Identity(),
+                          Eigen::Vector3d::Zero(),
+                          scale,
+                          reconstruction);
+
+  // Compute a rotation such that the x-y plane is aligned to the dominating
+  // plane of the cameras.
+  std::vector<Eigen::Vector3d> cameras;
+  const auto& view_ids = reconstruction->ViewIds();
+  for (const theia::ViewId view_id : view_ids) {
+    const auto* view = reconstruction->View(view_id);
+    if (view == nullptr || !view->IsEstimated()) {
+      continue;
+    }
+    cameras.emplace_back(view->Camera().GetPosition());
+  }
+
+  // Robustly estimate the dominant plane from the cameras. This will correspond
+  // to a plan that is parallel to the ground plane for the majority of
+  // reconstructions. We start with a small threshold and gradually increase it
+  // until at an inlier set of at least 50% is found.
+  RansacParameters ransac_params;
+  ransac_params.max_iterations = 1000;
+  ransac_params.error_thresh = 0.01;
+  Plane plane;
+  RansacSummary unused_summary;
+  Eigen::Matrix3d rotation_for_dominant_plane = Eigen::Matrix3d::Identity();
+  if (EstimateDominantPlaneFromPoints(ransac_params,
+                                      RansacType::LMED,
+                                      cameras,
+                                      &plane,
+                                      &unused_summary)) {
+    // Set the rotation such that the plane normal points in the upward
+    // direction. Choose the sign of the normal that will minimize the rotation
+    // (this hopes to prevent having a rotation that flips the scene upside
+    // down).
+    const Eigen::Quaterniond rotation_quat1 =
+      Eigen::Quaterniond::FromTwoVectors(plane.unit_normal,
+                                         Eigen::Vector3d(0, 0, 1.0));
+    const Eigen::Quaterniond rotation_quat2 =
+      Eigen::Quaterniond::FromTwoVectors(-plane.unit_normal,
+                                         Eigen::Vector3d(0, 0, 1.0));
+    const Eigen::AngleAxisd rotation1_aa(rotation_quat1);
+    const Eigen::AngleAxisd rotation2_aa(rotation_quat2);
+
+    if (rotation1_aa.angle() < rotation2_aa.angle()) {
+      rotation_for_dominant_plane = rotation1_aa.toRotationMatrix();
+    } else {
+      rotation_for_dominant_plane = rotation2_aa.toRotationMatrix();
+    }
+  }
+
+  TransformReconstruction(rotation_for_dominant_plane,
+                          Eigen::Vector3d::Zero(),
+                          1.0,
+                          reconstruction);
+}
+
 std::unique_ptr<Reconstruction> AddCameraList(
   const std::string& data_type, const std::string filepath,
   const std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*
@@ -512,7 +627,8 @@ std::unique_ptr<Reconstruction> AddCameraList(
     }
   } else {
     // Centers the reconstruction based on the absolute deviation of 3D points.
-    reconstruction->Normalize();
+    //reconstruction->Normalize();
+    NormalizeCameraPoses(reconstruction.get());
   }
 
   // Set up camera drawing.
@@ -599,7 +715,8 @@ int main(int argc, char* argv[]) {
   glutMouseFunc(MouseButton);
   glutMotionFunc(MouseMove);
   glutKeyboardFunc(Keyboard);
-  glutIdleFunc(RenderScene);
+  //glutIdleFunc(RenderScene);
+  glutIdleFunc(Idle);
 
   // enter GLUT event processing loop
   glutMainLoop();

@@ -3,7 +3,7 @@
 # Change variables.
 #DATA_ADDRESS=data/mit_dorm_mcc_eflr6/dorm_mcc_eflr6_oct_31_2012_scan1_erika
 #DATA_DIR=$HOME/home/data/sun3d.cs.princeton.edu/$DATA_ADDRESS
-DATA_DIR=$HOME/home/data/cmu_localization/data_collection_20100901/c0
+DATA_DIR=$HOME/Developer/data/sfm/IMG_2437
 echo ${DATA_DIR}
 
 # Download Sun3D data.
