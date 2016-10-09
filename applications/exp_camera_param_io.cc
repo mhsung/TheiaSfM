@@ -581,43 +581,6 @@ bool ReadSequenceIndices(
   return true;
 }
 
-void SetCameraIntrinsics(
-  const theia::CameraIntrinsicsPrior& camera_intrinsic_prior,
-  theia::Camera* camera) {
-  CHECK_NOTNULL(camera);
-
-  camera->SetImageSize(
-    camera_intrinsic_prior.image_width,
-    camera_intrinsic_prior.image_height);
-
-  if (camera_intrinsic_prior.focal_length.is_set) {
-    camera->SetFocalLength(camera_intrinsic_prior.focal_length.value);
-  }
-
-  if (camera_intrinsic_prior.principal_point[0].is_set &&
-      camera_intrinsic_prior.principal_point[1].is_set) {
-    camera->SetPrincipalPoint(
-      camera_intrinsic_prior.principal_point[0].value,
-      camera_intrinsic_prior.principal_point[1].value);
-  }
-
-  if (camera_intrinsic_prior.aspect_ratio.is_set) {
-    camera->SetAspectRatio(camera_intrinsic_prior.aspect_ratio.value);
-  }
-
-  if (camera_intrinsic_prior.skew.is_set) {
-    camera->SetSkew(camera_intrinsic_prior.skew.value);
-  }
-
-
-  if (camera_intrinsic_prior.radial_distortion[0].is_set &&
-      camera_intrinsic_prior.radial_distortion[1].is_set) {
-    camera->SetRadialDistortion(
-      camera_intrinsic_prior.radial_distortion[0].value,
-      camera_intrinsic_prior.radial_distortion[1].value);
-  }
-}
-
 std::unique_ptr<Reconstruction> CreateTheiaReconstructionFromModelviews(
   const std::unordered_map<std::string, Eigen::Affine3d>& modelviews,
   const std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*

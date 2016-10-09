@@ -405,6 +405,8 @@ void ResetViewpoint() {
 
 // @mhsung
 void Idle() {
+  RenderScene();
+
   // If snapshot file name is given, save a snapshot and close application.
   if (FLAGS_snapshot_file != "") {
     Snapshot(FLAGS_snapshot_file);
