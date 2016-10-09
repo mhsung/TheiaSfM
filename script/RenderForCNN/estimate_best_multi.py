@@ -18,7 +18,7 @@ import numpy as np
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
-    BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
+    BASE_DIR, 'script/RenderForCNN/class_names.txt'), '')
 gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
 gflags.DEFINE_string('crop_dir', 'convnet/object_crop', '')
 gflags.DEFINE_string('out_best_orientation_file',

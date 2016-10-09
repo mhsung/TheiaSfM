@@ -18,7 +18,7 @@ BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'lib'))
 sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'tools'))
-sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
+sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN')
 
 import _init_paths
 from fast_rcnn.config import cfg

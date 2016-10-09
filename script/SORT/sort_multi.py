@@ -25,7 +25,7 @@ import os, sys
 BASE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, 'script'))
-sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN', 'multi'))
+sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN'))
 
 from filterpy.kalman import KalmanFilter
 from sklearn.utils.linear_assignment_ import linear_assignment

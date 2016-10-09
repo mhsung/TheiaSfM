@@ -19,7 +19,7 @@ import multiprocessing
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
-    BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
+    BASE_DIR, 'script/RenderForCNN/class_names.txt'), '')
 gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
 gflags.DEFINE_string('orientation_file',
     'convnet/object_orientations_fitted.csv', '')
