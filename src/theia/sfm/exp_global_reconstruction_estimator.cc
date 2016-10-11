@@ -284,6 +284,41 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   return summary;
 }
 
+void ExpGlobalReconstructionEstimator::InitializeObjectOrientations() {
+  object_orientations_.clear();
+
+  for (const auto& object : *object_view_orientations_) {
+    const ObjectId& object_id = object.first;
+    CHECK(!object.second.empty());
+
+    // Use any object-view constraint.
+    const auto& orientation = *(object.second.begin());
+    const ViewId& view_id = orientation.first;
+
+    const Eigen::Vector3d object_to_view_vec = orientation.second;
+    Eigen::Matrix3d object_to_view_R;
+    ceres::AngleAxisToRotationMatrix(
+      object_to_view_vec.data(),
+      ceres::ColumnMajorAdapter3x3(object_to_view_R.data()));
+
+    const Eigen::Vector3d world_to_view_vec =
+      FindOrDie(view_orientations_, view_id);
+    Eigen::Matrix3d world_to_view_R;
+    ceres::AngleAxisToRotationMatrix(
+      world_to_view_vec.data(),
+      ceres::ColumnMajorAdapter3x3(world_to_view_R.data()));
+
+    const Eigen::Matrix3d world_to_object_R =
+      object_to_view_R.transpose() * world_to_view_R;
+
+    Eigen::Vector3d object_orientation;
+    ceres::RotationMatrixToAngleAxis(
+      ceres::ColumnMajorAdapter3x3(world_to_object_R.data()),
+      object_orientation.data());
+    object_orientations_.emplace(object_id, object_orientation);
+  }
+}
+
 bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
   if (options_.global_rotation_estimator_type !=
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
@@ -292,12 +327,11 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
 
   // Initialize the orientation estimations by walking along the maximum
   // spanning tree.
-  // FIXME:
-  // Initialize view orientation with the given object view orientations.
-  // const ObjectViewOrientations& constraints = object_view_orientations_->at(0);
-  // OrientationsFromMaximumSpanningTree(
-  //     *view_graph_, &view_orientations_, &constraints);
   OrientationsFromMaximumSpanningTree(*view_graph_, &view_orientations_);
+
+  // Initialize object orientations with object-view constraints and initial 
+  // view orientations.
+  InitializeObjectOrientations();
 
   RobustRotationEstimator::Options robust_rotation_estimator_options;
   std::unique_ptr<ConstrainedRobustRotationEstimator>
@@ -305,8 +339,6 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
       robust_rotation_estimator_options,
       options_.rotation_estimation_constraint_weight));
 
-  // FIXME:
-  // Initialize object orientations before calling estimate function.
   const auto& view_pairs = view_graph_->GetAllEdges();
   const bool ret = constrained_rotation_estimator->EstimateRotations(
       view_pairs, *object_view_orientations_,
@@ -320,7 +352,7 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
 bool ExpGlobalReconstructionEstimator::EstimatePosition() {
   if (options_.global_position_estimator_type !=
       GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
-    return ExpGlobalReconstructionEstimator::EstimatePosition();
+    return GlobalReconstructionEstimator::EstimatePosition();
   }
 
   std::unique_ptr<ConstrainedNonlinearPositionEstimator> position_estimator(

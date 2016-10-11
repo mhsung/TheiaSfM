@@ -57,15 +57,6 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
       *global_view_orientations, object_view_constraints))
   << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
 
-  // Initialize object orientations.
-  // FIXME:
-  // Object orientations should be initialized before calling this function.
-  global_object_orientations_->clear();
-  for (const auto& object : object_view_constraints_) {
-    CHECK(!object.second.empty());
-    (*global_object_orientations_)[object.first] = Eigen::Vector3d::Zero();
-  }
-
   // @mhsung
   // Fix the orientation of the first object by assigning -1 index.
   int index = -1;

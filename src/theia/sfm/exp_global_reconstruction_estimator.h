@@ -45,6 +45,7 @@ private:
   void ComputeRotationEstimationStatistics();
   void ComputePositionEstimationStatistics();
 
+  void InitializeObjectOrientations();
   // void FilterInitialOrientations();
 
   // @mhsung

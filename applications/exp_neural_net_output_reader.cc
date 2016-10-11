@@ -62,12 +62,12 @@ bool ReadNeuralNetBBoxesAndOrientations(
   LOG(INFO) << "Loaded " << num_bboxes << " bounding box information.";
 
   // Read orientations.
-  Eigen::MatrixXi orientation_matrix(num_bboxes, 3);
+  Eigen::MatrixXd orientation_matrix(num_bboxes, 3);
   CHECK(ReadEigenMatrixFromCSV(orientation_filepath, &orientation_matrix));
 
   int bbox_id = 0;
   for (auto it = bboxes.begin(); it != bboxes.end(); ++it, ++bbox_id) {
-    (*it)->camera_param_ = orientation_matrix.row(bbox_id).cast<double>();
+    (*it)->camera_param_ = orientation_matrix.row(bbox_id);
   }
   LOG(INFO) << "Loaded " << num_bboxes << " bounding box orientation.";
 
