@@ -99,7 +99,7 @@ Eigen::Vector3d ComputeCameraToObjectDirections(
     const Eigen::Vector4d& bounding_box,
     const theia::CameraIntrinsicsPrior& intrinsic) {
   // Compute object center on image.
-  Eigen::Vector2d bbox_center(
+  const Eigen::Vector2d bbox_center(
     0.5 * (bounding_box[0] + bounding_box[2]),
     0.5 * (bounding_box[1] + bounding_box[3]));
 

@@ -94,8 +94,8 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
   AddCameraToCameraConstraints(view_orientations, view_positions);
 
   // @mhsung
-  AddObjectToCameraConstraints(
-      view_orientations, view_positions, object_positions);
+  AddCameraToObjectConstraints(
+    view_orientations, view_positions, object_positions);
 
   if (options_.min_num_points_per_view > 0) {
     AddPointToCameraConstraints(view_orientations, view_positions);
@@ -156,10 +156,10 @@ void ConstrainedNonlinearPositionEstimator::InitializeRandomPositions(
   }
 }
 
-void ConstrainedNonlinearPositionEstimator::AddObjectToCameraConstraints(
-    const std::unordered_map<ViewId, Vector3d>& view_orientations,
-    std::unordered_map<ViewId, Vector3d>* view_positions,
-    std::unordered_map<ViewId, Vector3d>* object_positions) {
+void ConstrainedNonlinearPositionEstimator::AddCameraToObjectConstraints(
+  const std::unordered_map<ViewId, Vector3d>& view_orientations,
+  std::unordered_map<ViewId, Vector3d>* view_positions,
+  std::unordered_map<ViewId, Vector3d>* object_positions) {
   int num_object_to_camera_constraints = 0;
 
   for (const auto& object : object_view_constraints_) {

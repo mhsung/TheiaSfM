@@ -174,7 +174,8 @@ Eigen::Matrix3d ComputeAverageRotation(
   const int num_Rs = R_list.size();
   CHECK_GT(num_Rs, 0);
 
-  Eigen::Matrix3d avg_R = Eigen::Matrix3d::Identity();
+  // Start from the first rotation.
+  Eigen::Matrix3d avg_R = R_list.front();
   double prev_error = std::numeric_limits<double>::max();
 
   // Minimize under the geodesic metric.

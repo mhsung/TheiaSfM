@@ -19,7 +19,13 @@ struct DetectedBBox {
   Eigen::Vector4d bbox_;    // [x1, y1, x2, y2]
   double score_;
   Eigen::Vector3d camera_param_;
+
+  Eigen::Vector2d bbox_center() const {
+    return Eigen::Vector2d (
+      0.5 * (bbox_[0] + bbox_[2]), 0.5 * (bbox_[1] + bbox_[3]));
+  }
 };
+
 typedef std::unique_ptr<DetectedBBox> DetectedBBoxPtr;
 typedef std::list<DetectedBBoxPtr> DetectedBBoxPtrList;
 
