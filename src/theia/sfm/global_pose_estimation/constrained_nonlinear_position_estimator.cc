@@ -64,7 +64,8 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
     object_view_constraints,
     std::unordered_map<ViewId, Vector3d>* view_positions,
-    std::unordered_map<ViewId, Vector3d>* object_positions) {
+    std::unordered_map<ViewId, Vector3d>* object_positions,
+    bool randomly_initialize) {
   CHECK_NOTNULL(view_positions);
   CHECK_NOTNULL(object_positions);
   if (view_pairs.empty() || view_orientations.empty()) {
@@ -87,8 +88,10 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
 
   // Initialize positions to be random.
   // @mhsung
-  InitializeRandomPositions(view_orientations, view_positions,
-                            object_positions);
+  if (randomly_initialize) {
+    InitializeRandomPositions(view_orientations, view_positions,
+                              object_positions);
+  }
 
   // Add the constraints to the problem.
   AddCameraToCameraConstraints(view_orientations, view_positions);
@@ -106,7 +109,9 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
 
   // @mhsung
   // Fix the first object frame as the origin.
-  object_positions->begin()->second.setZero();
+  if (randomly_initialize) {
+    object_positions->begin()->second.setZero();
+  }
   problem_->SetParameterBlockConstant(object_positions->begin()->second.data());
 
   // Set the solver options.

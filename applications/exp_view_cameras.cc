@@ -58,7 +58,7 @@ int height = 800;
 
 // OpenGL camera parameters.
 Eigen::Vector3f viewer_position(0.0, 0.0, 0.0);
-float zoom = -100.0;
+float zoom = -200.0;
 float delta_zoom = 1.1;
 
 // Rotation values for the navigation

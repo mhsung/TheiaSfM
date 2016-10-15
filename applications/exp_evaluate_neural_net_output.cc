@@ -579,12 +579,12 @@ bool TestPositionOptimization(
     world_to_object_ts;
 
   // 'world_to_camera_ts' and 'world_to_object_ts' are updated.
+  const bool kRandomlyInitialize = false;
   const bool ret = constrained_position_estimator->EstimatePositions(
     camera_pairs, world_to_camera_Rs, camera_coord_camera_to_object_t_dirs,
-    &world_to_camera_ts, &world_to_object_ts);
+    &world_to_camera_ts, &world_to_object_ts, kRandomlyInitialize);
   if (!ret) return false;
 
-  /*
   // Check object position differences.
   for (const auto& object : world_to_object_ts) {
     const ObjectId object_id = object.first;
@@ -600,7 +600,6 @@ bool TestPositionOptimization(
     LOG(INFO) << " - Predicted position:    "
               << pred_world_to_object_t.transpose().format(csv_format);
   }
-  */
 
   // Check camera-to-object direction differences.
   std::vector<double> angle_errors;

@@ -292,30 +292,37 @@ void ExpGlobalReconstructionEstimator::InitializeObjectOrientations() {
     CHECK(!object.second.empty());
 
     // Use any object-view constraint.
-    const auto& orientation = *(object.second.begin());
-    const ViewId view_id = orientation.first;
+    for (const auto& orientation : object.second) {
+      const ViewId view_id = orientation.first;
 
-    const Eigen::Vector3d object_to_view_vec = orientation.second;
-    Eigen::Matrix3d object_to_view_R;
-    ceres::AngleAxisToRotationMatrix(
-      object_to_view_vec.data(),
-      ceres::ColumnMajorAdapter3x3(object_to_view_R.data()));
+      const Eigen::Vector3d* world_to_view_vec =
+        FindOrNull(view_orientations_, view_id);
+      if (world_to_view_vec == nullptr) {
+        continue;
+      }
 
-    const Eigen::Vector3d world_to_view_vec =
-      FindOrDie(view_orientations_, view_id);
-    Eigen::Matrix3d world_to_view_R;
-    ceres::AngleAxisToRotationMatrix(
-      world_to_view_vec.data(),
-      ceres::ColumnMajorAdapter3x3(world_to_view_R.data()));
+      Eigen::Matrix3d world_to_view_R;
+      ceres::AngleAxisToRotationMatrix(
+        world_to_view_vec->data(),
+        ceres::ColumnMajorAdapter3x3(world_to_view_R.data()));
 
-    const Eigen::Matrix3d world_to_object_R =
-      object_to_view_R.transpose() * world_to_view_R;
+      const Eigen::Vector3d object_to_view_vec = orientation.second;
+      Eigen::Matrix3d object_to_view_R;
+      ceres::AngleAxisToRotationMatrix(
+        object_to_view_vec.data(),
+        ceres::ColumnMajorAdapter3x3(object_to_view_R.data()));
 
-    Eigen::Vector3d object_orientation;
-    ceres::RotationMatrixToAngleAxis(
-      ceres::ColumnMajorAdapter3x3(world_to_object_R.data()),
-      object_orientation.data());
-    object_orientations_.emplace(object_id, object_orientation);
+      const Eigen::Matrix3d world_to_object_R =
+        object_to_view_R.transpose() * world_to_view_R;
+
+      Eigen::Vector3d object_orientation;
+      ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(world_to_object_R.data()),
+        object_orientation.data());
+      object_orientations_.emplace(object_id, object_orientation);
+
+      break;
+    }
   }
 }
 

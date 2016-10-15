@@ -36,7 +36,8 @@ class ConstrainedNonlinearPositionEstimator
       const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
           object_view_constraints,
       std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
-      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
+      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions,
+      bool randomly_initialize = true);
 
  private:
   // @mhsung
