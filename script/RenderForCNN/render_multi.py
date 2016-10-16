@@ -32,7 +32,7 @@ gflags.DEFINE_bool('use_opengl', True, '')
 def render_model(bbox_idx, row, class_names, preds):
     class_name = class_names[int(row['class_index'])]
     model_obj_file = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), '../sample_model',
+        os.path.dirname(os.path.abspath(__file__)), 'sample_model',
         class_name + '.obj')
 
     out_file = os.path.join(FLAGS.data_dir, FLAGS.out_render_dir,
