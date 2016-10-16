@@ -456,8 +456,9 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
     reconstruction_builder) {
   // Read bounding box information.
   std::unordered_map<ObjectId, DetectedBBoxPtrList> object_bboxes;
-  ReadDetectedBBoxes(FLAGS_initial_bounding_boxes_filepath,
-                     FLAGS_initial_orientations_filepath, &object_bboxes);
+  ReadNeuralNetBBoxesAndOrientations(FLAGS_initial_bounding_boxes_filepath,
+                                     FLAGS_initial_orientations_filepath,
+                                     &object_bboxes);
 
   for (const auto& object : object_bboxes) {
     const theia::ObjectId object_id = object.first;

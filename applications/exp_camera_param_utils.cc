@@ -174,7 +174,9 @@ Eigen::Matrix3d ComputeAverageRotation(
   const int num_Rs = R_list.size();
   CHECK_GT(num_Rs, 0);
 
-  Eigen::Matrix3d avg_R = Eigen::Matrix3d::Identity();
+  // Start from the first rotation.
+  Eigen::Matrix3d avg_R = R_list.front();
+  double prev_error = std::numeric_limits<double>::max();
 
   // Minimize under the geodesic metric.
   // Hartley et al., L1 rotation averaging using the Weiszfeld algorithm,
@@ -182,15 +184,26 @@ Eigen::Matrix3d ComputeAverageRotation(
   // Algorithm 1.
   for (int iter = 0; iter < kMaxIter; ++iter) {
     Eigen::Matrix3d r = Eigen::Matrix3d::Zero();
-    for (const Eigen::Matrix3d diff_R : R_list) {
-      r += (avg_R.transpose() * diff_R).log();
+    for (const Eigen::Matrix3d R : R_list) {
+      r += (avg_R.transpose() * R).log();
     }
     r = r / (double) num_Rs;
     avg_R = avg_R * r.exp();
 
     const double error = r.norm();
     VLOG(3) << "[" << iter << "] error = " << error;
-    if (error < kErrorThreshold) break;
+
+    if (error < kErrorThreshold) {
+      VLOG(3) << "The error is smaller than threshold ("
+              << error << " < " << kErrorThreshold << "). Stop.";
+      break;
+    }
+    else if (error > prev_error) {
+      LOG(WARNING) << "The error is greater than previous one ("
+                   << error << " > " << prev_error << "). Stop.";
+      break;
+    }
+    prev_error = error;
   }
 
   VLOG(3) << "Done.";

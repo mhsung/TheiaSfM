@@ -284,6 +284,48 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
   return summary;
 }
 
+void ExpGlobalReconstructionEstimator::InitializeObjectOrientations() {
+  object_orientations_.clear();
+
+  for (const auto& object : *object_view_orientations_) {
+    const ObjectId object_id = object.first;
+    CHECK(!object.second.empty());
+
+    // Use any object-view constraint.
+    for (const auto& orientation : object.second) {
+      const ViewId view_id = orientation.first;
+
+      const Eigen::Vector3d* world_to_view_vec =
+        FindOrNull(view_orientations_, view_id);
+      if (world_to_view_vec == nullptr) {
+        continue;
+      }
+
+      Eigen::Matrix3d world_to_view_R;
+      ceres::AngleAxisToRotationMatrix(
+        world_to_view_vec->data(),
+        ceres::ColumnMajorAdapter3x3(world_to_view_R.data()));
+
+      const Eigen::Vector3d object_to_view_vec = orientation.second;
+      Eigen::Matrix3d object_to_view_R;
+      ceres::AngleAxisToRotationMatrix(
+        object_to_view_vec.data(),
+        ceres::ColumnMajorAdapter3x3(object_to_view_R.data()));
+
+      const Eigen::Matrix3d world_to_object_R =
+        object_to_view_R.transpose() * world_to_view_R;
+
+      Eigen::Vector3d object_orientation;
+      ceres::RotationMatrixToAngleAxis(
+        ceres::ColumnMajorAdapter3x3(world_to_object_R.data()),
+        object_orientation.data());
+      object_orientations_.emplace(object_id, object_orientation);
+
+      break;
+    }
+  }
+}
+
 bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
   if (options_.global_rotation_estimator_type !=
       GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2) {
@@ -292,12 +334,11 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
 
   // Initialize the orientation estimations by walking along the maximum
   // spanning tree.
-  // FIXME:
-  // Initialize view orientation with the given object view orientations.
-  // const ObjectViewOrientations& constraints = object_view_orientations_->at(0);
-  // OrientationsFromMaximumSpanningTree(
-  //     *view_graph_, &view_orientations_, &constraints);
   OrientationsFromMaximumSpanningTree(*view_graph_, &view_orientations_);
+
+  // Initialize object orientations with object-view constraints and initial 
+  // view orientations.
+  InitializeObjectOrientations();
 
   RobustRotationEstimator::Options robust_rotation_estimator_options;
   std::unique_ptr<ConstrainedRobustRotationEstimator>
@@ -305,8 +346,6 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
       robust_rotation_estimator_options,
       options_.rotation_estimation_constraint_weight));
 
-  // FIXME:
-  // Initialize object orientations before calling estimate function.
   const auto& view_pairs = view_graph_->GetAllEdges();
   const bool ret = constrained_rotation_estimator->EstimateRotations(
       view_pairs, *object_view_orientations_,
@@ -320,16 +359,16 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
 bool ExpGlobalReconstructionEstimator::EstimatePosition() {
   if (options_.global_position_estimator_type !=
       GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
-    return ExpGlobalReconstructionEstimator::EstimatePosition();
+    return GlobalReconstructionEstimator::EstimatePosition();
   }
 
-  std::unique_ptr<ConstrainedNonlinearPositionEstimator> position_estimator(
-      new ConstrainedNonlinearPositionEstimator(
+  std::unique_ptr<ConstrainedNonlinearPositionEstimator>
+    constrained_position_estimator(new ConstrainedNonlinearPositionEstimator(
           options_.nonlinear_position_estimator_options, *reconstruction_,
           options_.position_estimation_constraint_weight));
 
   const auto& view_pairs = view_graph_->GetAllEdges();
-  const bool ret = position_estimator->EstimatePositions(
+  const bool ret = constrained_position_estimator->EstimatePositions(
       view_pairs, view_orientations_, *object_view_position_directions_,
       &view_positions_, &object_positions_);
   if (!ret) return false;
@@ -415,82 +454,32 @@ void ExpGlobalReconstructionEstimator::ComputePositionEstimationStatistics() {
           ceres::ColumnMajorAdapter3x3(view_orientation_matrix.data()));
 
       const Eigen::Vector3d relative_position =
-          (*object_position) - (*view_position);
+        ((*object_position) - (*view_position)).normalized();
 
       // Convert camera coordinates camera to object direction to
       // world coordinates direction.
       const Eigen::Vector3d given_position_direction =
-          view_orientation_matrix.transpose() * position_direction.second;
-
-      const double distance = relative_position.norm();
-      min_distance = std::min(distance, min_distance);
-      max_distance = std::max(distance, max_distance);
+        (view_orientation_matrix.transpose() * position_direction.second)
+          .normalized();
 
       const double dot_prod =
-          given_position_direction.dot(relative_position.normalized());
+          given_position_direction.dot(relative_position);
       const double direction_angle_error = std::acos(dot_prod) / M_PI * 180.0;
-      min_direction_angle_error = std::min(direction_angle_error,
-                                           min_direction_angle_error);
-      max_direction_angle_error = std::max(direction_angle_error,
-                                           max_direction_angle_error);
+      min_direction_angle_error =
+        std::min(direction_angle_error, min_direction_angle_error);
+      max_direction_angle_error =
+        std::max(direction_angle_error, max_direction_angle_error);
 
       VLOG(2) << "Object view translation difference with constraint ("
               << "Object ID: " << object_id << ", "
               << "View ID: " << view_id << ", "
-              << "Angle diff: " << direction_angle_error << ", "
-              << "Distance: " << distance << ")";
+              << "Angle diff: " << direction_angle_error << ")";
     }
   }
 
   LOG(INFO) << "Object view translation difference with constraint ("
-            << "Angle diff Min: " << min_direction_angle_error << ", "
-            << "Angle diff Max: " << max_direction_angle_error << ", "
-            << "Distance Min: " << min_distance << ", "
-            << "Distance Max: " << max_distance << ")";
-
-
-  // For each view graph edge.
-  for (const auto& view_pair : view_graph_->GetAllEdges()) {
-    const ViewId view1_id = view_pair.first.first;
-    const ViewId view2_id = view_pair.first.second;
-    const Eigen::Vector3d* view1_position = FindOrNull(
-        view_positions_, view1_id);
-    const Eigen::Vector3d* view2_position = FindOrNull(
-        view_positions_, view2_id);
-    if (!view1_position || !view2_position) continue;
-
-    const View* view1 = reconstruction_->View(view1_id);
-    const View* view2 = reconstruction_->View(view2_id);
-    CHECK(view1 != nullptr);
-    CHECK(view2 != nullptr);
-
-    for (const auto& object : object_positions_) {
-      const ObjectId object_id = object.first;
-      const Eigen::Vector3d& object_position = object.second;
-
-      const double distance1 = ((*view1_position) - object_position).norm();
-      const double distance2 = ((*view2_position) - object_position).norm();
-      CHECK_GT(distance1, 0.0);
-      CHECK_GT(distance2, 0.0);
-
-      const Eigen::Vector3d position_direction =
-          ((*view2_position) - (*view1_position)).normalized();
-      const double dot_prod =
-          view_pair.second.position_2.dot(position_direction);
-      const double direction_angle_error = std::acos(dot_prod) / M_PI * 180.0;
-
-      const double kDistanceRatioTol = 10000.0;
-      if ((distance1 / distance2) > kDistanceRatioTol ||
-          (distance2 / distance1) > kDistanceRatioTol) {
-        LOG(WARNING) << "Distance ratio is too big ("
-            << "View1: " << view1->Name() << ", "
-            << "View2: " << view2->Name() << ", "
-            << "Distance1: " << distance1 << ", "
-            << "Distance2: " << distance2 << ", "
-            << "Angle diff: " << direction_angle_error;
-      }
-    }
-  }
+            << "Min: " << min_direction_angle_error << ", "
+            << "Max: " << max_direction_angle_error << ")";
 }
 
 /*

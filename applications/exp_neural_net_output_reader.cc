@@ -13,13 +13,14 @@
 
 namespace theia {
 
-bool ReadDetectedBBoxes(
-  const std::string& bbox_info_file, const std::string& orientation_file,
+bool ReadNeuralNetBBoxesAndOrientations(
+  const std::string& bbox_info_filepath,
+  const std::string& orientation_filepath,
   std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes) {
   std::list<DetectedBBoxPtr> bboxes;
 
   // Read bounding box information.
-  std::ifstream file(bbox_info_file);
+  std::ifstream file(bbox_info_filepath);
   if (!file.good()) {
     return false;
   }
@@ -32,7 +33,7 @@ bool ReadDetectedBBoxes(
     DetectedBBoxPtr bbox(new DetectedBBox);
 
     CHECK(std::getline(sstr, token, ','));
-    // const int bbox_id = std::stoi(token);
+    bbox->bbox_id_ = std::stoi(token);
 
     CHECK(std::getline(sstr, token, ','));
     bbox->view_name_ = token;
@@ -55,18 +56,20 @@ bool ReadDetectedBBoxes(
     bboxes.push_back(std::move(bbox));
   }
 
-  const int num_bboxs = bboxes.size();
-  LOG(INFO) << "Loaded " << num_bboxs << " bounding box information.";
+  file.close();
+
+  const int num_bboxes = bboxes.size();
+  LOG(INFO) << "Loaded " << num_bboxes << " bounding box information.";
 
   // Read orientations.
-  Eigen::MatrixXi orientation_matrix(num_bboxs, 3);
-  CHECK(ReadEigenMatrixFromCSV(orientation_file, &orientation_matrix));
+  Eigen::MatrixXd orientation_matrix(num_bboxes, 3);
+  CHECK(ReadEigenMatrixFromCSV(orientation_filepath, &orientation_matrix));
 
   int bbox_id = 0;
   for (auto it = bboxes.begin(); it != bboxes.end(); ++it, ++bbox_id) {
-    (*it)->camera_param_ = orientation_matrix.row(bbox_id).cast<double>();
+    (*it)->camera_param_ = orientation_matrix.row(bbox_id);
   }
-  LOG(INFO) << "Loaded " << num_bboxs << " bounding box orientation.";
+  LOG(INFO) << "Loaded " << num_bboxes << " bounding box orientation.";
 
   // Collect object bounding boxes.
   for (auto& bbox : bboxes) {
@@ -74,6 +77,85 @@ bool ReadDetectedBBoxes(
   }
   const int num_object = object_bboxes->size();
   LOG(INFO) << "Loaded " << num_object << " objects.";
+
+  return true;
+}
+
+void SortByBBoxIds(
+  const std::unordered_map<ObjectId, DetectedBBoxPtrList>& object_bboxes,
+  std::vector<const DetectedBBox*>* all_bboxes) {
+  CHECK_NOTNULL(all_bboxes)->clear();
+
+  int num_all_bboxes = 0;
+  for (const auto& object : object_bboxes) {
+    num_all_bboxes += object.second.size();
+  }
+  all_bboxes->resize(num_all_bboxes);
+
+  int count_bboxes = 0;
+  for (const auto& object : object_bboxes) {
+    for (const auto& bbox : object.second) {
+      CHECK_LT(bbox->bbox_id_, num_all_bboxes);
+      (*all_bboxes)[bbox->bbox_id_] = bbox.get();
+      ++count_bboxes;
+    }
+  }
+  CHECK_EQ(count_bboxes, num_all_bboxes);
+}
+
+bool WriteNeuralNetBBoxes(
+  const std::string& filepath,
+  const std::unordered_map<ObjectId, DetectedBBoxPtrList>& object_bboxes) {
+  std::vector<const DetectedBBox*> all_bboxes;
+  SortByBBoxIds(object_bboxes, &all_bboxes);
+  const int num_all_bboxes = all_bboxes.size();
+
+  // Read bounding box information.
+  std::ofstream file(filepath);
+  if (!file.good()) {
+    return false;
+  }
+
+  for (const auto& bbox : all_bboxes) {
+    CHECK_LT(bbox->bbox_id_, num_all_bboxes);
+    file << bbox->bbox_id_ << ","
+         << bbox->view_name_ << ","
+         << bbox->category_id_ << ",";
+    for (int i = 0; i < 4; i++) {
+      file << bbox->bbox_[i] << ",";
+    }
+    file << bbox->score_ << ","
+         << bbox->object_id_ << std::endl;
+  }
+
+  file.close();
+
+  LOG(INFO) << "Saved " << num_all_bboxes << " bounding boxes.";
+
+  return true;
+}
+
+bool WriteNeuralNetOrientations(
+  const std::string& filepath,
+  const std::unordered_map<ObjectId, DetectedBBoxPtrList>& object_bboxes) {
+  std::vector<const DetectedBBox*> all_bboxes;
+  SortByBBoxIds(object_bboxes, &all_bboxes);
+  const int num_all_bboxes = all_bboxes.size();
+
+  Eigen::MatrixXd orientation_matrix(num_all_bboxes, 3);
+
+  for (const auto& bbox : all_bboxes) {
+    CHECK_LT(bbox->bbox_id_, num_all_bboxes);
+    orientation_matrix.row(bbox->bbox_id_) = bbox->camera_param_.transpose();
+  }
+
+  if (!WriteEigenMatrixToCSV(filepath, orientation_matrix)) {
+    return false;
+  }
+
+  LOG(INFO) << "Saved " << num_all_bboxes << " orientations.";
+
+  return true;
 }
 
 }

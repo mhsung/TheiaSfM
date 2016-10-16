@@ -36,7 +36,8 @@ class ConstrainedNonlinearPositionEstimator
       const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
           object_view_constraints,
       std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
-      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
+      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions,
+      bool randomly_initialize = true);
 
  private:
   // @mhsung
@@ -52,10 +53,10 @@ class ConstrainedNonlinearPositionEstimator
       std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
 
   // Creates camera to camera constraints from relative translations.
-  void AddObjectToCameraConstraints(
-      const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
-      std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
-      std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
+  void AddCameraToObjectConstraints(
+    const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
+    std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
+    std::unordered_map<ViewId, Eigen::Vector3d>* object_positions);
 
   void AddCamerasAndPointsToParameterGroups(
       std::unordered_map<ViewId, Eigen::Vector3d>* view_positions,
