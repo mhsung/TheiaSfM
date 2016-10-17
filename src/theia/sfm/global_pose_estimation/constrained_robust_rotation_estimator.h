@@ -21,9 +21,9 @@ namespace theia {
 class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
  public:
   explicit ConstrainedRobustRotationEstimator(
-      const Options& options, const double constraint_weight)
+      const Options& options, const double constraint_default_weight)
     : RobustRotationEstimator(options),
-      constraint_weight_(constraint_weight) {}
+      constraint_default_weight_(constraint_default_weight) {}
 
   // Estimates the global orientations of all views based on an initial
   // guess. Returns true on successful estimation and false otherwise.
@@ -32,14 +32,19 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
       const std::unordered_map<ObjectId, ObjectViewOrientations>&
       object_view_constraints,
       std::unordered_map<ViewId, Eigen::Vector3d>* global_view_orientations,
-      std::unordered_map<ViewId, Eigen::Vector3d>* global_object_orientations);
+      std::unordered_map<ObjectId, Eigen::Vector3d>*
+      global_object_orientations,
+      const std::unordered_map<ObjectId, ObjectViewOrientationWeights>*
+      object_view_constraint_weights = nullptr);
 
  protected:
   // @mhsung
   bool SetObjectViewConstraints(
       const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
       const std::unordered_map<ObjectId, ObjectViewOrientations>&
-      object_view_constraints);
+      object_view_constraints,
+      const std::unordered_map<ObjectId, ObjectViewOrientationWeights>*
+      object_view_constraint_weights = nullptr);
 
   // Sets up the sparse linear system such that dR_ij = dR_j - dR_i. This is the
   // first-order approximation of the angle-axis rotations. This should only be
@@ -67,9 +72,12 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
 
   // FIXME:
   // Remove constant weight and use weight vector only.
-  const double constraint_weight_;
+  const double constraint_default_weight_;
 
   std::unordered_map<ObjectId, ObjectViewOrientations> object_view_constraints_;
+
+  std::unordered_map<ObjectId, ObjectViewOrientationWeights>
+      object_view_constraint_weights_;
 
   // The global orientation estimates for each object.
   std::unordered_map<ObjectId, Eigen::Vector3d>* global_object_orientations_;

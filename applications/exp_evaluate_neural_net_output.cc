@@ -255,7 +255,7 @@ void GetAllCameraToObjectPositionDirections(
   camera_intrinsics_priors,
   const std::unordered_map<ObjectId, DetectedBBoxPtrList>& object_bboxes,
   const std::unordered_map<std::string, ViewId>& view_name_to_ids,
-  std::unordered_map<ObjectId, ObjectViewPositionDirections>*
+  std::unordered_map<ObjectId, ViewObjectPositionDirections>*
   camera_coord_camera_to_object_t_dirs) {
   CHECK_NOTNULL(camera_coord_camera_to_object_t_dirs)->clear();
 
@@ -266,7 +266,7 @@ void GetAllCameraToObjectPositionDirections(
       const std::string basename = stlplus::basename_part(bbox->view_name_);
       const ViewId view_id = FindOrDie(view_name_to_ids, basename);
 
-      // Compute object-to-camera position direction.
+      // Compute camera-to-object position direction.
       const theia::CameraIntrinsicsPrior& intrinsics =
         FindOrDie(camera_intrinsics_priors, bbox->view_name_);
       const Eigen::Vector3d camera_to_object_t_dir =
@@ -503,6 +503,7 @@ bool TestRotationOptimization(
     world_to_object_Rs;
 
   // 'world_to_camera_Rs' and 'world_to_object_Rs' are updated.
+  // Use default weight.
   const bool ret = constrained_rotation_estimator->EstimateRotations(
     camera_pairs, object_to_camera_Rs,
     &world_to_camera_Rs, &world_to_object_Rs);
@@ -554,7 +555,7 @@ bool TestPositionOptimization(
     object_positions;
 
   // Compute object-to-camera-orientations.
-  std::unordered_map<ObjectId, ObjectViewPositionDirections>
+  std::unordered_map<ObjectId, ViewObjectPositionDirections>
     camera_coord_camera_to_object_t_dirs;
   GetAllCameraToObjectPositionDirections(
     camera_intrinsics_priors, object_bboxes, view_name_to_ids,
@@ -579,10 +580,11 @@ bool TestPositionOptimization(
     world_to_object_ts;
 
   // 'world_to_camera_ts' and 'world_to_object_ts' are updated.
+  // Use default weight.
   const bool kRandomlyInitialize = false;
   const bool ret = constrained_position_estimator->EstimatePositions(
     camera_pairs, world_to_camera_Rs, camera_coord_camera_to_object_t_dirs,
-    &world_to_camera_ts, &world_to_object_ts, kRandomlyInitialize);
+    &world_to_camera_ts, &world_to_object_ts, nullptr, kRandomlyInitialize);
   if (!ret) return false;
 
   // Check object position differences.

@@ -20,18 +20,52 @@ namespace theia {
 bool ConstrainedRobustRotationEstimator::SetObjectViewConstraints(
     const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
     const std::unordered_map<ObjectId, ObjectViewOrientations>&
-    object_view_constraints) {
+    object_view_constraints,
+    const std::unordered_map<ObjectId, ObjectViewOrientationWeights>*
+    object_view_constraint_weights) {
   int num_object_view_pairs = 0;
   object_view_constraints_.clear();
+  object_view_constraint_weights_.clear();
+
+  bool use_per_constraint_weight = true;
+  if (!object_view_constraint_weights ||
+      object_view_constraint_weights->empty()) {
+    LOG(INFO) << "Orientation weights were not given. Use default: "
+              << constraint_default_weight_;
+    use_per_constraint_weight = false;
+  } else {
+    LOG(INFO) << "Use per-constraint orientation weights.";
+  }
 
   for (const auto& object : object_view_constraints) {
     const ObjectId object_id = object.first;
 
     // Check whether the constrained views exist in the view orientation list.
     for (const auto& constraint : object.second) {
-      if (ContainsKey(view_orientations, constraint.first)) {
+      const ViewId view_id = constraint.first;
+
+      if (ContainsKey(view_orientations, view_id)) {
         object_view_constraints_[object_id].emplace(constraint);
+
+        // Set weights.
+        if (use_per_constraint_weight) {
+          const auto& object_weights =
+              FindOrNull(*object_view_constraint_weights, object_id);
+          CHECK(object_weights) << "Orientation weights for object "
+                                << object_id << " do not exist.";
+          const double* weight = FindOrNull(*object_weights, view_id);
+          CHECK(weight) << "Orientation Weight for object " << object_id
+                        << " and view " << view_id << "pair does not exist.";
+          object_view_constraint_weights_[object_id].emplace(view_id, *weight);
+        } else {
+          // Use default weight.
+          object_view_constraint_weights_[object_id].emplace(
+              view_id, constraint_default_weight_);
+        }
+
         ++num_object_view_pairs;
+      } else {
+        LOG(WARNING) << "View " << view_id << " does not exist.";
       }
     }
   }
@@ -44,7 +78,9 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
     const std::unordered_map<ObjectId, ObjectViewOrientations>&
     object_view_constraints,
     std::unordered_map<ViewId, Eigen::Vector3d>* global_view_orientations,
-    std::unordered_map<ObjectId, Eigen::Vector3d>* global_object_orientations) {
+    std::unordered_map<ObjectId, Eigen::Vector3d>* global_object_orientations,
+    const std::unordered_map<ObjectId, ObjectViewOrientationWeights>*
+    object_view_constraint_weights) {
   CHECK_NOTNULL(global_view_orientations);
   CHECK_NOTNULL(global_object_orientations);
 
@@ -54,7 +90,8 @@ bool ConstrainedRobustRotationEstimator::EstimateRotations(
 
   // @mhsung
   CHECK(SetObjectViewConstraints(
-      *global_view_orientations, object_view_constraints))
+      *global_view_orientations, object_view_constraints,
+      object_view_constraint_weights))
   << "No initial orientation is given. Re-run with 'ROBUST_L1L2' option.";
 
   // @mhsung
@@ -112,17 +149,13 @@ void ConstrainedRobustRotationEstimator::SetupLinearSystem() {
   rotation_change_.resize(num_variables);
   relative_rotation_error_.resize(num_equations);
   sparse_matrix_.resize(num_equations, num_variables);
+  weight_vector_ = Eigen::VectorXd::Ones(num_equations);
 
   // @mhsung.
   std::vector<Eigen::Triplet<double> > triplet_list;
   FillLinearSystemTripletList(&triplet_list);
 
   sparse_matrix_.setFromTriplets(triplet_list.begin(), triplet_list.end());
-
-  // Set weights for constraints.
-  weight_vector_ = Eigen::VectorXd::Ones(num_equations);
-  weight_vector_.tail(num_object_view_pairs * 3).setConstant(
-      constraint_weight_);
 }
 
 void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
@@ -159,6 +192,13 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
       triplet_list->emplace_back(3 * rotation_error_index + 2,
                                  3 * view_index + 2,
                                  1.0);
+
+      // Set weights.
+      const double weight = FindOrDie(FindOrDie(
+          object_view_constraint_weights_, object_index), view_index);
+      weight_vector_(3 * rotation_error_index + 0) = weight;
+      weight_vector_(3 * rotation_error_index + 1) = weight;
+      weight_vector_(3 * rotation_error_index + 2) = weight;
 
       ++rotation_error_index;
     }

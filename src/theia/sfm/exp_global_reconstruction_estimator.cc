@@ -89,22 +89,42 @@ Eigen::Vector3d ComputeRelativeRotationError(
 }  // namespace
 
 // @mhsung
-void ExpGlobalReconstructionEstimator::SetInitialObjectViewOrientation(
+void ExpGlobalReconstructionEstimator::SetInitialObjectViewOrientations(
     const std::unordered_map<ObjectId, ObjectViewOrientations>&
     object_view_orientations) {
   object_view_orientations_ = &object_view_orientations;
 }
 
 // @mhsung
-void ExpGlobalReconstructionEstimator::SetInitialObjectViewPositionDirection(
-    const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
-    object_view_position_directions) {
-  object_view_position_directions_ = &object_view_position_directions;
+void ExpGlobalReconstructionEstimator::SetInitialObjectViewOrientationWeights(
+    const std::unordered_map<ObjectId, ObjectViewOrientationWeights>&
+    object_view_orientation_weights) {
+  object_view_orientation_weights_ = &object_view_orientation_weights;
+}
+
+// @mhsung
+void ExpGlobalReconstructionEstimator::SetInitialViewObjectPositionDirections(
+    const std::unordered_map<ObjectId, ViewObjectPositionDirections>&
+    view_object_position_directions) {
+  view_object_position_directions_ = &view_object_position_directions;
+}
+
+// @mhsung
+void ExpGlobalReconstructionEstimator
+::SetInitialViewObjectPositionDirectionWeights(
+    const std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>&
+    view_object_position_direction_weights) {
+  view_object_position_direction_weights_ =
+      &view_object_position_direction_weights;
 }
 
 ExpGlobalReconstructionEstimator::ExpGlobalReconstructionEstimator(
     const ReconstructionEstimatorOptions& options)
-    : GlobalReconstructionEstimator(options) {
+    : GlobalReconstructionEstimator(options),
+      object_view_orientations_(nullptr),
+      object_view_orientation_weights_(nullptr),
+      view_object_position_directions_(nullptr),
+      view_object_position_direction_weights_(nullptr) {
 }
 
 // The pipeline for estimating camera poses and structure is as follows:
@@ -349,7 +369,8 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
   const auto& view_pairs = view_graph_->GetAllEdges();
   const bool ret = constrained_rotation_estimator->EstimateRotations(
       view_pairs, *object_view_orientations_,
-      &view_orientations_, &object_orientations_);
+      &view_orientations_, &object_orientations_,
+      object_view_orientation_weights_);
   if (!ret) return false;
 
   ComputeRotationEstimationStatistics();
@@ -364,12 +385,12 @@ bool ExpGlobalReconstructionEstimator::EstimatePosition() {
 
   std::unique_ptr<ConstrainedNonlinearPositionEstimator>
     constrained_position_estimator(new ConstrainedNonlinearPositionEstimator(
-          options_.nonlinear_position_estimator_options, *reconstruction_,
-          options_.position_estimation_constraint_weight));
+        options_.nonlinear_position_estimator_options, *reconstruction_,
+        options_.position_estimation_constraint_weight));
 
   const auto& view_pairs = view_graph_->GetAllEdges();
   const bool ret = constrained_position_estimator->EstimatePositions(
-      view_pairs, view_orientations_, *object_view_position_directions_,
+      view_pairs, view_orientations_, *view_object_position_directions_,
       &view_positions_, &object_positions_);
   if (!ret) return false;
 
@@ -433,7 +454,7 @@ void ExpGlobalReconstructionEstimator::ComputePositionEstimationStatistics() {
   double min_direction_angle_error = std::numeric_limits<double>::max();
   double max_direction_angle_error = 0.0;
 
-  for (const auto& object : *object_view_position_directions_) {
+  for (const auto& object : *view_object_position_directions_) {
     const ObjectId object_id = object.first;
     const Eigen::Vector3d* object_position = FindOrNull
         (object_positions_, object_id);

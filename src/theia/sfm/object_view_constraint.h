@@ -13,12 +13,15 @@ namespace theia {
 
 typedef uint32_t ObjectId;
 
-// View orientations w.r.t object coordinates.
+// View orientations w.r.t object orientations.
 typedef std::unordered_map<ViewId, Eigen::Vector3d> ObjectViewOrientations;
+typedef std::unordered_map<ViewId, double> ObjectViewOrientationWeights;
 
-// View position directions w.r.t object coordinates.
+// Object positions w.r.t view positions.
 typedef std::unordered_map<ViewId, Eigen::Vector3d>
-    ObjectViewPositionDirections;
+    ViewObjectPositionDirections;
+typedef std::unordered_map<ViewId, double>
+    ViewObjectPositionDirectionWeights;
 
 }  // namespace theia
 

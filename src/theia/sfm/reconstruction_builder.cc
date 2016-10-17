@@ -364,10 +364,14 @@ bool ReconstructionBuilder::BuildReconstruction(
         dynamic_cast<ExpGlobalReconstructionEstimator*>(
             reconstruction_estimator.get());
     if (exp_global_estimator != nullptr) {
-      exp_global_estimator->SetInitialObjectViewOrientation(
+      exp_global_estimator->SetInitialObjectViewOrientations(
           object_view_orientations_);
-      exp_global_estimator->SetInitialObjectViewPositionDirection(
-          object_view_position_directions_);
+      exp_global_estimator->SetInitialObjectViewOrientationWeights(
+          object_view_orientation_weights_);
+      exp_global_estimator->SetInitialViewObjectPositionDirections(
+          view_object_position_directions_);
+      exp_global_estimator->SetInitialViewObjectPositionDirectionWeights(
+          view_object_position_direction_weights_);
     }
 
     const auto& summary = reconstruction_estimator->Estimate(
@@ -441,10 +445,10 @@ void ReconstructionBuilder::SetInitialObjectViewOrientation(
   object_view_orientations_[object_id][view_id] = orientation;
 }
 
-void ReconstructionBuilder::SetInitialObjectViewPositionDirection(
+void ReconstructionBuilder::SetInitialViewObjectPositionDirection(
     const ObjectId object_id, const ViewId view_id,
     const Eigen::Vector3d& position_direction) {
-  object_view_position_directions_[object_id][view_id] = position_direction;
+  view_object_position_directions_[object_id][view_id] = position_direction;
 }
 
 }  // namespace theia

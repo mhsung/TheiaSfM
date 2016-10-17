@@ -181,7 +181,7 @@ class ReconstructionBuilder {
       const Eigen::Vector3d& orientation);
 
   // @mhsung
-  void SetInitialObjectViewPositionDirection(
+  void SetInitialViewObjectPositionDirection(
       const ObjectId object_id, const ViewId view_id,
       const Eigen::Vector3d& position_direction);
 
@@ -216,10 +216,12 @@ class ReconstructionBuilder {
   // @mhsung
   std::unordered_map<ObjectId, ObjectViewOrientations>
       object_view_orientations_;
-
-  // @mhsung
-  std::unordered_map<ObjectId, ObjectViewPositionDirections>
-      object_view_position_directions_;
+  std::unordered_map<ObjectId, ObjectViewOrientationWeights>
+      object_view_orientation_weights_;
+  std::unordered_map<ObjectId, ViewObjectPositionDirections>
+      view_object_position_directions_;
+  std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>
+      view_object_position_direction_weights_;
 
   DISALLOW_COPY_AND_ASSIGN(ReconstructionBuilder);
 };

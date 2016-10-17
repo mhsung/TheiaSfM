@@ -30,19 +30,53 @@ using Eigen::Vector3d;
 
 bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
     const std::unordered_map<ViewId, Eigen::Vector3d>& view_orientations,
-    const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
-    object_view_constraints) {
+    const std::unordered_map<ObjectId, ViewObjectPositionDirections>&
+    view_object_constraints,
+    const std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>*
+    view_object_constraint_weights) {
   int num_object_view_pairs = 0;
   object_view_constraints_.clear();
+  view_object_constraint_weights_.clear();
 
-  for (const auto& object : object_view_constraints) {
+  bool use_per_constraint_weight = true;
+  if (!view_object_constraint_weights ||
+      view_object_constraint_weights->empty()) {
+    LOG(INFO) << "Position direction weights were not given. Use default: "
+              << constraint_default_weight_;
+    use_per_constraint_weight = false;
+  } else {
+    LOG(INFO) << "Use per-constraint position direction weights.";
+  }
+
+  for (const auto& object : view_object_constraints) {
     const ObjectId object_id = object.first;
 
     // Check whether the constrained views exist in the view orientation list.
     for (const auto& constraint : object.second) {
+      const ViewId view_id = constraint.first;
+
       if (ContainsKey(view_orientations, constraint.first)) {
         object_view_constraints_[object_id].emplace(constraint);
+
+        // Set weights.
+        if (use_per_constraint_weight) {
+          const auto& object_weights =
+              FindOrNull(*view_object_constraint_weights, object_id);
+          CHECK(object_weights) << "Position direction weights for object "
+                                << object_id << " do not exist.";
+          const double* weight = FindOrNull(*object_weights, view_id);
+          CHECK(weight) << "Position direction Weight for object " << object_id
+                        << " and view " << view_id << "pair does not exist.";
+          view_object_constraint_weights_[object_id].emplace(view_id, *weight);
+        } else {
+          // Use default weight.
+          view_object_constraint_weights_[object_id].emplace(
+              view_id, constraint_default_weight_);
+        }
+
         ++num_object_view_pairs;
+      } else {
+        LOG(WARNING) << "View " << view_id << " does not exist.";
       }
     }
   }
@@ -55,16 +89,18 @@ ConstrainedNonlinearPositionEstimator::ConstrainedNonlinearPositionEstimator(
     const Reconstruction& reconstruction,
     const double constraint_weight)
     : NonlinearPositionEstimator(options, reconstruction),
-      constraint_weight_(constraint_weight) {
+      constraint_default_weight_(constraint_weight) {
 }
 
 bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
     const std::unordered_map<ViewIdPair, TwoViewInfo>& view_pairs,
     const std::unordered_map<ViewId, Vector3d>& view_orientations,
-    const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
-    object_view_constraints,
+    const std::unordered_map<ObjectId, ViewObjectPositionDirections>&
+    view_object_constraints,
     std::unordered_map<ViewId, Vector3d>* view_positions,
     std::unordered_map<ViewId, Vector3d>* object_positions,
+    const std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>*
+    view_object_constraint_weights,
     bool randomly_initialize) {
   CHECK_NOTNULL(view_positions);
   CHECK_NOTNULL(object_positions);
@@ -79,7 +115,8 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
   view_pairs_ = &view_pairs;
 
   // @mhsung
-  CHECK(SetObjectViewConstraints(view_orientations, object_view_constraints))
+  CHECK(SetObjectViewConstraints(view_orientations, view_object_constraints,
+                                 view_object_constraint_weights))
   << "No initial position direction is given. Re-run with 'NONLINEAR' option.";
 
   // Iterative schur is only used if the problem is large enough, otherwise
@@ -184,9 +221,10 @@ void ConstrainedNonlinearPositionEstimator::AddCameraToObjectConstraints(
       const Vector3d translation_direction = GetRotatedTranslation(
           FindOrDie(view_orientations, view_id), position_direction.second);
 
+      const double weight = FindOrDie(FindOrDie(
+          view_object_constraint_weights_, object_id), view_id);
       ceres::CostFunction* cost_function =
-          PairwiseTranslationError::Create(translation_direction,
-                                           constraint_weight_);
+          PairwiseTranslationError::Create(translation_direction, weight);
 
       problem_->AddResidualBlock(cost_function,
                                  new ceres::HuberLoss(

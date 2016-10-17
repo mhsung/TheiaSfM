@@ -419,7 +419,7 @@ void SetInitialOrientations(ReconstructionBuilder* reconstruction_builder) {
     ceres::RotationMatrixToAngleAxis(
         ceres::ColumnMajorAdapter3x3(init_orientation.second.data()),
         angle_axis.data());
-    reconstruction_builder->SetInitialObjectViewOrientation(
+    reconstruction_builder->SetInitialObjectViewOrientations(
         0, view_id, angle_axis);
   }
 }
@@ -446,7 +446,7 @@ void SetInitialPositionDirections(ReconstructionBuilder*
     const Eigen::Vector3d cam_coord_cam_to_obj_dir =
         ComputeCameraToObjectDirections(
             init_bounding_box.second, view->CameraIntrinsicsPrior());
-    reconstruction_builder->SetInitialObjectViewPositionDirection(
+    reconstruction_builder->SetInitialViewObjectPositionDirections(
         0, view_id, cam_coord_cam_to_obj_dir);
   }
 }
@@ -488,8 +488,8 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
       const Eigen::Vector3d cam_coord_cam_to_obj_dir =
         ComputeCameraToObjectDirections(
           bbox->bbox_, view->CameraIntrinsicsPrior());
-      reconstruction_builder->SetInitialObjectViewPositionDirection(
-        object_id, view_id, cam_coord_cam_to_obj_dir);
+      reconstruction_builder->SetInitialViewObjectPositionDirection(
+          object_id, view_id, cam_coord_cam_to_obj_dir);
     }
   }
 }

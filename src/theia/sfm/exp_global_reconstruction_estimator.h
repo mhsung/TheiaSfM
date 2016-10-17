@@ -26,14 +26,18 @@ class ExpGlobalReconstructionEstimator : public GlobalReconstructionEstimator {
       const ReconstructionEstimatorOptions& options);
 
   // @mhsung
-  void SetInitialObjectViewOrientation(
+  void SetInitialObjectViewOrientations(
       const std::unordered_map<ObjectId, ObjectViewOrientations>&
       object_view_orientations);
-
-  // @mhsung
-  void SetInitialObjectViewPositionDirection(
-      const std::unordered_map<ObjectId, ObjectViewPositionDirections>&
-      object_view_position_directions);
+  void SetInitialObjectViewOrientationWeights(
+      const std::unordered_map<ObjectId, ObjectViewOrientationWeights>&
+      object_view_orientation_weights);
+  void SetInitialViewObjectPositionDirections(
+      const std::unordered_map<ObjectId, ViewObjectPositionDirections>&
+      view_object_position_directions);
+  void SetInitialViewObjectPositionDirectionWeights(
+      const std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>&
+      view_object_position_direction_weights);
 
   ReconstructionEstimatorSummary Estimate(ViewGraph* view_graph,
                                           Reconstruction* reconstruction);
@@ -51,10 +55,12 @@ private:
   // @mhsung
   const std::unordered_map<ObjectId, ObjectViewOrientations>*
       object_view_orientations_;
-
-  // @mhsung
-  const std::unordered_map<ObjectId, ObjectViewPositionDirections>*
-      object_view_position_directions_;
+  const std::unordered_map<ObjectId, ObjectViewOrientationWeights>*
+      object_view_orientation_weights_;
+  const std::unordered_map<ObjectId, ViewObjectPositionDirections>*
+      view_object_position_directions_;
+  const std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>*
+      view_object_position_direction_weights_;
 
   DISALLOW_COPY_AND_ASSIGN(ExpGlobalReconstructionEstimator);
 };
