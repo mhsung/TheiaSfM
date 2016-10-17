@@ -18,7 +18,7 @@ BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'lib'))
 sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'py-faster-rcnn', 'tools'))
-sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN')
+sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN'))
 
 import _init_paths
 from fast_rcnn.config import cfg
@@ -49,14 +49,13 @@ NETS = {'vgg16': ('VGG16', 'VGG16_faster_rcnn_final.caffemodel'),
 FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
-    BASE_DIR, 'script/RenderForCNN/multi/class_names.txt'), '')
+    BASE_DIR, 'script/RenderForCNN/class_names.txt'), '')
 gflags.DEFINE_string('out_bbox_file', 'convnet/raw_bboxes.csv', '')
 
 gflags.DEFINE_integer('gpu_id', 0, 'GPU device id to use [0]')
 gflags.DEFINE_bool('cpu_mode', False, 'Use CPU mode (overrides --gpu)')
 gflags.DEFINE_string('demo_net', 'vgg16', 'Network to use [vgg16]')
 gflags.DEFINE_float('conf_thresh', 0.8, '')
-# gflags.DEFINE_float('conf_thresh', 0.5, '')
 gflags.DEFINE_float('nms_thresh', 0.3, '')
 
 

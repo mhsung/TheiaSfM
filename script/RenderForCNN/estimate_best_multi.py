@@ -5,8 +5,7 @@ BASE_DIR = os.path.normpath(os.path.join(os.path.dirname(
     os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, '3rdparty', 'RenderForCNN'))
 from global_variables import *
-sys.path.append(os.path.join(g_render4cnn_root_folder, 'view_estimation'))
-from evaluation_helper import viewpoint
+from evaluation_helper_custom import viewpoint_best
 
 import cnn_utils
 import gflags
@@ -53,7 +52,7 @@ if __name__ == '__main__':
         class_idxs.append(class_idx)
 
     # Estimate viewpoints.
-    preds = viewpoint(img_filenames, class_idxs)
+    preds = viewpoint_best(img_filenames, class_idxs)
 
     # Save results.
     np.savetxt(os.path.join(FLAGS.data_dir, FLAGS.out_best_orientation_file),
