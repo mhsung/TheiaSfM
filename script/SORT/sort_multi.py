@@ -157,10 +157,13 @@ class KalmanBoxTracker(object):
         self.age = 0
 
         # @mhsung
+        self.score = 0
         self.class_idx = -1
-        # det: [x0, y0, x1, y2, score, class_index, ...]
-        # Store class index if given.
-        if (len(bbox) >= 6):
+        # bbox: [x0, y0, x1, y2, score, class_index, ...]
+        # Store score and class index if given.
+        if len(bbox) >= 5:
+            self.score = bbox[4]
+        if len(bbox) >= 6:
             self.class_idx = bbox[5]
 
 
@@ -173,6 +176,13 @@ class KalmanBoxTracker(object):
         self.hits += 1
         self.hit_streak += 1
         self.kf.update(convert_bbox_to_z(bbox))
+
+        # @mhsung
+        # bbox: [x0, y0, x1, y2, score, class_index, ...]
+        if len(bbox) >= 5:
+            self.score = bbox[4]
+        if len(bbox) >= 6:
+            assert(self.class_idx == bbox[5])
 
 
     def predict(self):
@@ -279,8 +289,9 @@ class Sort(object):
         ret = []
         for t, trk in enumerate(trks):
             pos = self.trackers[t].predict()[0]
+            score = self.trackers[t].score
             class_idx = self.trackers[t].class_idx
-            trk[:] = [pos[0], pos[1], pos[2], pos[3], 0, class_idx]
+            trk[:] = [pos[0], pos[1], pos[2], pos[3], score, class_idx]
             if (np.any(np.isnan(pos))):
                 to_del.append(t)
         trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
@@ -309,10 +320,12 @@ class Sort(object):
                 # Add class index if given.
                 if trk.class_idx >= 0:
                     ret.append(np.concatenate(
-                        (d, [trk.id + 1, trk.class_idx])).reshape(1, -1))
+                        (d, [trk.score, trk.id + 1, trk.class_idx])).reshape(
+                        1, -1))
                 else:
                     # +1 as MOT benchmark requires positive
-                    ret.append(np.concatenate((d, [trk.id + 1])).reshape(1, -1))
+                    ret.append(np.concatenate(
+                        (d, [trk.score, trk.id + 1])).reshape(1, -1))
 
             i -= 1
             # remove dead tracklet
@@ -373,14 +386,14 @@ if __name__ == '__main__':
         total_time += cycle_time
 
         for d in trackers:
-            # d: [x1, y1, x2, y2, track_index, class_index]
+            # d: [x1, y1, x2, y2, score, track_index, class_index]
             assert (len(d) >= 6)
 
             # Append a row.
             # ['image_name', 'class_index',
             #         'x1', 'y1', 'x2', 'y2', 'score', 'object_index')
             object_df.loc[len(object_df)] = [
-                im_name, d[5], d[0], d[1], d[2], d[3], 1.0, d[4]]
+                im_name, d[6], d[0], d[1], d[2], d[3], d[4], d[5]]
 
     out_file = os.path.join(FLAGS.data_dir, FLAGS.out_object_bbox_file)
     if not os.path.exists(os.path.dirname(out_file)):

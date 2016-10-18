@@ -16,6 +16,12 @@ import sys
 import tempfile
 
 
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0)
+
+
 def viewpoint_best(img_filenames, class_idxs):
     batch_size = g_test_batch_size
     model_params_file = g_caffe_param_file
@@ -32,17 +38,23 @@ def viewpoint_best(img_filenames, class_idxs):
     # EXTRACT PRED FROM PROBS
     num_images = len(img_filenames)
 
-    preds = np.zeros((num_images, 3))
+    # @mhsung
+    # Store scores at the end.
+    preds = np.zeros((num_images, len(result_keys) + 1))
     for i in range(len(img_filenames)):
         class_idx = class_idxs[i]
 
         # pred is the class with highest prob within
         # class_idx*360~class_idx*360+360-1
-        for k in range(len(result_keys)):
+        for k in range(len(result_keys) + 1):
             probs = probs_lists[k][i]
             probs = probs[class_idx * 360:(class_idx + 1) * 360]
-            pred = probs.argmax() + class_idx * 360
+            max_idx = probs.argmax()
+            pred = max_idx + class_idx * 360
             preds[i, k] = pred % 360
+            # Softmax.
+            probs = softmax(probs)
+            preds[i, -1] = probs[max_idx]
 
     return preds
 
@@ -75,6 +87,8 @@ def viewpoint_scores(img_filenames, class_idxs, output_result_files):
             # class_idx*360~class_idx*360+360-1
             probs = probs_lists[k][i]
             probs = probs[class_idx * 360:(class_idx + 1) * 360]
+            # Softmax.
+            probs = softmax(probs)
             probs_3dview.append(probs)
         probs_3dview_all[i] = probs_3dview
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #### Set Paths ####
-DATA_DIR=/home/msung/Developer/data/ICL-NUIM/lr_kt2
+DATA_DIR=$HOME/Developer/data/ICL-NUIM/lr_kt2
 echo ${DATA_DIR}
 
 IMAGE_WILDCARD=scene_00_%04d.png

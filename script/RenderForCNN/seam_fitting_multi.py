@@ -145,7 +145,8 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(
             FLAGS.data_dir, FLAGS.out_plot_dir))
 
-    fitted_preds = np.empty([len(df.index), len(ANGLE_TYPES)])
+    # Store the minimum score at the end.
+    fitted_preds = np.empty([len(df.index), len(ANGLE_TYPES) + 1])
     fitted_preds.fill(np.nan)
 
     count_objects = 0
@@ -169,12 +170,18 @@ if __name__ == '__main__':
         timer = Timer()
         timer.tic()
         fitted_x = np.arange(num_frames)
-        fitted_y = np.full((num_frames, NUM_ANGLE_TYPES), np.nan, dtype=np.float)
+        fitted_y = np.full((num_frames, NUM_ANGLE_TYPES), np.nan,
+                           dtype=np.float)
+        fitted_z = np.full((num_frames, NUM_ANGLE_TYPES), np.nan,
+                           dtype=np.float)
         frame_range = range(min(loaded_frames), max(loaded_frames) + 1)
+
         for type_index in range(NUM_ANGLE_TYPES):
             angles = plot_utils.compute_seam_fitting_angles(
                     z_values[type_index][frame_range, :])
             fitted_y[frame_range, type_index] = angles
+            fitted_z[frame_range, type_index] = z_values[type_index][
+                frame_range, angles]
         timer.toc()
         print ('Seam fitting took {:.3f}s for {:d} bboxes').format(
                 timer.total_time, len(object_df.index))
@@ -198,13 +205,17 @@ if __name__ == '__main__':
             bbox_idx = bbox_idxs[frame]
             assert (not np.any(np.isnan(pred)))
             assert (np.any(np.isnan(fitted_preds[bbox_idx, :])))
-            fitted_preds[bbox_idx, :] = pred
+            fitted_preds[bbox_idx, :NUM_ANGLE_TYPES] = pred
+
+            # Store minimum score.
+            scores = fitted_z[frame, :]
+            fitted_preds[bbox_idx, -1] = np.min(scores)
 
     assert (not np.any(np.isnan(fitted_preds)))
 
     # Save results.
     np.savetxt(os.path.join(FLAGS.data_dir, FLAGS.out_fitted_orientation_file),
-               fitted_preds, fmt='%i', delimiter=",")
+               fitted_preds, fmt='%i,%i,%i,%f')
 
     print ('{} object(s) are tracked.'.format(count_objects))
 
