@@ -69,7 +69,7 @@ def run(FLAGS, PATHS):
     #cmd += '--min_triangulation_angle_degrees=4.0' + ' \\\n'
     #cmd += '--triangulation_reprojection_error_pixels=10.0' + ' \\\n'
     cmd += '--max_reprojection_error_pixels=100000.0' + ' \\\n'
-    cmd += '--min_triangulation_angle_degrees=100000.0' + ' \\\n'
+    cmd += '--min_triangulation_angle_degrees=0.0' + ' \\\n'
     cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
     cmd += '--bundle_adjust_tracks=true' + ' \\\n'
 

@@ -22,6 +22,14 @@ def softmax(x):
     return e_x / e_x.sum(axis=0)
 
 
+def compute_entropy_based_confidence(probs):
+    assert (abs(sum(probs) - 1.0) < 1.0E-3)
+    entropy = -probs.dot(np.log2(probs))
+    normalized_entropy = entropy / np.log2(len(probs))
+    confidence = 1.0 - normalized_entropy
+    return confidence
+
+
 def viewpoint_best(img_filenames, class_idxs):
     batch_size = g_test_batch_size
     model_params_file = g_caffe_param_file
@@ -43,6 +51,7 @@ def viewpoint_best(img_filenames, class_idxs):
     preds = np.zeros((num_images, len(result_keys) + 1))
     for i in range(len(img_filenames)):
         class_idx = class_idxs[i]
+        scores = np.zeros((len(result_keys), 1))
 
         # pred is the class with highest prob within
         # class_idx*360~class_idx*360+360-1
@@ -52,9 +61,17 @@ def viewpoint_best(img_filenames, class_idxs):
             max_idx = probs.argmax()
             pred = max_idx + class_idx * 360
             preds[i, k] = pred % 360
+
             # Softmax.
             probs = softmax(probs)
-            preds[i, -1] = probs[max_idx]
+
+            # Compute entropy-based confidence scores.
+            # Consider the distribution of probabilities and give a low score
+            # as the distribution is close to uniform.
+            scores[k] = compute_entropy_based_confidence(probs)
+
+        # Store average score.
+        preds[i, -1] = np.average(scores)
 
     return preds
 
@@ -87,8 +104,10 @@ def viewpoint_scores(img_filenames, class_idxs, output_result_files):
             # class_idx*360~class_idx*360+360-1
             probs = probs_lists[k][i]
             probs = probs[class_idx * 360:(class_idx + 1) * 360]
+
             # Softmax.
             probs = softmax(probs)
+
             probs_3dview.append(probs)
         probs_3dview_all[i] = probs_3dview
 

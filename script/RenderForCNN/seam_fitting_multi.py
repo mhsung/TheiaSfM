@@ -34,6 +34,14 @@ NUM_ANGLE_TYPES = len(ANGLE_TYPES)
 NUM_ANGLE_SAMPLES = 360
 
 
+def compute_entropy_based_confidence(probs):
+    assert (abs(sum(probs) - 1.0) < 1.0E-3)
+    entropy = -probs.dot(np.log2(probs))
+    normalized_entropy = entropy / np.log2(len(probs))
+    confidence = 1.0 - normalized_entropy
+    return confidence
+
+
 def read_convnet_scores(im_names, df, num_digits):
     num_frames = len(im_names)
 
@@ -172,16 +180,12 @@ if __name__ == '__main__':
         fitted_x = np.arange(num_frames)
         fitted_y = np.full((num_frames, NUM_ANGLE_TYPES), np.nan,
                            dtype=np.float)
-        fitted_z = np.full((num_frames, NUM_ANGLE_TYPES), np.nan,
-                           dtype=np.float)
         frame_range = range(min(loaded_frames), max(loaded_frames) + 1)
 
         for type_index in range(NUM_ANGLE_TYPES):
             angles = plot_utils.compute_seam_fitting_angles(
                     z_values[type_index][frame_range, :])
             fitted_y[frame_range, type_index] = angles
-            fitted_z[frame_range, type_index] = z_values[type_index][
-                frame_range, angles]
         timer.toc()
         print ('Seam fitting took {:.3f}s for {:d} bboxes').format(
                 timer.total_time, len(object_df.index))
@@ -207,9 +211,16 @@ if __name__ == '__main__':
             assert (np.any(np.isnan(fitted_preds[bbox_idx, :])))
             fitted_preds[bbox_idx, :NUM_ANGLE_TYPES] = pred
 
-            # Store minimum score.
-            scores = fitted_z[frame, :]
-            fitted_preds[bbox_idx, -1] = np.min(scores)
+            # Compute entropy-based confidence scores.
+            # Consider the distribution of probabilities and give a low score
+            # as the distribution is close to uniform.
+            scores = np.zeros((NUM_ANGLE_TYPES, 1))
+            for type_index in range(NUM_ANGLE_TYPES):
+                scores = compute_entropy_based_confidence(
+                    z_values[type_index][frame, :])
+
+            # Store average score.
+            fitted_preds[bbox_idx, -1] = np.average(scores)
 
     assert (not np.any(np.isnan(fitted_preds)))
 
