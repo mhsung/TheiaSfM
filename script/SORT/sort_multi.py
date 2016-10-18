@@ -30,6 +30,7 @@ sys.path.append(os.path.join(BASE_DIR, 'script', 'RenderForCNN'))
 from filterpy.kalman import KalmanFilter
 from sklearn.utils.linear_assignment_ import linear_assignment
 import cnn_utils
+import cv2
 import gflags
 import glob
 #from numba import jit
@@ -51,6 +52,8 @@ gflags.DEFINE_integer('max_age', 10, '')
 gflags.DEFINE_integer('min_hits', 3, '')
 gflags.DEFINE_float('iou_threshold', 0.3, '')
 gflags.DEFINE_float('measurement_noise', 1000.0, '')
+gflags.DEFINE_bool('ignore_bbox_on_boundary', True, '')
+gflags.DEFINE_integer('object_track_length_tol', 10, '')
 
 
 #@jit
@@ -377,6 +380,12 @@ if __name__ == '__main__':
     object_df = cnn_utils.create_bbox_data_frame(with_object_index=True)
 
     for frame, im_name in enumerate(im_names):
+        # Load the input image.
+        im_file = os.path.join(FLAGS.data_dir, 'images', im_name)
+        im = cv2.imread(im_file)
+        im_size_x = im.shape[1]
+        im_size_y = im.shape[0]
+
         dets = seq_dets[seq_dets[:, 0] == frame, 1:]
         total_frames += 1
 
@@ -388,12 +397,30 @@ if __name__ == '__main__':
         for d in trackers:
             # d: [x1, y1, x2, y2, score, track_index, class_index]
             assert (len(d) >= 6)
-
+            if FLAGS.ignore_bbox_on_boundary:
+                # Ignore bounding boxes on the frame boundary.
+                if d[0] <= 0 or d[2] >= (im_size_x - 1) or \
+                        d[1] <= 0 or d[3] >= (im_size_y - 1):
+                    continue
             # Append a row.
             # ['image_name', 'class_index',
             #         'x1', 'y1', 'x2', 'y2', 'score', 'object_index')
             object_df.loc[len(object_df)] = [
                 im_name, d[6], d[0], d[1], d[2], d[3], d[4], d[5]]
+
+    # Remove short object tracks.
+    object_idxs = object_df.object_index.unique()
+    for object_idx in object_idxs:
+        num_object_frames = len(object_df[
+                object_df.object_index == object_idx])
+        if num_object_frames < FLAGS.object_track_length_tol:
+            print ('Remove short object track (id: {:d}, length: {:d})'.format(
+                int(object_idx), num_object_frames))
+            object_df = object_df[
+                object_df.object_index != object_idx]
+
+    # Reset bounding indices.
+    object_df = object_df.reset_index(drop=True)
 
     out_file = os.path.join(FLAGS.data_dir, FLAGS.out_object_bbox_file)
     if not os.path.exists(os.path.dirname(out_file)):
@@ -405,7 +432,7 @@ if __name__ == '__main__':
     object_df['object_index'] = object_df['object_index'].map(
             lambda x: '%i' % x)
     object_df.to_csv(out_file, header=False)
-    num_bboxes = len(object_df.index)
+    num_bboxes = len(object_df)
     print ('{:d} bounding box(es) are saved.'.format(num_bboxes))
 
     print("Total Tracking took: %.3f for %d frames or %.1f FPS" %

@@ -26,8 +26,8 @@ from fast_rcnn.test import im_detect
 from fast_rcnn.nms_wrapper import nms
 from utils.timer import Timer
 import caffe
-import cv2
 import cnn_utils
+import cv2
 import glob
 import gflags
 import numpy as np
@@ -57,6 +57,7 @@ gflags.DEFINE_bool('cpu_mode', False, 'Use CPU mode (overrides --gpu)')
 gflags.DEFINE_string('demo_net', 'vgg16', 'Network to use [vgg16]')
 gflags.DEFINE_float('conf_thresh', 0.8, '')
 gflags.DEFINE_float('nms_thresh', 0.3, '')
+gflags.DEFINE_bool('ignore_bbox_on_boundary', True, '')
 
 
 def detect_bboxes(net, im_names, subset_classes):
@@ -67,9 +68,11 @@ def detect_bboxes(net, im_names, subset_classes):
         print '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'
         print 'Demo for {}'.format(im_name)
 
-        # Load the demo image.
+        # Load the input image.
         im_file = os.path.join(FLAGS.data_dir, 'images', im_name)
         im = cv2.imread(im_file)
+        im_size_x = im.shape[1]
+        im_size_y = im.shape[0]
 
         # Detect all object classes and regress object bounds.
         timer = Timer()
@@ -101,12 +104,20 @@ def detect_bboxes(net, im_names, subset_classes):
                 print ('{} {}(s) are detected.'.format(len(inds), cls))
 
             for i in inds:
-                # Append a row.
                 # ['image_name', 'class_index', 'x1', 'y1', 'x2', 'y2', 'score']
+                x1 = dets[i, 0]
+                y1 = dets[i, 1]
+                x2 = dets[i, 2]
+                y2 = dets[i, 3]
+                score = dets[i, -1]
+                if FLAGS.ignore_bbox_on_boundary:
+                    # Ignore bounding boxes on the frame boundary.
+                    if x1 <= 0 or x2 >= (im_size_x - 1) or \
+                            y1 <= 0 or y2 >= (im_size_y - 1):
+                        continue
+                # Append a row.
                 df.loc[len(df)] = [
-                    im_name, subset_cls_ind,
-                    dets[i, 0], dets[i, 1], dets[i, 2], dets[i, 3],
-                    dets[i, -1]]
+                    im_name, subset_cls_ind, x1, y1, x2, y2, score]
 
     return df
 

@@ -21,13 +21,15 @@ gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('class_name_file', os.path.join(
     BASE_DIR, 'script/RenderForCNN/class_names.txt'), '')
 gflags.DEFINE_string('bbox_file', 'convnet/object_bboxes.csv', '')
+gflags.DEFINE_string('orientation_file',
+    'convnet/object_orientations_fitted.csv', '')
 gflags.DEFINE_string('render_dir', 'convnet/object_render_fitted', '')
 gflags.DEFINE_string('out_composite_dir', 'convnet/object_composite_fitted', '')
 
 gflags.DEFINE_bool('with_object_index', True, '')
 gflags.DEFINE_bool('composite_rendered', True, '')
 gflags.DEFINE_bool('draw_bboxes', True, '')
-gflags.DEFINE_bool('half_size_output', True, '')
+gflags.DEFINE_bool('half_size_output', False, '')
 
 
 def composite_rendered_images(im, bbox_idx, row, num_digits):
@@ -89,7 +91,7 @@ def composite_rendered_images(im, bbox_idx, row, num_digits):
     return im
 
 
-def draw_bboxes(im, row, class_names):
+def draw_bboxes(im, row, pred, class_names):
     class_idx = row['class_index']
     class_name = class_names[class_idx]
 
@@ -114,15 +116,20 @@ def draw_bboxes(im, row, class_names):
     cv2.rectangle(im, (sx, sy), (ex, ey), bbox_color,
                   bbox_thickness)
 
-    #label = '{:s} {:.3f}'.format(class_name, row['score'])
+    bbox_score = row['score']
+    orientation_score = pred[-1]
+    assert (len(pred) == 4)
+
     if FLAGS.with_object_index:
-        label = '{:s} ({:d})'.format(class_name, object_idx)
+        label = '[{:d}] {:s} ({:.3f}, {:.3f})'.format(
+                object_idx, class_name, bbox_score, orientation_score)
     else:
-        label = '{:s}'.format(class_name)
+        label = '{:s} ({:.3f}, {:.3f})'.format(
+                class_name, bbox_score, orientation_score)
 
     fontface = cv2.FONT_HERSHEY_SIMPLEX
-    scale = 1
-    text_thickness = 4
+    scale = 0.5
+    text_thickness = 2
     label_size = cv2.getTextSize(label, fontface, scale, text_thickness)[0]
     # Fill background of label (-1 thickness).
     cv2.rectangle(im, (sx - bbox_thickness / 2,
@@ -144,7 +151,7 @@ def draw_bboxes(im, row, class_names):
     return im
 
 
-def generate_output_images(im_name, df, class_names, num_digits):
+def generate_output_images(im_name, df, preds, class_names, num_digits):
     out_im_file = os.path.join(
         FLAGS.data_dir, FLAGS.out_composite_dir, im_name)
 
@@ -173,7 +180,8 @@ def generate_output_images(im_name, df, class_names, num_digits):
     # Draw bounding boxes.
     if FLAGS.draw_bboxes:
         for bbox_idx, row in subset_df.iterrows():
-            im = draw_bboxes(im, row, class_names)
+            pred = preds[bbox_idx, :]
+            im = draw_bboxes(im, row, pred, class_names)
 
     if FLAGS.half_size_output:
         height, width = im.shape[:2]
@@ -199,6 +207,11 @@ if __name__ == '__main__':
         os.path.join(FLAGS.data_dir, FLAGS.bbox_file),
         FLAGS.with_object_index)
 
+    # Read estimated best orientations.
+    preds = cnn_utils.read_orientations(
+        os.path.join(FLAGS.data_dir, FLAGS.orientation_file))
+    assert (len(df.index) == preds.shape[0])
+
     if not os.path.exists(os.path.join(
             FLAGS.data_dir, FLAGS.out_composite_dir)):
         os.makedirs(os.path.join(
@@ -210,5 +223,5 @@ if __name__ == '__main__':
     # Parallel processing.
     num_cores = multiprocessing.cpu_count()
     results = Parallel(n_jobs=num_cores)(delayed(
-        generate_output_images)(im_name, df, class_names, num_digits)
+        generate_output_images)(im_name, df, preds, class_names, num_digits)
                                          for im_name in im_names)

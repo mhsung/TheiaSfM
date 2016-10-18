@@ -37,16 +37,16 @@ DEFINE_string(orientations_filepath,
                 "/object_orientations_fitted.csv", "");
 DEFINE_string(out_fitted_bounding_boxes_filepath,
               "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/object_bboxes_test.csv", "");
+                "/object_bboxes_gt.csv", "");
 DEFINE_string(out_fitted_orientations_filepath,
               "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/object_orientations_test.csv", "");
+                "/object_orientations_gt.csv", "");
 DEFINE_string(out_world_to_object_rotations_filepath,
               "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/world_to_object_rotations_test.csv", "");
+                "/world_to_object_rotations_gt.csv", "");
 DEFINE_string(out_camera_to_object_distnaces_filepath,
               "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/camera_to_object_distances_test.csv", "");
+                "/camera_to_object_distances_gt.csv", "");
 
 
 std::string PrintMeanMedianHistogram(
