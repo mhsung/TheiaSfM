@@ -27,7 +27,7 @@ def run(FLAGS, PATHS):
     else:
         cmd += '--reconstruction_estimator=GLOBAL' + ' \\\n'
 
-    cmd += '--max_track_length=1000' + ' \\\n'
+    cmd += '--max_track_length=100000' + ' \\\n'
     cmd += '--reconstruct_largest_connected_component=true' + ' \\\n'
     cmd += '--only_calibrated_views=false' + ' \\\n'
     cmd += '--shared_calibration=true' + ' \\\n'
@@ -64,19 +64,13 @@ def run(FLAGS, PATHS):
     # ' \\\n'
     cmd += '--intrinsics_to_optimize=FOCAL_LENGTH' + ' \\\n'
 
-    if FLAGS.use_initial_orientations:
-        cmd += '--max_reprojection_error_pixels=100000.0' + ' \\\n'
-    else:
-        cmd += '--max_reprojection_error_pixels=6.0' + ' \\\n'
-
     ############### Triangulation Options ###############
-    if FLAGS.use_initial_orientations:
-        cmd += '--min_triangulation_angle_degrees=100000.0' + ' \\\n'
-        cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
-    else:
-        cmd += '--min_triangulation_angle_degrees=4.0' + ' \\\n'
-        cmd += '--triangulation_reprojection_error_pixels=10.0' + ' \\\n'
-
+    #cmd += '--max_reprojection_error_pixels=6.0' + ' \\\n'
+    #cmd += '--min_triangulation_angle_degrees=4.0' + ' \\\n'
+    #cmd += '--triangulation_reprojection_error_pixels=10.0' + ' \\\n'
+    cmd += '--max_reprojection_error_pixels=100000.0' + ' \\\n'
+    cmd += '--min_triangulation_angle_degrees=100000.0' + ' \\\n'
+    cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
     cmd += '--bundle_adjust_tracks=true' + ' \\\n'
 
     # if FLAGS.less_num_inliers:
