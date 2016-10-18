@@ -17,8 +17,9 @@ struct DetectedBBox {
   uint32_t bbox_id_;
   std::string view_name_;
   Eigen::Vector4d bbox_;    // [x1, y1, x2, y2]
-  double score_;
+  double bbox_score_;
   Eigen::Vector3d camera_param_;
+  double orientation_score_;
 
   Eigen::Vector2d bbox_center() const {
     return Eigen::Vector2d (

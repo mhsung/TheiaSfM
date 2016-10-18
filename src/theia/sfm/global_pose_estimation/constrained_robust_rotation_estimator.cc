@@ -166,7 +166,8 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
 
   // Add constraints.
   for (const auto& object : object_view_constraints_) {
-    const int object_index = FindOrDie(object_id_to_index_, object.first);
+    const ObjectId object_id = object.first;
+    const int object_index = FindOrDie(object_id_to_index_, object_id);
 
     for (const auto& orientation : object.second) {
       if (object_index != kConstantRotationIndex) {
@@ -181,7 +182,8 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
                                    -1.0);
       }
 
-      const int view_index = FindOrDie(view_id_to_index_, orientation.first);
+      const ViewId view_id = orientation.first;
+      const int view_index = FindOrDie(view_id_to_index_, view_id);
       CHECK (view_index != kConstantRotationIndex);
       triplet_list->emplace_back(3 * rotation_error_index + 0,
                                  3 * view_index + 0,
@@ -195,7 +197,7 @@ void ConstrainedRobustRotationEstimator::FillLinearSystemTripletList(
 
       // Set weights.
       const double weight = FindOrDie(FindOrDie(
-          object_view_constraint_weights_, object_index), view_index);
+          object_view_constraint_weights_, object_id), view_id);
       weight_vector_(3 * rotation_error_index + 0) = weight;
       weight_vector_(3 * rotation_error_index + 1) = weight;
       weight_vector_(3 * rotation_error_index + 2) = weight;

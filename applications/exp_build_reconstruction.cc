@@ -168,10 +168,12 @@ DEFINE_string(initial_orientations_filepath, "", "");
 // Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
 DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
 
+DEFINE_bool(use_per_object_view_pair_weights, false, "");
+
 // Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is selected
 // as global rotation estimator type.
-DEFINE_double(rotation_estimation_constraint_weight, 1.0E2, "");
-DEFINE_double(position_estimation_constraint_weight, 1.0E2, "");
+DEFINE_double(rotation_estimation_constraint_weight, 50.0, "");
+DEFINE_double(position_estimation_constraint_weight, 50.0, "");
 
 DEFINE_string(match_pairs_file, "",
               "Filename of match pair list. Each line has 'name1,name2' "
@@ -483,6 +485,10 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
         ceres::ColumnMajorAdapter3x3(orientation.data()), angle_axis.data());
       reconstruction_builder->SetInitialObjectViewOrientation(
         object_id, view_id, angle_axis);
+      if (FLAGS_use_per_object_view_pair_weights) {
+        reconstruction_builder->SetInitialObjectViewOrientationWeight(
+            object_id, view_id, bbox->orientation_score_);
+      }
 
       // Set position.
       const Eigen::Vector3d cam_coord_cam_to_obj_dir =
@@ -490,6 +496,10 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
           bbox->bbox_, view->CameraIntrinsicsPrior());
       reconstruction_builder->SetInitialViewObjectPositionDirection(
           object_id, view_id, cam_coord_cam_to_obj_dir);
+      if (FLAGS_use_per_object_view_pair_weights) {
+        reconstruction_builder->SetInitialViewObjectPositionDirectionWeight(
+            object_id, view_id, bbox->bbox_score_);
+      }
     }
   }
 }

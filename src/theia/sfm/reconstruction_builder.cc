@@ -445,10 +445,20 @@ void ReconstructionBuilder::SetInitialObjectViewOrientation(
   object_view_orientations_[object_id][view_id] = orientation;
 }
 
+void ReconstructionBuilder::SetInitialObjectViewOrientationWeight(
+    const ObjectId object_id, const ViewId view_id, const double weight) {
+  object_view_orientation_weights_[object_id][view_id] = weight;
+}
+
 void ReconstructionBuilder::SetInitialViewObjectPositionDirection(
     const ObjectId object_id, const ViewId view_id,
     const Eigen::Vector3d& position_direction) {
   view_object_position_directions_[object_id][view_id] = position_direction;
+}
+
+void ReconstructionBuilder::SetInitialViewObjectPositionDirectionWeight(
+    const ObjectId object_id, const ViewId view_id, const double weight) {
+  view_object_position_direction_weights_[object_id][view_id] = weight;
 }
 
 }  // namespace theia

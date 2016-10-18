@@ -47,7 +47,7 @@ bool ReadNeuralNetBBoxesAndOrientations(
     }
 
     CHECK(std::getline(sstr, token, ','));
-    bbox->score_ = std::stod(token);
+    bbox->bbox_score_ = std::stod(token);
 
     CHECK(std::getline(sstr, token, ','));
     bbox->object_id_ = std::stoi(token);
@@ -62,12 +62,13 @@ bool ReadNeuralNetBBoxesAndOrientations(
   LOG(INFO) << "Loaded " << num_bboxes << " bounding box information.";
 
   // Read orientations.
-  Eigen::MatrixXd orientation_matrix(num_bboxes, 3);
+  Eigen::MatrixXd orientation_matrix(num_bboxes, 4);
   CHECK(ReadEigenMatrixFromCSV(orientation_filepath, &orientation_matrix));
 
   int bbox_id = 0;
   for (auto it = bboxes.begin(); it != bboxes.end(); ++it, ++bbox_id) {
-    (*it)->camera_param_ = orientation_matrix.row(bbox_id);
+    (*it)->camera_param_ = orientation_matrix.row(bbox_id).segment(0, 3);
+    (*it)->orientation_score_ = orientation_matrix.row(bbox_id)[3];
   }
   LOG(INFO) << "Loaded " << num_bboxes << " bounding box orientation.";
 
@@ -124,7 +125,7 @@ bool WriteNeuralNetBBoxes(
     for (int i = 0; i < 4; i++) {
       file << bbox->bbox_[i] << ",";
     }
-    file << bbox->score_ << ","
+    file << bbox->bbox_score_ << ","
          << bbox->object_id_ << std::endl;
   }
 

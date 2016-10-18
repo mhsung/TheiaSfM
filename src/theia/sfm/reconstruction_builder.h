@@ -179,11 +179,13 @@ class ReconstructionBuilder {
   void SetInitialObjectViewOrientation(
       const ObjectId object_id, const ViewId view_id,
       const Eigen::Vector3d& orientation);
-
-  // @mhsung
+  void SetInitialObjectViewOrientationWeight(
+      const ObjectId object_id, const ViewId view_id, const double weight);
   void SetInitialViewObjectPositionDirection(
       const ObjectId object_id, const ViewId view_id,
       const Eigen::Vector3d& position_direction);
+  void SetInitialViewObjectPositionDirectionWeight(
+      const ObjectId object_id, const ViewId view_id, const double weight);
 
  private:
   // Adds the given matches as edges in the view graph.
