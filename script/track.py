@@ -57,15 +57,6 @@ def extract_matches(FLAGS, PATHS):
     #           "when tracking features.")
     #     raw_input('Press Enter to continue...')
 
-    # FIXME: Remove this.
-    '''
-    if FLAGS.use_initial_orientations:
-        cmd += '--initial_orientations_data_type=' + \
-               FLAGS.ground_truth_type + ' \\\n'
-        cmd += '--initial_orientations_filepath=' + \
-               PATHS.ground_truth_path + ' \\\n'
-    '''
-
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
         PATHS.script_path, 'extract_matches.sh'))

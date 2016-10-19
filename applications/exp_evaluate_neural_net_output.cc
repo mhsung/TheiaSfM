@@ -22,31 +22,17 @@
 #include "theia/sfm/global_pose_estimation/constrained_nonlinear_position_estimator.h"
 
 // Input/output files.
-DEFINE_string(calibration_file,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/calibration.txt",
+DEFINE_string(calibration_file, "calibration.txt",
               "Calibration file containing image calibration data.");
 DEFINE_string(ground_truth_data_type, "reconstruction", "");
-DEFINE_string(ground_truth_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/ground_truth.bin",
-              "");
-DEFINE_string(bounding_boxes_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/object_bboxes.csv", "");
+DEFINE_string(ground_truth_filepath, "ground_truth.bin", "");
+DEFINE_string(bounding_boxes_filepath, "convnet/object_bboxes.csv", "");
 DEFINE_string(orientations_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/object_orientations_fitted.csv", "");
+              "convnet/object_orientations_fitted.csv", "");
 DEFINE_string(out_fitted_bounding_boxes_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/object_bboxes_gt.csv", "");
+              "convnet/object_bboxes_gt.csv", "");
 DEFINE_string(out_fitted_orientations_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/object_orientations_gt.csv", "");
-DEFINE_string(out_world_to_object_rotations_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/world_to_object_rotations_gt.csv", "");
-DEFINE_string(out_camera_to_object_distnaces_filepath,
-              "/Users/msung/Developer/data/ICL-NUIM/lr_kt2/convnet"
-                "/camera_to_object_distances_gt.csv", "");
+              "convnet/object_orientations_gt.csv", "");
 
 
 std::string PrintMeanMedianHistogram(

@@ -6,8 +6,13 @@ import os
 
 
 def clean(FLAGS, PATHS):
-    # To Do.
-    return
+    if os.path.exists(PATHS.ground_truth_reconstruction_path):
+        os.remove(PATHS.ground_truth_reconstruction_path)
+        print("Removed '" + PATHS.ground_truth_reconstruction_path + "'.")
+
+    if os.path.exists(PATHS.snapshot_path):
+        os.remove(PATHS.snapshot_path)
+        print("Removed '" + PATHS.snapshot_path + "'.")
 
 
 def run(FLAGS, PATHS):

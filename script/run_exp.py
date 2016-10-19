@@ -10,10 +10,11 @@ import sys
 import calibration
 import evaluation
 import feature
+import ground_truth
 import match
-import match_info
+# import match_info
 import options
-import orientation
+# import orientation
 import reconstruction
 import track
 
@@ -39,6 +40,8 @@ PATHS = namedtuple('PATHS', [
     'reconstruction_file',
     'init_bbox_path',
     'init_orientation_path',
+    'ground_truth_bbox_path',
+    'ground_truth_orientation_path',
     'feature_track_path',
     'image_filenames_path',
     'feature_track_info_path',
@@ -58,7 +61,17 @@ def set_output_name():
     # if FLAGS.less_sampson_error:        output_name += '_lse'
     # if FLAGS.no_two_view_bundle:        output_name += '_ntb'
     # if FLAGS.no_only_symmetric:         output_name += '_nos'
-    if FLAGS.use_initial_orientations:  output_name += '_uio'
+
+    if FLAGS.use_initial_orientations:
+        # Use either predicted orientations or ground truth orientations.
+        assert (not FLAGS.use_gt_orientations)
+        output_name += '_uio'
+
+    if FLAGS.use_gt_orientations:
+        # Use either predicted orientations or ground truth orientations.
+        assert (not FLAGS.use_initial_orientations)
+        output_name += '_gt'
+
     return output_name
 
 
@@ -102,6 +115,11 @@ def set_paths():
         FLAGS.data_dir, 'convnet', 'object_bboxes.csv')
     PATHS.init_orientation_path = os.path.join(
         FLAGS.data_dir, 'convnet', 'object_orientations_fitted.csv')
+
+    PATHS.ground_truth_bbox_path = os.path.join(
+        FLAGS.data_dir, 'convnet', 'object_bboxes_gt.csv')
+    PATHS.ground_truth_orientation_path = os.path.join(
+        FLAGS.data_dir, 'convnet', 'object_orientations_gt.csv')
 
     if not os.path.exists(PATHS.init_bbox_path) or \
         not os.path.exists(PATHS.init_orientation_path):
@@ -221,6 +239,10 @@ if __name__ == '__main__':
         # Match features.
         if not os.path.exists(PATHS.matches_file):
             match.run(FLAGS, PATHS)
+
+    if FLAGS.use_gt_orientations:
+        # Generate ground truth object information if the option is true.
+        ground_truth.run(FLAGS, PATHS)
 
     # Build reconstruction.
     if not os.path.exists(PATHS.reconstruction_file + '-0'):

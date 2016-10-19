@@ -22,18 +22,15 @@ def run(FLAGS, PATHS):
     cmd += '--output_reconstruction=' + PATHS.reconstruction_file + ' \\\n'
 
     ############### General SfM Options ###############
-    if FLAGS.use_initial_orientations:
-        cmd += '--reconstruction_estimator=EXP_GLOBAL' + ' \\\n'
-    else:
-        cmd += '--reconstruction_estimator=GLOBAL' + ' \\\n'
-
+    # cmd += '--reconstruction_estimator=GLOBAL' + ' \\\n'
+    cmd += '--reconstruction_estimator=EXP_GLOBAL' + ' \\\n'
     cmd += '--max_track_length=100000' + ' \\\n'
     cmd += '--reconstruct_largest_connected_component=true' + ' \\\n'
     cmd += '--only_calibrated_views=false' + ' \\\n'
     cmd += '--shared_calibration=true' + ' \\\n'
 
     ############### Global SfM Options ###############
-    if FLAGS.use_initial_orientations:
+    if FLAGS.use_initial_orientations or FLAGS.use_gt_orientations:
         cmd += '--global_position_estimator=CONSTRAINED_NONLINEAR' + ' \\\n'
         cmd += '--global_rotation_estimator=CONSTRAINED_ROBUST_L1L2' + ' \\\n'
     else:
@@ -83,13 +80,20 @@ def run(FLAGS, PATHS):
                PATHS.init_bbox_path + ' \\\n'
         cmd += '--initial_orientations_filepath=' + \
                PATHS.init_orientation_path + ' \\\n'
-        # FIXME:
-        # Make this as option.
-        cmd += '--exp_global_run_bundle_adjustment=false' + ' \\\n'
+    if FLAGS.use_gt_orientations:
+        cmd += '--initial_bounding_boxes_filepath=' + \
+               PATHS.ground_truth_bbox_path + ' \\\n'
+        cmd += '--initial_orientations_filepath=' + \
+               PATHS.ground_truth_orientation_path + ' \\\n'
+
+    # FIXME:
+    # Make the weights as option.
+    if FLAGS.use_initial_orientations or FLAGS.use_gt_orientations:
         cmd += '--rotation_estimation_constraint_weight=50.0' + ' \\\n'
         cmd += '--position_estimation_constraint_weight=50.0' + ' \\\n'
 
-    cmd += '--log_dir=' + PATHS.log_path
+    cmd += '--log_dir=' + PATHS.log_path + ' \\\n'
+    cmd += '--alsologtostderr'
     run_cmd.save_and_run_cmd(
         cmd, os.path.join(PATHS.script_path, 'reconstruction.sh'))
 
