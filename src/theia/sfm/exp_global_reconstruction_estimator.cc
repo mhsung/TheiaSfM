@@ -364,13 +364,21 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
   std::unique_ptr<ConstrainedRobustRotationEstimator>
       constrained_rotation_estimator(new ConstrainedRobustRotationEstimator(
       robust_rotation_estimator_options,
-      options_.rotation_estimation_constraint_weight));
+      options_.rotation_constraint_weight_multiplier));
 
   const auto& view_pairs = view_graph_->GetAllEdges();
-  const bool ret = constrained_rotation_estimator->EstimateRotations(
-      view_pairs, *object_view_orientations_,
-      &view_orientations_, &object_orientations_,
-      object_view_orientation_weights_);
+
+  bool ret = false;
+  if (options_.use_use_per_object_view_pair_weights) {
+    const bool ret = constrained_rotation_estimator->EstimateRotations(
+        view_pairs, *object_view_orientations_,
+        &view_orientations_, &object_orientations_,
+        object_view_orientation_weights_);
+  } else {
+    const bool ret = constrained_rotation_estimator->EstimateRotations(
+        view_pairs, *object_view_orientations_,
+        &view_orientations_, &object_orientations_, nullptr);
+  }
   if (!ret) return false;
 
   ComputeRotationEstimationStatistics();
@@ -386,12 +394,21 @@ bool ExpGlobalReconstructionEstimator::EstimatePosition() {
   std::unique_ptr<ConstrainedNonlinearPositionEstimator>
     constrained_position_estimator(new ConstrainedNonlinearPositionEstimator(
         options_.nonlinear_position_estimator_options, *reconstruction_,
-        options_.position_estimation_constraint_weight));
+        options_.position_constraint_weight_multiplier));
 
   const auto& view_pairs = view_graph_->GetAllEdges();
-  const bool ret = constrained_position_estimator->EstimatePositions(
-      view_pairs, view_orientations_, *view_object_position_directions_,
-      &view_positions_, &object_positions_);
+
+  bool ret = false;
+  if (options_.use_use_per_object_view_pair_weights) {
+    ret = constrained_position_estimator->EstimatePositions(
+        view_pairs, view_orientations_, *view_object_position_directions_,
+        &view_positions_, &object_positions_,
+        view_object_position_direction_weights_);
+  } else {
+    ret = constrained_position_estimator->EstimatePositions(
+        view_pairs, view_orientations_, *view_object_position_directions_,
+        &view_positions_, &object_positions_, nullptr);
+  }
   if (!ret) return false;
 
   ComputePositionEstimationStatistics();

@@ -143,11 +143,14 @@ bool WriteNeuralNetOrientations(
   SortByBBoxIds(object_bboxes, &all_bboxes);
   const int num_all_bboxes = all_bboxes.size();
 
-  Eigen::MatrixXd orientation_matrix(num_all_bboxes, 3);
+  Eigen::MatrixXd orientation_matrix(num_all_bboxes, 4);
 
   for (const auto& bbox : all_bboxes) {
     CHECK_LT(bbox->bbox_id_, num_all_bboxes);
-    orientation_matrix.row(bbox->bbox_id_) = bbox->camera_param_.transpose();
+    orientation_matrix.row(bbox->bbox_id_).segment(0, 3) =
+        bbox->camera_param_.transpose();
+    orientation_matrix.row(bbox->bbox_id_)[3] =
+        bbox->orientation_score_;
   }
 
   if (!WriteEigenMatrixToCSV(filepath, orientation_matrix)) {

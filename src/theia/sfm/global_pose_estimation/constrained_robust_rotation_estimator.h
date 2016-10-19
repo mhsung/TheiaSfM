@@ -21,9 +21,9 @@ namespace theia {
 class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
  public:
   explicit ConstrainedRobustRotationEstimator(
-      const Options& options, const double constraint_default_weight)
+      const Options& options, const double constraint_weight_multiplier)
     : RobustRotationEstimator(options),
-      constraint_default_weight_(constraint_default_weight) {}
+      constraint_weight_multiplier_(constraint_weight_multiplier) {}
 
   // Estimates the global orientations of all views based on an initial
   // guess. Returns true on successful estimation and false otherwise.
@@ -70,9 +70,9 @@ class ConstrainedRobustRotationEstimator : public RobustRotationEstimator {
 
   Eigen::VectorXd weight_vector_;
 
-  // FIXME:
-  // Remove constant weight and use weight vector only.
-  const double constraint_default_weight_;
+  // Multiplied by per object-view weights if provided, or used as a constant
+  // weight.
+  const double constraint_weight_multiplier_;
 
   std::unordered_map<ObjectId, ObjectViewOrientations> object_view_constraints_;
 

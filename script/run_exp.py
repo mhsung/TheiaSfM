@@ -72,6 +72,12 @@ def set_output_name():
         assert (not FLAGS.use_initial_orientations)
         output_name += '_gt'
 
+    if FLAGS.use_score_based_weights:
+        # Score-based weights are used only for predicted orientations.
+        assert (FLAGS.use_initial_orientations)
+        assert (not FLAGS.use_gt_orientations)
+        output_name += '_scr'
+
     return output_name
 
 
@@ -110,6 +116,15 @@ def set_paths():
     PATHS.calibration_file = os.path.join(FLAGS.data_dir, 'calibration.txt')
     PATHS.matches_file = os.path.join(PATHS.output_path, 'matches.bin')
     PATHS.reconstruction_file = os.path.join(PATHS.output_path, 'output')
+
+    # IMPORTANT NOTE:
+    # Link feature track matches if exists.
+    if FLAGS.track_features:
+        orig_output_path = os.path.join(FLAGS.data_dir, 'sfm_track')
+        orig_matches_file = os.path.join(orig_output_path, 'matches.bin')
+        if orig_matches_file != PATHS.matches_file and \
+            os.path.exists(orig_matches_file):
+            os.system('ln -s ' + orig_matches_file + ' ' + PATHS.matches_file)
 
     PATHS.init_bbox_path = os.path.join(
         FLAGS.data_dir, 'convnet', 'object_bboxes.csv')

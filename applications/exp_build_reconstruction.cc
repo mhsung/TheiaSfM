@@ -37,10 +37,9 @@ DEFINE_int32(num_threads, 1,
              "Number of threads to use for feature extraction and matching.");
 
 // Feature and matching options.
-DEFINE_string(
-    descriptor, "SIFT",
-    "Type of feature descriptor to use. Must be one of the following: "
-    "SIFT");
+DEFINE_string(descriptor, "SIFT",
+              "Type of feature descriptor to use. Must be one of the "
+                  "following: SIFT");
 DEFINE_string(feature_density, "NORMAL",
               "Set to SPARSE, NORMAL, or DENSE to extract fewer or more "
               "features from each image.");
@@ -59,9 +58,9 @@ DEFINE_int32(matching_max_num_images_in_cache, 128,
              "feature matching. The higher this number is the more memory is "
              "consumed during matching.");
 DEFINE_double(lowes_ratio, 0.8, "Lowes ratio used for feature matching.");
-DEFINE_double(
-    max_sampson_error_for_verified_match, 4.0,
-    "Maximum sampson error for a match to be considered geometrically valid.");
+DEFINE_double(max_sampson_error_for_verified_match, 4.0,
+              "Maximum sampson error for a match to be considered "
+                  "geometrically valid.");
 DEFINE_int32(min_num_inliers_for_valid_match, 30,
              "Minimum number of geometrically verified inliers that a pair on "
              "images must have in order to be considered a valid two-view "
@@ -120,9 +119,9 @@ DEFINE_int32(num_retriangulation_iterations, 1,
              "adjustment is performed after retriangulation.");
 
 // Nonlinear position estimation options.
-DEFINE_int32(
-    position_estimation_min_num_tracks_per_view, 0,
-    "Minimum number of point to camera constraints for position estimation.");
+DEFINE_int32(position_estimation_min_num_tracks_per_view, 0,
+             "Minimum number of point to camera constraints for position "
+                 "estimation.");
 DEFINE_double(position_estimation_robust_loss_width, 0.1,
               "Robust loss width to use for position estimation.");
 
@@ -143,9 +142,8 @@ DEFINE_int32(partial_bundle_adjustment_num_views, 20,
 // Triangulation options.
 DEFINE_double(min_triangulation_angle_degrees, 4.0,
               "Minimum angle between views for triangulation.");
-DEFINE_double(
-    triangulation_reprojection_error_pixels, 15.0,
-    "Max allowable reprojection error on initial triangulation of points.");
+DEFINE_double(triangulation_reprojection_error_pixels, 15.0,
+              "Max allowable reprojection error on initial triangulation of points.");
 DEFINE_bool(bundle_adjust_tracks, true,
             "Set to true to optimize tracks immediately upon estimation.");
 
@@ -165,21 +163,37 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
 DEFINE_string(initial_bounding_boxes_filepath, "", "");
 DEFINE_string(initial_orientations_filepath, "", "");
 
-// Only used when 'EXP_GLOBAL' is chosen for rotation estimator type.
-DEFINE_bool(exp_global_run_bundle_adjustment, true, "");
+DEFINE_bool(exp_global_run_bundle_adjustment, true,
+            "Only used when 'EXP_GLOBAL' is chosen for rotation estimator "
+                "type.");
 
-DEFINE_bool(use_per_object_view_pair_weights, false, "");
+DEFINE_bool(use_per_object_view_pair_weights, false,
+            "Use different weight for each of object-view pair based on given"
+                " scores. Otherwise, 'rotation_constraint_weight_multiplier' "
+                "and 'position_constraint_weight_multiplier' are used as "
+                "constant weights. Only used when 'CONSTRAINED_ROBUST_L1L2' "
+                "is chosen for global rotation estimator type, and when "
+                "'CONSTRAINED_NONLINEAR' is chosen for global position "
+                "estimator type.");
 
-// Constraint weight. Only used when 'CONSTRAINED_ROBUST_L1L2' is selected
-// as global rotation estimator type.
-DEFINE_double(rotation_estimation_constraint_weight, 50.0, "");
-DEFINE_double(position_estimation_constraint_weight, 50.0, "");
+DEFINE_double(rotation_constraint_weight_multiplier, 50.0,
+              "Multiplied by per object-view weights, or used as a constant "
+                  "weight if 'use_use_per_object_view_pair_weights' is set to"
+                  " false. Only used when 'CONSTRAINED_ROBUST_L1L2' is chosen"
+                  " for global rotation estimator type.");
+DEFINE_double(position_constraint_weight_multiplier, 50.0,
+              "Multiplied by per object-view weights, or used as a constant "
+                  "weight if 'use_use_per_object_view_pair_weights' is set to"
+                  " false. Only used when 'CONSTRAINED_NONLINEAR' is chosen "
+                  "for global position estimator type.");
 
 DEFINE_string(match_pairs_file, "",
               "Filename of match pair list. Each line has 'name1,name2' "
                   "format. Override 'match_only_consecutive_pairs'.");
+
 DEFINE_bool(match_only_consecutive_pairs, false,
             "Set to true to match only consecutive pairs.");
+
 DEFINE_int32(consecutive_pair_frame_range, 10,
              "Frame range of consecutive image pairs to be matched.");
 // ---- //
@@ -296,10 +310,12 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
   // @mhsung
   reconstruction_estimator_options.exp_global_run_bundle_adjustment =
       FLAGS_exp_global_run_bundle_adjustment;
-  reconstruction_estimator_options.rotation_estimation_constraint_weight =
-      FLAGS_rotation_estimation_constraint_weight;
-  reconstruction_estimator_options.position_estimation_constraint_weight =
-      FLAGS_position_estimation_constraint_weight;
+  reconstruction_estimator_options.use_use_per_object_view_pair_weights =
+      FLAGS_use_per_object_view_pair_weights;
+  reconstruction_estimator_options.rotation_constraint_weight_multiplier =
+      FLAGS_rotation_constraint_weight_multiplier;
+  reconstruction_estimator_options.position_constraint_weight_multiplier =
+      FLAGS_position_constraint_weight_multiplier;
 
   return options;
 }

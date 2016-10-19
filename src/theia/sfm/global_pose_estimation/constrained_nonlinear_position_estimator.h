@@ -26,7 +26,7 @@ class ConstrainedNonlinearPositionEstimator
   ConstrainedNonlinearPositionEstimator(
       const NonlinearPositionEstimator::Options& options,
       const Reconstruction& reconstruction,
-      const double constraint_weight);
+      const double constraint_weight_multiplier);
 
   // Returns true if the optimization was a success, false if there was a
   // failure.
@@ -68,9 +68,9 @@ class ConstrainedNonlinearPositionEstimator
 
   friend class EstimatePositionsNonlinearTest;
 
-  // FIXME:
-  // Remove constant weight and use weight vector.
-  const double constraint_default_weight_;
+  // Multiplied by per object-view weights if provided, or used as a constant
+  // weight.
+  const double constraint_weight_multiplier_;
 
   std::unordered_map<ObjectId, ViewObjectPositionDirections>
       object_view_constraints_;

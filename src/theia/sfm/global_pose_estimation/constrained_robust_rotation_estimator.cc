@@ -27,12 +27,11 @@ bool ConstrainedRobustRotationEstimator::SetObjectViewConstraints(
   object_view_constraints_.clear();
   object_view_constraint_weights_.clear();
 
-  bool use_per_constraint_weight = true;
-  if (!object_view_constraint_weights ||
-      object_view_constraint_weights->empty()) {
+  bool use_per_constraint_weights = true;
+  if (!object_view_constraint_weights) {
     LOG(INFO) << "Orientation weights were not given. Use default: "
-              << constraint_default_weight_;
-    use_per_constraint_weight = false;
+              << constraint_weight_multiplier_;
+    use_per_constraint_weights = false;
   } else {
     LOG(INFO) << "Use per-constraint orientation weights.";
   }
@@ -48,7 +47,7 @@ bool ConstrainedRobustRotationEstimator::SetObjectViewConstraints(
         object_view_constraints_[object_id].emplace(constraint);
 
         // Set weights.
-        if (use_per_constraint_weight) {
+        if (use_per_constraint_weights) {
           const auto& object_weights =
               FindOrNull(*object_view_constraint_weights, object_id);
           CHECK(object_weights) << "Orientation weights for object "
@@ -56,11 +55,15 @@ bool ConstrainedRobustRotationEstimator::SetObjectViewConstraints(
           const double* weight = FindOrNull(*object_weights, view_id);
           CHECK(weight) << "Orientation Weight for object " << object_id
                         << " and view " << view_id << "pair does not exist.";
-          object_view_constraint_weights_[object_id].emplace(view_id, *weight);
+
+          const double scaled_weight =
+              constraint_weight_multiplier_ * (*weight);
+          object_view_constraint_weights_[object_id].emplace(
+              view_id, scaled_weight);
         } else {
           // Use default weight.
           object_view_constraint_weights_[object_id].emplace(
-              view_id, constraint_default_weight_);
+              view_id, constraint_weight_multiplier_);
         }
 
         ++num_object_view_pairs;

@@ -89,8 +89,15 @@ def run(FLAGS, PATHS):
     # FIXME:
     # Make the weights as option.
     if FLAGS.use_initial_orientations or FLAGS.use_gt_orientations:
-        cmd += '--rotation_estimation_constraint_weight=50.0' + ' \\\n'
-        cmd += '--position_estimation_constraint_weight=50.0' + ' \\\n'
+        if FLAGS.use_score_based_weights:
+            assert (FLAGS.use_initial_orientations)
+            assert (not FLAGS.use_gt_orientations)
+            cmd += '--use_per_object_view_pair_weights=true' + ' \\\n'
+            cmd += '--rotation_constraint_weight_multiplier=100.0' + ' \\\n'
+            cmd += '--position_constraint_weight_multiplier=50.0' + ' \\\n'
+        else:
+            cmd += '--rotation_constraint_weight_multiplier=50.0' + ' \\\n'
+            cmd += '--position_constraint_weight_multiplier=50.0' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path + ' \\\n'
     cmd += '--alsologtostderr'

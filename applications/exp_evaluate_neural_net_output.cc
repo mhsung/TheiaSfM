@@ -492,7 +492,7 @@ bool TestRotationOptimization(
   // Use default weight.
   const bool ret = constrained_rotation_estimator->EstimateRotations(
     camera_pairs, object_to_camera_Rs,
-    &world_to_camera_Rs, &world_to_object_Rs);
+    &world_to_camera_Rs, &world_to_object_Rs, nullptr);
   if (!ret) return false;
 
   // Check object orientation differences.

@@ -38,12 +38,11 @@ bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
   object_view_constraints_.clear();
   view_object_constraint_weights_.clear();
 
-  bool use_per_constraint_weight = true;
-  if (!view_object_constraint_weights ||
-      view_object_constraint_weights->empty()) {
+  bool use_per_constraint_weights = true;
+  if (!view_object_constraint_weights) {
     LOG(INFO) << "Position direction weights were not given. Use default: "
-              << constraint_default_weight_;
-    use_per_constraint_weight = false;
+              << constraint_weight_multiplier_;
+    use_per_constraint_weights = false;
   } else {
     LOG(INFO) << "Use per-constraint position direction weights.";
   }
@@ -59,7 +58,7 @@ bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
         object_view_constraints_[object_id].emplace(constraint);
 
         // Set weights.
-        if (use_per_constraint_weight) {
+        if (use_per_constraint_weights) {
           const auto& object_weights =
               FindOrNull(*view_object_constraint_weights, object_id);
           CHECK(object_weights) << "Position direction weights for object "
@@ -67,11 +66,15 @@ bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
           const double* weight = FindOrNull(*object_weights, view_id);
           CHECK(weight) << "Position direction Weight for object " << object_id
                         << " and view " << view_id << "pair does not exist.";
-          view_object_constraint_weights_[object_id].emplace(view_id, *weight);
+
+          const double scaled_weight =
+              constraint_weight_multiplier_ * (*weight);
+          view_object_constraint_weights_[object_id].emplace(
+              view_id, scaled_weight);
         } else {
           // Use default weight.
           view_object_constraint_weights_[object_id].emplace(
-              view_id, constraint_default_weight_);
+              view_id, constraint_weight_multiplier_);
         }
 
         ++num_object_view_pairs;
@@ -87,9 +90,9 @@ bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
 ConstrainedNonlinearPositionEstimator::ConstrainedNonlinearPositionEstimator(
     const NonlinearPositionEstimator::Options& options,
     const Reconstruction& reconstruction,
-    const double constraint_weight)
+    const double constraint_weight_multiplier)
     : NonlinearPositionEstimator(options, reconstruction),
-      constraint_default_weight_(constraint_weight) {
+      constraint_weight_multiplier_(constraint_weight_multiplier) {
 }
 
 bool ConstrainedNonlinearPositionEstimator::EstimatePositions(

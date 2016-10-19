@@ -19,6 +19,7 @@ def initialize():
     # gflags.DEFINE_bool('no_only_symmetric', False, 'nos')
     gflags.DEFINE_bool('use_initial_orientations', False, 'uio')
     gflags.DEFINE_bool('use_gt_orientations', False, 'gt')
+    gflags.DEFINE_bool('use_score_based_weights', False, 'scr')
 
 
 def show(FLAGS, PATHS):
