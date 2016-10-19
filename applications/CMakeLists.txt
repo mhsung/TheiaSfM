@@ -161,11 +161,11 @@ add_executable(exp_create_reconstruction_from_modelviews exp_create_reconstructi
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc exp_matrix_utils.h)
 target_link_libraries(exp_create_reconstruction_from_modelviews theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(exp_evaluate_neural_net_output exp_evaluate_neural_net_output.cc
+add_executable(exp_evaluate_neural_net_outputs exp_evaluate_neural_net_outputs.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc exp_matrix_utils.h
   exp_bounding_box_utils.h exp_bounding_box_utils.cc
   exp_neural_net_output_reader.h exp_neural_net_output_reader.cc)
-target_link_libraries(exp_evaluate_neural_net_output theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+target_link_libraries(exp_evaluate_neural_net_outputs theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(exp_view_cameras exp_view_cameras.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc exp_matrix_utils.h)
