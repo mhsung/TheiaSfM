@@ -67,8 +67,9 @@ bool ReadNeuralNetBBoxesAndOrientations(
 
   int bbox_id = 0;
   for (auto it = bboxes.begin(); it != bboxes.end(); ++it, ++bbox_id) {
-    (*it)->camera_param_ = orientation_matrix.row(bbox_id).segment(0, 3);
-    (*it)->orientation_score_ = orientation_matrix.row(bbox_id)[3];
+    (*it)->camera_param_ =
+        orientation_matrix.block<1, 3>(bbox_id, 0).transpose();
+    (*it)->orientation_score_ = orientation_matrix(bbox_id, 3);
   }
   LOG(INFO) << "Loaded " << num_bboxes << " bounding box orientation.";
 
@@ -147,9 +148,9 @@ bool WriteNeuralNetOrientations(
 
   for (const auto& bbox : all_bboxes) {
     CHECK_LT(bbox->bbox_id_, num_all_bboxes);
-    orientation_matrix.row(bbox->bbox_id_).segment(0, 3) =
+    orientation_matrix.block<1, 3>(bbox->bbox_id_, 0) =
         bbox->camera_param_.transpose();
-    orientation_matrix.row(bbox->bbox_id_)[3] =
+    orientation_matrix(bbox->bbox_id_, 3) =
         bbox->orientation_score_;
   }
 

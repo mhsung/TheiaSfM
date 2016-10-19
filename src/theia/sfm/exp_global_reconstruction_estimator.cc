@@ -370,12 +370,12 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
 
   bool ret = false;
   if (options_.use_use_per_object_view_pair_weights) {
-    const bool ret = constrained_rotation_estimator->EstimateRotations(
+    ret = constrained_rotation_estimator->EstimateRotations(
         view_pairs, *object_view_orientations_,
         &view_orientations_, &object_orientations_,
         object_view_orientation_weights_);
   } else {
-    const bool ret = constrained_rotation_estimator->EstimateRotations(
+    ret = constrained_rotation_estimator->EstimateRotations(
         view_pairs, *object_view_orientations_,
         &view_orientations_, &object_orientations_, nullptr);
   }
