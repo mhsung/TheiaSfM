@@ -99,6 +99,32 @@ class PoseError {
     return message;
   }
 
+  // @mhsung
+  void ComputeMeanMedian(
+      double* mean_rotation_error, double* median_rotation_error,
+      double* mean_position_error, double* median_position_error) {
+    CHECK_NOTNULL(mean_rotation_error);
+    CHECK_NOTNULL(median_rotation_error);
+    CHECK_NOTNULL(mean_position_error);
+    CHECK_NOTNULL(median_position_error);
+
+    // Compute rotation errors.
+    std::sort(rotation_error_.begin(), rotation_error_.end());
+    (*mean_rotation_error) =
+        std::accumulate(rotation_error_.begin(), rotation_error_.end(), 0.0) /
+        static_cast<double>(rotation_error_.size());
+    (*median_rotation_error) =
+        rotation_error_[rotation_error_.size() / 2];
+
+    // Compute position errors.
+    std::sort(position_error_.begin(), position_error_.end());
+    (*mean_position_error) =
+        std::accumulate(position_error_.begin(), position_error_.end(), 0.0) /
+        static_cast<double>(position_error_.size());
+    (*median_position_error) =
+        position_error_[position_error_.size() / 2];
+  }
+
  private:
   std::unique_ptr<Histogram<double> > rotation_histogram_;
   std::unique_ptr<Histogram<double> > position_histogram_;

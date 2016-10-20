@@ -39,6 +39,8 @@
 #include <theia/theia.h>
 
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -54,10 +56,36 @@ DEFINE_double(robust_alignment_threshold, 0.0,
               "If greater than 0.0, this threshold sets determines inliers for "
               "RANSAC alignment of reconstructions. The inliers are then used "
               "for a least squares alignment.");
+// @mhsung
+DEFINE_string(out_json_file, "", "");
 
 using theia::Reconstruction;
 using theia::TrackId;
 using theia::ViewId;
+
+
+// @mhsung
+bool OpenJsonFile(std::ofstream& file, const std::string& filename) {
+  file.open(filename);
+  if (file.is_open()) return false;
+  file << "{" << std::endl;
+  return true;
+}
+
+// @mhsung
+template <class T>
+void WriteJsonElement(std::ofstream& file,
+    const std::string& name, const T& value) {
+  file << "  \"" << name << "\": " << value << std::endl;
+}
+
+// @mhsung
+void CloseJsonFile(std::ofstream& file) {
+  if (file.is_open()) {
+    file << "}" << std::endl;
+    file.close();
+  }
+}
 
 std::string PrintMeanMedianHistogram(
     const std::vector<double>& sorted_errors,
@@ -129,7 +157,9 @@ void EvaluateRotations(const Reconstruction& reference_reconstruction,
 void EvaluateAlignedPoseError(
     const std::vector<std::string>& common_view_names,
     const Reconstruction& reference_reconstruction,
-    Reconstruction* reconstruction_to_align) {
+    Reconstruction* reconstruction_to_align,
+    // @mhsung
+    std::ofstream& file) {
   if (FLAGS_robust_alignment_threshold > 0.0) {
     AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
                                reference_reconstruction,
@@ -174,6 +204,17 @@ void EvaluateAlignedPoseError(
   const std::string focal_length_error_msg =
       PrintMeanMedianHistogram(focal_length_errors, histogram_bins);
   LOG(INFO) << "Focal length errors: \n" << focal_length_error_msg;
+
+  // @mhsung
+  double mean_rotation_error = 0.0, median_rotation_error = 0.0;
+  double mean_position_error = 0.0, median_position_error = 0.0;
+  pose_error.ComputeMeanMedian(
+      &mean_rotation_error, &median_rotation_error,
+      &mean_position_error, &median_position_error);
+  WriteJsonElement(file, "mean_rotation_error", mean_rotation_error);
+  WriteJsonElement(file, "median_rotation_error", median_rotation_error);
+  WriteJsonElement(file, "mean_position_error", mean_position_error);
+  WriteJsonElement(file, "median_position_error", median_position_error);
 }
 
 void ComputeTrackLengthHistogram(const Reconstruction& reconstruction) {
@@ -226,6 +267,18 @@ int main(int argc, char* argv[]) {
             << "\tReconstruction 1: " << reference_reconstruction->NumTracks()
             << "\n\tReconstruction 2: " << reconstruction_to_align->NumTracks();
 
+  // @mhsung
+  std::ofstream json_file;
+  if (FLAGS_out_json_file != "") {
+    CHECK(OpenJsonFile(json_file, FLAGS_out_json_file))
+    << "Can't open file '" + FLAGS_out_json_file + "'.";
+
+    WriteJsonElement(json_file, "num_views",
+                     reference_reconstruction->NumViews());
+    WriteJsonElement(json_file, "num_estimated_views",
+                     reconstruction_to_align->NumViews());
+  }
+
   // Evaluate rotation independent of positions.
   EvaluateRotations(*reference_reconstruction,
                     *reconstruction_to_align,
@@ -234,7 +287,10 @@ int main(int argc, char* argv[]) {
   // Align models and evaluate position and rotation errors.
   EvaluateAlignedPoseError(common_view_names,
                            *reference_reconstruction,
-                           reconstruction_to_align.get());
+                           reconstruction_to_align.get(), json_file);
+
+  // @mhsung
+  CloseJsonFile(json_file);
 
   return 0;
 }
