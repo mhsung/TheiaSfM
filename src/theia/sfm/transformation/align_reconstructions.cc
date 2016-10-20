@@ -188,6 +188,12 @@ void AlignReconstructionsRobust(
                           &translation,
                           &scale);
 
+  // @mhsung
+  VLOG(3) << "Similarity transformation:";
+  VLOG(3) << " - Rotation: \n" << rotation;
+  VLOG(3) << " - Translation: \n" << translation;
+  VLOG(3) << " - Scale: " << scale;
+
   // Apply the similarity transformation to the reconstruction.
   TransformReconstruction(rotation, translation, scale, reconstruction2);
 }

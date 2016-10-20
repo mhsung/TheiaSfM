@@ -49,7 +49,7 @@ def run(FLAGS, PATHS):
         + '-0' + ' \\\n'
     # FIXME:
     # Make the parameter as an option.
-    cmd += '--robust_alignment_threshold=0.5' + ' \\\n'
+    cmd += '--robust_alignment_threshold=0.1' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
@@ -65,7 +65,7 @@ def run(FLAGS, PATHS):
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
     # FIXME:
     # Make the parameter as an option.
-    cmd += '--robust_alignment_threshold=0.5' + ' \\\n'
+    cmd += '--robust_alignment_threshold=0.1' + ' \\\n'
     cmd += '--snapshot_file=' + PATHS.snapshot_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
