@@ -47,6 +47,9 @@ def run(FLAGS, PATHS):
            + PATHS.ground_truth_reconstruction_path + ' \\\n'
     cmd += '--reconstruction_to_align=' + PATHS.reconstruction_file\
         + '-0' + ' \\\n'
+    # FIXME:
+    # Make the parameter as an option.
+    cmd += '--robust_alignment_threshold=0.5' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
@@ -60,6 +63,9 @@ def run(FLAGS, PATHS):
     cmd += '--filepath_list=' + PATHS.ground_truth_reconstruction_path\
            + ',' + PATHS.reconstruction_file + '-0' +' \\\n'
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
+    # FIXME:
+    # Make the parameter as an option.
+    cmd += '--robust_alignment_threshold=0.5' + ' \\\n'
     cmd += '--snapshot_file=' + PATHS.snapshot_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path

@@ -123,7 +123,8 @@ def set_paths():
         orig_output_path = os.path.join(FLAGS.data_dir, 'sfm_track')
         orig_matches_file = os.path.join(orig_output_path, 'matches.bin')
         if orig_matches_file != PATHS.matches_file and \
-            os.path.exists(orig_matches_file):
+            os.path.exists(orig_matches_file) and \
+                not os.path.exists(PATHS.matches_file):
             os.system('ln -s ' + orig_matches_file + ' ' + PATHS.matches_file)
 
     PATHS.init_bbox_path = os.path.join(

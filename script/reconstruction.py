@@ -87,7 +87,7 @@ def run(FLAGS, PATHS):
                PATHS.ground_truth_orientation_path + ' \\\n'
 
     # FIXME:
-    # Make the weights as option.
+    # Make the weights as options.
     if FLAGS.use_initial_orientations or FLAGS.use_gt_orientations:
         if FLAGS.use_score_based_weights:
             assert (FLAGS.use_initial_orientations)
