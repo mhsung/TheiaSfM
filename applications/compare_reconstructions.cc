@@ -65,27 +65,42 @@ using theia::ViewId;
 
 
 // @mhsung
-bool OpenJsonFile(std::ofstream& file, const std::string& filename) {
-  file.open(filename);
-  if (file.is_open()) return false;
-  file << "{" << std::endl;
-  return true;
-}
+class JsonFile {
+  public:
+    bool Open(const std::string& filename) {
+      file.open(filename);
+      if (!file.is_open()) return false;
+      is_first_element_added = false;
+      return true;
+    }
 
-// @mhsung
-template <class T>
-void WriteJsonElement(std::ofstream& file,
-    const std::string& name, const T& value) {
-  file << "  \"" << name << "\": " << value << std::endl;
-}
+    bool IsOpen() const { return file.is_open(); }
 
-// @mhsung
-void CloseJsonFile(std::ofstream& file) {
-  if (file.is_open()) {
-    file << "}" << std::endl;
-    file.close();
-  }
-}
+    template <class T>
+    void WriteElement(const std::string& name, const T& value) {
+      CHECK (file.is_open()) << " Open json file first.";
+      if (!is_first_element_added) {
+        file << "{" << std::endl;
+        is_first_element_added = true;
+      } else {
+        file << "," << std::endl;
+      }
+      file << "  \"" << name << "\": " << value;
+    }
+
+    void Close() {
+      if (file.is_open()) {
+        file << std::endl;
+        file << "}" << std::endl;
+        file.close();
+      }
+    }
+
+  private:
+    std::ofstream file;
+    bool is_first_element_added;
+};
+
 
 std::string PrintMeanMedianHistogram(
     const std::vector<double>& sorted_errors,
@@ -159,7 +174,8 @@ void EvaluateAlignedPoseError(
     const Reconstruction& reference_reconstruction,
     Reconstruction* reconstruction_to_align,
     // @mhsung
-    std::ofstream& file) {
+    JsonFile* out_file) {
+  CHECK_NOTNULL(out_file);
   if (FLAGS_robust_alignment_threshold > 0.0) {
     AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
                                reference_reconstruction,
@@ -206,15 +222,17 @@ void EvaluateAlignedPoseError(
   LOG(INFO) << "Focal length errors: \n" << focal_length_error_msg;
 
   // @mhsung
-  double mean_rotation_error = 0.0, median_rotation_error = 0.0;
-  double mean_position_error = 0.0, median_position_error = 0.0;
-  pose_error.ComputeMeanMedian(
-      &mean_rotation_error, &median_rotation_error,
-      &mean_position_error, &median_position_error);
-  WriteJsonElement(file, "mean_rotation_error", mean_rotation_error);
-  WriteJsonElement(file, "median_rotation_error", median_rotation_error);
-  WriteJsonElement(file, "mean_position_error", mean_position_error);
-  WriteJsonElement(file, "median_position_error", median_position_error);
+  if (out_file->IsOpen()) {
+    double mean_rotation_error = 0.0, median_rotation_error = 0.0;
+    double mean_position_error = 0.0, median_position_error = 0.0;
+    pose_error.ComputeMeanMedian(
+        &mean_rotation_error, &median_rotation_error,
+        &mean_position_error, &median_position_error);
+    out_file->WriteElement("mean_rotation_error", mean_rotation_error);
+    out_file->WriteElement("median_rotation_error", median_rotation_error);
+    out_file->WriteElement("mean_position_error", mean_position_error);
+    out_file->WriteElement("median_position_error", median_position_error);
+  }
 }
 
 void ComputeTrackLengthHistogram(const Reconstruction& reconstruction) {
@@ -268,15 +286,13 @@ int main(int argc, char* argv[]) {
             << "\n\tReconstruction 2: " << reconstruction_to_align->NumTracks();
 
   // @mhsung
-  std::ofstream json_file;
+  JsonFile out_file;
   if (FLAGS_out_json_file != "") {
-    CHECK(OpenJsonFile(json_file, FLAGS_out_json_file))
+    CHECK(out_file.Open(FLAGS_out_json_file))
     << "Can't open file '" + FLAGS_out_json_file + "'.";
-
-    WriteJsonElement(json_file, "num_views",
-                     reference_reconstruction->NumViews());
-    WriteJsonElement(json_file, "num_estimated_views",
-                     reconstruction_to_align->NumViews());
+    out_file.WriteElement("num_views", reference_reconstruction->NumViews());
+    out_file.WriteElement(
+        "num_estimated_views", reconstruction_to_align->NumViews());
   }
 
   // Evaluate rotation independent of positions.
@@ -287,10 +303,10 @@ int main(int argc, char* argv[]) {
   // Align models and evaluate position and rotation errors.
   EvaluateAlignedPoseError(common_view_names,
                            *reference_reconstruction,
-                           reconstruction_to_align.get(), json_file);
+                           reconstruction_to_align.get(), &out_file);
 
   // @mhsung
-  CloseJsonFile(json_file);
+  out_file.Close();
 
   return 0;
 }
