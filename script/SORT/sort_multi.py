@@ -22,6 +22,7 @@
 from __future__ import print_function
 
 import os, sys
+
 BASE_DIR = os.path.normpath(os.path.join(
     os.path.dirname(os.path.abspath(__file__)), '../../'))
 sys.path.append(os.path.join(BASE_DIR, 'script'))
@@ -33,13 +34,12 @@ import cnn_utils
 import cv2
 import gflags
 import glob
-#from numba import jit
+# from numba import jit
 # @mhsung
 import image_list
 import numpy as np
 import pandas as pd
 import time
-
 
 FLAGS = gflags.FLAGS
 
@@ -47,6 +47,11 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('raw_bbox_file', 'convnet/raw_bboxes.csv', '')
 gflags.DEFINE_string('out_object_bbox_file', 'convnet/object_bboxes.csv', '')
+
+# If bounding box auxiliary information is given as a matrix,
+# rearrange and store the information based on the new bounding box order.
+gflags.DEFINE_string('in_bbox_auxiliary_file', '', '')
+gflags.DEFINE_string('out_bbox_auxiliary_file', '', '')
 
 gflags.DEFINE_integer('max_age', 10, '')
 gflags.DEFINE_integer('min_hits', 3, '')
@@ -56,7 +61,7 @@ gflags.DEFINE_bool('ignore_bbox_on_boundary', True, '')
 gflags.DEFINE_integer('object_track_length_tol', 10, '')
 
 
-#@jit
+# @jit
 def iou(bb_test, bb_gt):
     """
     Computes IUO between two bboxes in the form [x1,y1,x2,y2].
@@ -160,15 +165,14 @@ class KalmanBoxTracker(object):
         self.age = 0
 
         # @mhsung
-        self.score = 0
+        self.bbox_idx = -1
         self.class_idx = -1
-        # bbox: [x0, y0, x1, y2, score, class_index, ...]
-        # Store score and class index if given.
+        # bbox: [x0, y0, x1, y2, bbox_idx, class_index, ...]
+        # Store bounding box index and class index if given.
         if len(bbox) >= 5:
-            self.score = bbox[4]
+            self.bbox_idx = bbox[4]
         if len(bbox) >= 6:
             self.class_idx = bbox[5]
-
 
     def update(self, bbox):
         """
@@ -181,12 +185,11 @@ class KalmanBoxTracker(object):
         self.kf.update(convert_bbox_to_z(bbox))
 
         # @mhsung
-        # bbox: [x0, y0, x1, y2, score, class_index, ...]
+        # bbox: [x0, y0, x1, y2, bbox_idx, class_index, ...]
         if len(bbox) >= 5:
-            self.score = bbox[4]
+            self.bbox_idx = bbox[4]
         if len(bbox) >= 6:
-            assert(self.class_idx == bbox[5])
-
+            assert (self.class_idx == bbox[5])
 
     def predict(self):
         """
@@ -202,7 +205,6 @@ class KalmanBoxTracker(object):
         self.time_since_update += 1
         self.history.append(convert_x_to_bbox(self.kf.x))
         return self.history[-1]
-
 
     def get_state(self):
         """
@@ -241,9 +243,9 @@ def associate_detections_to_trackers(detections, trackers):
         is_unmatched = (iou_matrix[m[0], m[1]] < FLAGS.iou_threshold)
 
         # @mhsung
-        # det: [x0, y0, x1, y2, score, class_index, ...]
-        # If class indices are given, bboxes with the same class index are
-        # only matched.
+        # det: [x0, y0, x1, y2, bbox_idx, class_index, ...]
+        # If class indices are given, bounding boxes with the same class
+        # index are only matched.
         if (detections.shape[1] >= 6 and trackers.shape[1] >= 6):
             det_cls = detections[m[0], 5]
             trk_cls = trackers[m[1], 5]
@@ -266,12 +268,12 @@ class Sort(object):
     """
     Sets key parameters for SORT
     """
+
     def __init__(self):
         self.max_age = FLAGS.max_age
         self.min_hits = FLAGS.min_hits
         self.trackers = []
         self.frame_count = 0
-
 
     def update(self, dets):
         """
@@ -286,20 +288,23 @@ class Sort(object):
         detections provided.
         """
         self.frame_count += 1
+
         # get predicted locations from existing trackers.
         trks = np.zeros((len(self.trackers), 6))
         to_del = []
         ret = []
         for t, trk in enumerate(trks):
             pos = self.trackers[t].predict()[0]
-            score = self.trackers[t].score
+            bbox_idx = self.trackers[t].bbox_idx
             class_idx = self.trackers[t].class_idx
-            trk[:] = [pos[0], pos[1], pos[2], pos[3], score, class_idx]
+            trk[:] = [pos[0], pos[1], pos[2], pos[3], bbox_idx, class_idx]
             if (np.any(np.isnan(pos))):
                 to_del.append(t)
+
         trks = np.ma.compress_rows(np.ma.masked_invalid(trks))
         for t in reversed(to_del):
             self.trackers.pop(t)
+
         matched, unmatched_dets, unmatched_trks = \
             associate_detections_to_trackers(dets, trks)
 
@@ -313,6 +318,7 @@ class Sort(object):
         for i in unmatched_dets:
             trk = KalmanBoxTracker(dets[i, :])
             self.trackers.append(trk)
+
         i = len(self.trackers)
         for trk in reversed(self.trackers):
             d = trk.get_state()[0]
@@ -323,12 +329,12 @@ class Sort(object):
                 # Add class index if given.
                 if trk.class_idx >= 0:
                     ret.append(np.concatenate(
-                        (d, [trk.score, trk.id + 1, trk.class_idx])).reshape(
+                        (d, [trk.bbox_idx, trk.id + 1, trk.class_idx])).reshape(
                         1, -1))
                 else:
                     # +1 as MOT benchmark requires positive
                     ret.append(np.concatenate(
-                        (d, [trk.score, trk.id + 1])).reshape(1, -1))
+                        (d, [trk.bbox_idx, trk.id + 1])).reshape(1, -1))
 
             i -= 1
             # remove dead tracklet
@@ -340,20 +346,33 @@ class Sort(object):
 
 
 # @mhsung
-# output: [frame, x1, y1, x2, y2, score, class_index]
+# output: [frame, x1, y1, x2, y2, bbox_idx, class_index]
 def read_dets(df, im_names):
     seq_dets = np.ndarray(shape=(0, 7))
 
     for frame, im_name in enumerate(im_names):
         subset_df = df[df['image_name'] == im_name]
-        for _, row in subset_df.iterrows():
+        for bbox_idx, row in subset_df.iterrows():
             det = np.array([
                 frame, row['x1'], row['y1'], row['x2'], row['y2'],
-                row['score'], row['class_index']])
+                bbox_idx, row['class_index']])
             assert (row['class_index'] >= 0)
             seq_dets = np.vstack([seq_dets, det])
 
     return seq_dets
+
+
+# @mhsung
+def rearrange_bbox_info_matrix(mat, object_df):
+    dim = mat.shape[1]
+    old_num_rows = mat.shape[0]
+    new_num_rows = len(object_df)
+    new_mat = np.zeros((new_num_rows, dim))
+    for new_idx, row in object_df.iterrows():
+        old_idx = int(row['bbox_index'])
+        assert (old_idx < old_num_rows)
+        new_mat[new_idx, :] = mat[old_idx, :]
+    return new_mat
 
 
 if __name__ == '__main__':
@@ -379,6 +398,9 @@ if __name__ == '__main__':
 
     object_df = cnn_utils.create_bbox_data_frame(with_object_index=True)
 
+    # Temporarily add bounding index column.
+    object_df['bbox_index'] = []
+
     for frame, im_name in enumerate(im_names):
         # Load the input image.
         im_file = os.path.join(FLAGS.data_dir, 'images', im_name)
@@ -395,26 +417,31 @@ if __name__ == '__main__':
         total_time += cycle_time
 
         for d in trackers:
-            # d: [x1, y1, x2, y2, score, track_index, class_index]
+            # d: [x1, y1, x2, y2, bbox_idx, track_index, class_index]
             assert (len(d) >= 6)
             if FLAGS.ignore_bbox_on_boundary:
                 # Ignore bounding boxes on the frame boundary.
                 if d[0] <= 0 or d[2] >= (im_size_x - 1) or \
-                        d[1] <= 0 or d[3] >= (im_size_y - 1):
+                                d[1] <= 0 or d[3] >= (im_size_y - 1):
                     continue
+
+            bbox_idx = int(d[4])
+            object_idx = int(d[5])
+            cls_idx = int(d[6])
+            score = df.loc[bbox_idx]['score']
             # Append a row.
-            # ['image_name', 'class_index',
-            #         'x1', 'y1', 'x2', 'y2', 'score', 'object_index')
+            # ['image_name', 'class_index', 'x1', 'y1', 'x2', 'y2',
+            #  'score', 'object_index', 'bbox_index']
             object_df.loc[len(object_df)] = [
-                im_name, d[6], d[0], d[1], d[2], d[3], d[4], d[5]]
+                im_name, cls_idx, d[0], d[1], d[2], d[3],
+                score, object_idx, bbox_idx]
 
     # Remove short object tracks.
     object_idxs = object_df.object_index.unique()
     for object_idx in object_idxs:
-        num_object_frames = len(object_df[
-                object_df.object_index == object_idx])
+        num_object_frames = len(object_df[object_df.object_index == object_idx])
         if num_object_frames < FLAGS.object_track_length_tol:
-            print ('Remove short object track (id: {:d}, length: {:d})'.format(
+            print('Remove short object track (id: {:d}, length: {:d})'.format(
                 int(object_idx), num_object_frames))
             object_df = object_df[
                 object_df.object_index != object_idx]
@@ -422,19 +449,33 @@ if __name__ == '__main__':
     # Reset bounding indices.
     object_df = object_df.reset_index(drop=True)
 
+    # If bounding box auxiliary information is given as a matrix, rearrange
+    # and store the information based on the new bounding box order.
+    if (os.path.join(FLAGS.data_dir, FLAGS.in_bbox_auxiliary_file) != "" and\
+            os.path.join(FLAGS.data_dir, FLAGS.out_bbox_auxiliary_file) != ""):
+        mat = np.genfromtxt(
+            os.path.join(FLAGS.data_dir, FLAGS.in_bbox_auxiliary_file),
+            delimiter=',', dtype=float)
+        mat = rearrange_bbox_info_matrix(mat, object_df)
+        np.savetxt(os.path.join(FLAGS.data_dir, FLAGS.out_bbox_auxiliary_file),
+                   mat, fmt='%f', delimiter=',')
+
+    # Drop bounding box column.
+    object_df.drop('bbox_index', axis=1, inplace=True)
+
+    # Set indices as integer strings.
+    object_df['class_index'] = object_df['class_index'].map(
+        lambda x: '%i' % x)
+    object_df['object_index'] = object_df['object_index'].map(
+        lambda x: '%i' % x)
+
+    # Save results.
     out_file = os.path.join(FLAGS.data_dir, FLAGS.out_object_bbox_file)
     if not os.path.exists(os.path.dirname(out_file)):
         os.makedirs(os.path.dirname(out_file))
-
-    # Save class indices as integer.
-    object_df['class_index'] = object_df['class_index'].map(
-            lambda x: '%i' % x)
-    object_df['object_index'] = object_df['object_index'].map(
-            lambda x: '%i' % x)
     object_df.to_csv(out_file, header=False)
     num_bboxes = len(object_df)
-    print ('{:d} bounding box(es) are saved.'.format(num_bboxes))
+    print('{:d} bounding box(es) are saved.'.format(num_bboxes))
 
     print("Total Tracking took: %.3f for %d frames or %.1f FPS" %
           (total_time, total_frames, total_frames / total_time))
-
