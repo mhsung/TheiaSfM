@@ -451,8 +451,8 @@ if __name__ == '__main__':
 
     # If bounding box auxiliary information is given as a matrix, rearrange
     # and store the information based on the new bounding box order.
-    if (os.path.join(FLAGS.data_dir, FLAGS.in_bbox_auxiliary_file) != "" and\
-            os.path.join(FLAGS.data_dir, FLAGS.out_bbox_auxiliary_file) != ""):
+    if (FLAGS.in_bbox_auxiliary_file != "" and\
+            FLAGS.out_bbox_auxiliary_file != ""):
         mat = np.genfromtxt(
             os.path.join(FLAGS.data_dir, FLAGS.in_bbox_auxiliary_file),
             delimiter=',', dtype=float)

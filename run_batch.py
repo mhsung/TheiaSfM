@@ -2,7 +2,7 @@
 # Author: Minhyuk Sung (mhsung@cs.stanford.edu)
 
 import gflags
-import parallel_exec
+# import parallel_exec
 import os
 import sys
 
@@ -12,6 +12,9 @@ FLAGS = gflags.FLAGS
 # Set input files.
 gflags.DEFINE_string('dataset_dir', '', '')
 gflags.DEFINE_string('image_wildcard', '', '')
+
+gflags.DEFINE_bool('run_convnet', True, '')
+gflags.DEFINE_bool('run_sfm', True, '')
 
 
 if __name__ == '__main__':
@@ -28,45 +31,49 @@ if __name__ == '__main__':
         print ('================')
         print ('Data name: {}'.format(data_name))
 
+
         # Run convolutional neural networks.
-        cmd = ''
-        cmd += os.path.normpath(os.path.join(
-            sys.path[0], 'script', 'run_convnet.py')) + ' \\\n'
-        cmd += '--data_dir=' + data_dir + ' \\\n'
-        cmd += '--image_wildcard=' + FLAGS.image_wildcard
-        print(cmd)
-        os.system(cmd)
+        if FLAGS.run_convnet:
+            cmd = ''
+            cmd += os.path.normpath(os.path.join(
+                sys.path[0], 'script', 'run_convnet.py')) + ' \\\n'
+            cmd += '--data_dir=' + data_dir + ' \\\n'
+            cmd += '--image_wildcard=' + FLAGS.image_wildcard
+            print(cmd)
+            os.system(cmd)
+
 
         # Run TheiaSfM.
-        cmd_list = []
+        if FLAGS.run_sfm:
+            # cmd_list = []
 
-        cmd = ''
-        cmd += os.path.normpath(os.path.join(
-            sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
-        cmd += '--data_dir=' + data_dir + ' \\\n'
-        cmd += '--track_features'
-        print(cmd)
-        # os.system(cmd)
-        cmd_list.append((data_name, cmd))
+            cmd = ''
+            cmd += os.path.normpath(os.path.join(
+                sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
+            cmd += '--data_dir=' + data_dir + ' \\\n'
+            cmd += '--track_features'
+            print(cmd)
+            os.system(cmd)
+            # cmd_list.append((data_name, cmd))
 
-        cmd = ''
-        cmd += os.path.normpath(os.path.join(
-            sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
-        cmd += '--data_dir=' + data_dir + ' \\\n'
-        cmd += '--track_features --use_initial_orientations'
-        print(cmd)
-        # os.system(cmd)
-        cmd_list.append((data_name, cmd))
+            cmd = ''
+            cmd += os.path.normpath(os.path.join(
+                sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
+            cmd += '--data_dir=' + data_dir + ' \\\n'
+            cmd += '--track_features --use_initial_orientations'
+            print(cmd)
+            os.system(cmd)
+            # cmd_list.append((data_name, cmd))
 
-        cmd = ''
-        cmd += os.path.normpath(os.path.join(
-            sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
-        cmd += '--data_dir=' + data_dir + ' \\\n'
-        cmd += '--track_features --use_gt_orientations'
-        print(cmd)
-        # os.system(cmd)
-        cmd_list.append((data_name, cmd))
+            cmd = ''
+            cmd += os.path.normpath(os.path.join(
+                sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
+            cmd += '--data_dir=' + data_dir + ' \\\n'
+            cmd += '--track_features --use_gt_orientations'
+            print(cmd)
+            os.system(cmd)
+            # cmd_list.append((data_name, cmd))
 
-        parallel_exec.run_parallel('TheiaSfM', cmd_list)
-        print ('================')
-        print ('\n')
+            # parallel_exec.run_parallel('TheiaSfM', cmd_list)
+            print ('================')
+            print ('\n')

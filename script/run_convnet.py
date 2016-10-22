@@ -12,14 +12,10 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_string('data_dir', '', '')
 gflags.DEFINE_string('image_wildcard', '', '')
 
-HOME_DIR = os.path.expanduser('~')
-CAFFE_PATH = os.path.join(HOME_DIR, '/Developer/external/caffe/python')
-RENDERER_PATH = os.path.join(
-    HOME_DIR, '/Developer/app/mesh-viewer/build/OSMesaViewer/build/Build/bin ')
+# Check whether 'Caffe' python path and 'OSMesaViewer' path are set properly.
+os.system('echo $PATHONPATH')
+os.system('echo $PATH')
 BASE_DIR = os.path.normpath(os.path.dirname(os.path.abspath(__file__)))
-os.environ['PYTHONPATH'] = os.environ['PYTHONPATH'] + CAFFE_PATH
-os.environ['PATH'] = os.environ['PATH'] + RENDERER_PATH
-
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
@@ -83,8 +79,9 @@ if __name__ == '__main__':
     composite_video_file = os.path.join(
         FLAGS.data_dir, 'convnet', 'composite_fitted.mp4')
 
-    cmd = 'ffmpeg -i ' + composite_image_wildcard + \
+    cmd = 'ffmpeg -i ' + composite_image_wildcard + ' '\
           '-pix_fmt yuv420p -r 24 -b:v 8000k ' + \
           '-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ' + \
           composite_video_file
+    print(cmd)
     os.system(cmd)
