@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Minhyuk Sung (mhsung@cs.stanford.edu)
 
 import glob

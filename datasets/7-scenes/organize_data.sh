@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Minhyuk Sung (mhsung@cs.stanford.edu)
 
 if [ "$#" -lt 1 ]; then
@@ -19,11 +20,11 @@ mkdir ${data_dir}/images
 mv ${data_dir}/*.color.png ${data_dir}/images
 rename 's/\.color//g' ${data_dir}/images/*
 
-mkdir ${data_dir}/depths
-mv ${data_dir}/*.depth.png ${data_dir}/depths
-rename 's/\.depth//' ${data_dir}/depths/*
+mkdir ${data_dir}/depth
+mv ${data_dir}/*.depth.png ${data_dir}/depth
+rename 's/\.depth//' ${data_dir}/depth/*
 
-mkdir ${data_dir}/poses
-mv ${data_dir}/*.pose.txt ${data_dir}/poses
-rename 's/\.pose//' ${data_dir}/poses/*
+mkdir ${data_dir}/pose
+mv ${data_dir}/*.pose.txt ${data_dir}/pose
+rename 's/\.pose//' ${data_dir}/pose/*
 
