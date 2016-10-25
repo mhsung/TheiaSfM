@@ -4,6 +4,7 @@
 import run_cmd
 import os
 
+kAlignTol = 0.8
 
 def clean(FLAGS, PATHS):
     if os.path.exists(PATHS.ground_truth_reconstruction_path):
@@ -29,7 +30,8 @@ def run(FLAGS, PATHS):
                + ' \\\n'
 
         cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
-        cmd += '--data_type=modelview \\\n'
+        # cmd += '--data_type=modelview \\\n'
+        cmd += '--data_type=pose \\\n'
         cmd += '--filepath=' + PATHS.ground_truth_pose_path + ' \\\n'
         cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
         cmd += '--output_reconstruction='\
@@ -47,9 +49,10 @@ def run(FLAGS, PATHS):
            + PATHS.ground_truth_reconstruction_path + ' \\\n'
     cmd += '--reconstruction_to_align=' + PATHS.reconstruction_file\
         + '-0' + ' \\\n'
+    cmd += '--out_json_file=' + PATHS.eval_json_file + ' \\\n'
     # FIXME:
     # Make the parameter as an option.
-    cmd += '--robust_alignment_threshold=0.1' + ' \\\n'
+    cmd += '--robust_alignment_threshold=' + str(kAlignTol) + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
@@ -65,8 +68,8 @@ def run(FLAGS, PATHS):
     cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
     # FIXME:
     # Make the parameter as an option.
-    cmd += '--robust_alignment_threshold=0.1' + ' \\\n'
-    cmd += '--snapshot_file=' + PATHS.snapshot_path + ' \\\n'
+    cmd += '--robust_alignment_threshold='+ str(kAlignTol) + ' \\\n'
+    cmd += '--snapshot_file=' + PATHS.snapshot_file + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(

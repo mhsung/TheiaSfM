@@ -47,7 +47,8 @@ PATHS = namedtuple('PATHS', [
     'feature_track_info_path',
     'ground_truth_pose_path'
     'ground_truth_reconstruction_path'
-    'snapshot_path'
+    'snapshot_file',
+    'eval_json_file'
     ])
 
 
@@ -166,7 +167,8 @@ def set_paths():
     PATHS.ground_truth_pose_path = os.path.join(FLAGS.data_dir, 'pose')
     PATHS.ground_truth_reconstruction_path =\
         os.path.join(FLAGS.data_dir, 'ground_truth.bin')
-    PATHS.snapshot_path = os.path.join(PATHS.output_path, 'snapshot.png')
+    PATHS.snapshot_file = os.path.join(PATHS.output_path, 'snapshot.png')
+    PATHS.eval_json_file = os.path.join(PATHS.output_path, 'evaluation.json')
 
 
 def print_paths():

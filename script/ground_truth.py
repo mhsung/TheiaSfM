@@ -32,7 +32,8 @@ def run(FLAGS, PATHS):
                + ' \\\n'
 
         cmd += '--images=' + PATHS.image_wildcard + ' \\\n'
-        cmd += '--data_type=modelview \\\n'
+        # cmd += '--data_type=modelview \\\n'
+        cmd += '--data_type=pose \\\n'
         cmd += '--filepath=' + PATHS.ground_truth_pose_path + ' \\\n'
         cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
         cmd += '--output_reconstruction='\

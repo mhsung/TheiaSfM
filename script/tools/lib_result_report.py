@@ -313,7 +313,7 @@ def write_latex_image(file, image_size, image_filepath):
     file.write('\\begin{minipage}{' + str(image_size) +
                '\\textwidth} \\includegraphics[' +
                'width=\linewidth, clip, trim={50 -10 50 -10}]{' +
-               image_filepath + '} \\end{minipage} \n')
+               image_filepath + '} \\end{minipage}')
 
 
 def open_latex_table(filename, dataset_name, attr_names, attr_types):
@@ -337,11 +337,11 @@ def open_latex_table(filename, dataset_name, attr_names, attr_types):
     file.write('\maketitle\n\n')
 
     file.write('\\begin{figure*}[h]\n')
-    file.write('\\begin{tabu} to \\linewidth {')
+    file.write('\\begin{tabular}{|')
 
     for count_attrs in range(num_attrs):
-        file.write('@{}X[1,c,m]')
-    file.write('@{}}\n')
+        file.write('c|')
+    file.write('}\n')
 
     return file;
 
@@ -352,7 +352,8 @@ def write_latex_table(file, instances, attr_names, attr_types):
     image_size = 1.0 / (1.12 * num_attrs)
     num_instances = len(instances)
 
-    count_attrs = 0
+    file.write('\\toprule\n')
+
     for i in range(num_attrs):
         attr_name = attr_names[i]
         attr_name = attr_name.replace('_', ' ')
@@ -362,22 +363,18 @@ def write_latex_table(file, instances, attr_names, attr_types):
         attr_name = attr_name.replace('Etal', '{\it et al}.')
         # file.write('\\Large{'+attr_name+'}')
         file.write(attr_name)
-        count_attrs += 1
-        if count_attrs < num_attrs:
-            file.write(' & ')
+        if i < num_attrs - 1:
+            file.write(' &\n')
         else:
-            file.write('\\\\ \n')
+            file.write('\\\\\n')
 
     file.write('\\toprule\n')
 
-    count_attrs = 0
-    for i in range(num_attrs):
-        file.write('{\n')
-        file.write('\\renewcommand{\\arraystretch}{0.0}\n')
-        file.write('\\begin{tabular}{@{}c@{}}\n')
-        for instance_id in range(num_instances):
-            instance = instances[instance_id]
+    # file.write('\\renewcommand{\\arraystretch}{0.0}\n')
+    for instance_id in range(num_instances):
+        instance = instances[instance_id]
 
+        for i in range(num_attrs):
             if attr_types[i] == AttrType.image:
                 write_latex_image(file, image_size, instance[i])
             elif attr_types[i] == AttrType.number:
@@ -389,19 +386,19 @@ def write_latex_table(file, instances, attr_names, attr_types):
                 attr_value = instance[i].replace('_', '\_')
                 file.write(attr_value)
 
-            if (instance_id + 1) < num_instances:
-                file.write('\\\\ \n')
-        file.write('\end{tabular}\n')
-        count_attrs += 1
-        if count_attrs < num_attrs:
-            file.write('} & \n')
-        else:
-            file.write('}\n')
+            if i < num_attrs - 1:
+                file.write(' &\n')
+            else:
+                file.write('\\\\\n')
+
+        if (instance_id + 1) < num_instances:
+            file.write('\\midrule\n')
+
+    file.write('\\bottomrule\n')
 
 
 def close_latex_table(file):
-    file.write('\\\\ \\bottomrule\n')
-    file.write('\\end{tabu}\n')
+    file.write('\\end{tabular}\n')
     file.write('\\end{figure*}\n')
     file.write('\\end{document}\n')
 

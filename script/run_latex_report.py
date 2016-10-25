@@ -70,7 +70,8 @@ def load_instances():
 if __name__ == '__main__':
     FLAGS(sys.argv)
 
-    dataset_name = 'TEST'
+    dataset_name = os.path.splitext(os.path.basename(FLAGS.out_file))[0]
+    dataset_name = dataset_name.replace('_', '\_')
 
     out_dir = os.path.dirname(FLAGS.out_file)
     if not os.path.exists(out_dir):
