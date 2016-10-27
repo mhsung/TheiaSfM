@@ -20,6 +20,7 @@ def initialize():
     gflags.DEFINE_bool('use_initial_orientations', False, 'uio')
     gflags.DEFINE_bool('use_gt_orientations', False, 'gt')
     gflags.DEFINE_bool('use_score_based_weights', False, 'scr')
+    gflags.DEFINE_bool('use_consecutive_camera_constraints', False, 'ccc')
 
 
 def show(FLAGS, PATHS):

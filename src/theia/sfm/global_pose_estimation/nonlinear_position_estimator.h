@@ -70,6 +70,9 @@ class NonlinearPositionEstimator : public PositionEstimator {
     // The total weight of all point to camera correspondences compared to
     // camera to camera correspondences.
     double point_to_camera_weight = 0.5;
+
+    int consecutive_camera_range = 10;
+    double consecutive_camera_position_constraint_weight = 0.0;
   };
 
   NonlinearPositionEstimator(
@@ -138,6 +141,10 @@ class NonlinearPositionEstimator : public PositionEstimator {
 
   // @mhsung
   static Eigen::Vector3d RandVector3d();
+
+  // @mhsung
+  void AddConsecutiveCameraConstraints(
+      std::unordered_map<ViewId, Eigen::Vector3d>* positions);
 
   const NonlinearPositionEstimator::Options options_;
   const Reconstruction& reconstruction_;

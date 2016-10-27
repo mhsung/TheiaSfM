@@ -196,6 +196,10 @@ DEFINE_bool(match_only_consecutive_pairs, false,
 
 DEFINE_int32(consecutive_pair_frame_range, 10,
              "Frame range of consecutive image pairs to be matched.");
+
+DEFINE_bool(use_consecutive_camera_position_constraints, false, "");
+
+DEFINE_double(consecutive_camera_position_constraint_weight, 0.01, "");
 // ---- //
 
 
@@ -317,10 +321,68 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
   reconstruction_estimator_options.position_constraint_weight_multiplier =
       FLAGS_position_constraint_weight_multiplier;
 
+  if (FLAGS_use_consecutive_camera_position_constraints) {
+    reconstruction_estimator_options.consecutive_camera_range =
+        FLAGS_consecutive_pair_frame_range;
+    reconstruction_estimator_options
+        .consecutive_camera_position_constraint_weight =
+        FLAGS_consecutive_camera_position_constraint_weight;
+  } else {
+    // Set zero weight.
+    reconstruction_estimator_options
+        .consecutive_camera_position_constraint_weight = 0.0;
+  }
+
   return options;
 }
 
 // @mhsung
+void ExtractFramesFromTwoImageFiles(
+    const std::string& image1_file, const std::string& image2_file,
+    int* image1_frame, int* image2_frame) {
+  CHECK_NOTNULL(image1_frame);
+  CHECK_NOTNULL(image2_frame);
+
+  const std::string basename1 = stlplus::basename_part(image1_file);
+  const std::string basename2 = stlplus::basename_part(image2_file);
+
+  const std::string common_prefix(basename1.begin(), std::mismatch(
+      basename1.begin(), basename1.end(), basename2.begin()).first);
+  const int len_common_prefix = common_prefix.size();
+
+  // NOTE:
+  // Assume that the part after the common prefix is the frame number.
+  const int len_image1_frame = basename1.size() - len_common_prefix;
+  (*image1_frame) = std::stoi(
+      basename1.substr(len_common_prefix, len_image1_frame));
+
+  const int len_image2_frame = basename2.size() - len_common_prefix;
+  (*image2_frame) = std::stoi(
+      basename2.substr(len_common_prefix, len_image2_frame));
+}
+
+// @mhsung
+bool IsImageFileSortedByFrame(const std::vector<std::string>& image_files) {
+  const int num_images = image_files.size();
+  CHECK_GE(num_images, 2);
+
+  const std::string& image1_file = image_files[0];
+
+  for (int count = 1; count < num_images; ++count) {
+    const std::string& image2_file = image_files[count];
+
+    int image1_frame_index, image2_frame_index;
+    ExtractFramesFromTwoImageFiles(
+        image1_file, image2_file, &image1_frame_index, &image2_frame_index);
+    if ((image2_frame_index - image1_frame_index) != count)
+      return false;
+  }
+
+  return true;
+}
+
+// @mhsung
+// FIXME.
 void ExtractFrameIndicesFromImages(
     const std::vector<std::string>& image_files,
     std::map<int, std::string>* frame_indices) {
@@ -533,6 +595,11 @@ void AddMatchesToReconstructionBuilder(
                                 &camera_intrinsics_prior,
                                 &image_matches);
 
+  // @mhsung
+  // Check whether image files are sorted based on frames.
+  // This is checked to use consecutive camera constraints.
+  CHECK(IsImageFileSortedByFrame(image_files));
+
   // Add all the views. When the intrinsics group id is invalid, the
   // reconstruction builder will assume that the view does not share its
   // intrinsics with any other views.
@@ -563,6 +630,11 @@ void AddImagesToReconstructionBuilder(
       << ". NOTE that the ~ filepath is not supported.";
 
   CHECK_GT(image_files.size(), 0) << "No images found in: " << FLAGS_images;
+
+  // @mhsung
+  // Check whether image files are sorted based on frames.
+  // This is checked to use consecutive camera constraints.
+  CHECK(IsImageFileSortedByFrame(image_files));
 
   // Load calibration file if it is provided.
   std::unordered_map<std::string, theia::CameraIntrinsicsPrior>

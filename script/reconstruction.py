@@ -99,6 +99,9 @@ def run(FLAGS, PATHS):
             cmd += '--rotation_constraint_weight_multiplier=50.0' + ' \\\n'
             cmd += '--position_constraint_weight_multiplier=50.0' + ' \\\n'
 
+    if FLAGS.use_consecutive_camera_constraints:
+        cmd += '--use_consecutive_camera_position_constraints=true'
+
     cmd += '--log_dir=' + PATHS.log_path + ' \\\n'
     cmd += '--alsologtostderr'
     run_cmd.save_and_run_cmd(

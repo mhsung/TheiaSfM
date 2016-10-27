@@ -79,6 +79,9 @@ def set_output_name():
         assert (not FLAGS.use_gt_orientations)
         output_name += '_scr'
 
+    if FLAGS.use_consecutive_camera_constraints:
+        output_name += '_ccc'
+
     return output_name
 
 

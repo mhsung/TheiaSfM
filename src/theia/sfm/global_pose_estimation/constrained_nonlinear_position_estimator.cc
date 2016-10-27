@@ -148,6 +148,11 @@ bool ConstrainedNonlinearPositionEstimator::EstimatePositions(
   }
 
   // @mhsung
+  if (options_.consecutive_camera_position_constraint_weight > 0.0) {
+    AddConsecutiveCameraConstraints(view_positions);
+  }
+
+  // @mhsung
   // Fix the first object frame as the origin.
   if (randomly_initialize) {
     object_positions->begin()->second.setZero();

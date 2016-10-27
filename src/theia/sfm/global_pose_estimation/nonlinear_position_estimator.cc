@@ -50,6 +50,7 @@
 // @mhsung
 #include "theia/util/random.h"
 #include "theia/util/util.h"
+#include "theia/sfm/global_pose_estimation/pairwise_position_error.h"
 
 namespace theia {
 namespace {
@@ -120,6 +121,11 @@ bool NonlinearPositionEstimator::EstimatePositions(
   if (options_.min_num_points_per_view > 0) {
     AddPointToCameraConstraints(orientations, positions);
     AddCamerasAndPointsToParameterGroups(positions);
+  }
+
+  // @mhsung
+  if (options_.consecutive_camera_position_constraint_weight > 0.0) {
+    AddConsecutiveCameraConstraints(positions);
   }
 
   // Set one camera to be at the origin to remove the ambiguity of the origin.
@@ -391,6 +397,46 @@ Eigen::Vector3d NonlinearPositionEstimator::RandVector3d() {
       RandDouble(-1.0, +1.0),
       RandDouble(-1.0, +1.0),
       RandDouble(-1.0, +1.0));
+}
+
+// @mhsung
+void NonlinearPositionEstimator::AddConsecutiveCameraConstraints(
+    std::unordered_map<ViewId, Eigen::Vector3d>* positions) {
+  CHECK_NOTNULL(positions);
+  CHECK_GT(options_.consecutive_camera_position_constraint_weight, 0.0);
+
+  LOG(INFO) << "Use consecutive camera constraints with weight "
+            << options_.consecutive_camera_position_constraint_weight << ".";
+
+  for (auto& camera1 : *positions) {
+    const ViewId view1_id = camera1.first;
+    Eigen::Vector3d* position1 = &camera1.second;
+
+    for (auto& camera2 : *positions) {
+      const ViewId view2_id = camera2.first;
+      Eigen::Vector3d* position2 = &camera2.second;
+
+      if (view1_id == view2_id) {
+        continue;
+      }
+
+      const ViewId view_id_diff = (view1_id > view2_id) ?
+                                  (view1_id - view2_id) : (view2_id - view1_id);
+      if (view_id_diff > options_.consecutive_camera_range) {
+        // IMPORTANT NOTE:
+        // Consider view IDs as frames.
+        continue;
+      }
+
+      ceres::CostFunction* cost_function = PairwisePositionError::Create(
+          options_.consecutive_camera_position_constraint_weight);
+
+      problem_->AddResidualBlock(cost_function,
+                                 new ceres::HuberLoss(options_.robust_loss_width),
+                                 position1->data(),
+                                 position2->data());
+    }
+  }
 }
 
 }  // namespace theia
