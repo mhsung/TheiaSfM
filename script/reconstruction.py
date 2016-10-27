@@ -100,7 +100,7 @@ def run(FLAGS, PATHS):
             cmd += '--position_constraint_weight_multiplier=50.0' + ' \\\n'
 
     if FLAGS.use_consecutive_camera_constraints:
-        cmd += '--use_consecutive_camera_position_constraints=true'
+        cmd += '--use_consecutive_camera_position_constraints=true' + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path + ' \\\n'
     cmd += '--alsologtostderr'
