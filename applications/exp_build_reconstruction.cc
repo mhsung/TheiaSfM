@@ -598,7 +598,9 @@ void AddMatchesToReconstructionBuilder(
   // @mhsung
   // Check whether image files are sorted based on frames.
   // This is checked to use consecutive camera constraints.
-  CHECK(IsImageFileSortedByFrame(image_files));
+	if (FLAGS.use_consecutive_camera_position_constraints) {
+		CHECK(IsImageFileSortedByFrame(image_files));
+	}
 
   // Add all the views. When the intrinsics group id is invalid, the
   // reconstruction builder will assume that the view does not share its
@@ -634,7 +636,9 @@ void AddImagesToReconstructionBuilder(
   // @mhsung
   // Check whether image files are sorted based on frames.
   // This is checked to use consecutive camera constraints.
-  CHECK(IsImageFileSortedByFrame(image_files));
+	if (FLAGS.use_consecutive_camera_position_constraints) {
+		CHECK(IsImageFileSortedByFrame(image_files));
+	}
 
   // Load calibration file if it is provided.
   std::unordered_map<std::string, theia::CameraIntrinsicsPrior>

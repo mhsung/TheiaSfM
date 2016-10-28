@@ -158,7 +158,7 @@ ReconstructionEstimatorSummary ExpGlobalReconstructionEstimator::Estimate(
 
   // Step 1. Filter the initial view graph and remove any bad two view
   // geometries.
-  LOG(INFO) << "Filtering the intial view graph.";
+  LOG(INFO) << "Filtering the initial view graph.";
   timer.Reset();
   if (!FilterInitialViewGraph()) {
     LOG(INFO) << "Insufficient view pairs to perform estimation.";

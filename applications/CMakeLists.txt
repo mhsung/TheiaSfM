@@ -173,3 +173,6 @@ target_link_libraries(exp_view_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIE
   ${OPENGL_LIBRARIES}
   ${EXTRA_GL_LIBRARIES})
 
+add_executable(exp_reconstruction_stats exp_reconstruction_stats.cc)
+target_link_libraries(exp_reconstruction_stats theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+
