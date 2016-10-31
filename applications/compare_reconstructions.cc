@@ -44,6 +44,9 @@
 #include <memory>
 #include <string>
 
+// @mhsung
+#include <stlplus3/file_system.hpp>
+
 DEFINE_string(reference_reconstruction, "",
               "Filepath to the reconstruction that is considered the reference "
               "or 'ground truth' reconstruction.");
@@ -58,6 +61,8 @@ DEFINE_double(robust_alignment_threshold, 0.0,
               "for a least squares alignment.");
 // @mhsung
 DEFINE_string(out_json_file, "", "");
+DEFINE_int32(start_frame, -1, "");
+DEFINE_int32(end_frame, -1, "");
 
 using theia::Reconstruction;
 using theia::TrackId;
@@ -101,6 +106,53 @@ class JsonFile {
     bool is_first_element_added;
 };
 
+// @mhsung
+void ExtractFramesFromTwoImageFiles(
+    const std::string& image1_file, const std::string& image2_file,
+    int* image1_frame, int* image2_frame) {
+  CHECK_NOTNULL(image1_frame);
+  CHECK_NOTNULL(image2_frame);
+
+  const std::string basename1 = stlplus::basename_part(image1_file);
+  const std::string basename2 = stlplus::basename_part(image2_file);
+
+  const std::string common_prefix(basename1.begin(), std::mismatch(
+      basename1.begin(), basename1.end(), basename2.begin()).first);
+  const int len_common_prefix = common_prefix.size();
+
+  // NOTE:
+  // Assume that the part after the common prefix is the frame number.
+  const int len_image1_frame = basename1.size() - len_common_prefix;
+  (*image1_frame) = std::stoi(
+      basename1.substr(len_common_prefix, len_image1_frame));
+
+  const int len_image2_frame = basename2.size() - len_common_prefix;
+  (*image2_frame) = std::stoi(
+      basename2.substr(len_common_prefix, len_image2_frame));
+}
+
+// @mhsung
+void ExtractFrameIndicesFromImages(
+    const std::vector<std::string>& image_files,
+    std::unordered_map<int, std::string>* frame_indices) {
+  const int num_images = image_files.size();
+  CHECK_GE(num_images, 2);
+  CHECK_NOTNULL(frame_indices);
+  frame_indices->clear();
+
+  const std::string& image1_file = image_files[0];
+
+  for (int count = 1; count < num_images; ++count) {
+    const std::string& image2_file = image_files[count];
+
+    int image1_frame_index, image2_frame_index;
+    ExtractFramesFromTwoImageFiles(
+        image1_file, image2_file, &image1_frame_index, &image2_frame_index);
+
+    if (count == 1) frame_indices->emplace(image1_frame_index, image1_file);
+    frame_indices->emplace(image2_frame_index, image2_file);
+  }
+}
 
 std::string PrintMeanMedianHistogram(
     const std::vector<double>& sorted_errors,
@@ -262,6 +314,34 @@ int main(int argc, char* argv[]) {
   CHECK(theia::ReadReconstruction(FLAGS_reconstruction_to_align,
                                   reconstruction_to_align.get()))
       << "Could not read reconstruction file:" << FLAGS_reconstruction_to_align;
+
+  // @mhsung
+  // Use a subset of cameras if the frame range is given.
+  if (reference_reconstruction &&
+      FLAGS_start_frame >= 0 && FLAGS_end_frame >= 0) {
+    CHECK_LT(FLAGS_start_frame, FLAGS_end_frame - 1);
+
+    // Get view names.
+    std::vector<std::string> view_names;
+    view_names.reserve(reconstruction_to_align->ViewIds().size());
+    for (const auto& view_id : reconstruction_to_align->ViewIds()) {
+      view_names.push_back(reconstruction_to_align->View(view_id)->Name());
+    }
+
+    // Extract frame indices.
+    std::unordered_map<int, std::string> frame_indices;
+    ExtractFrameIndicesFromImages(view_names, &frame_indices);
+
+    // Remove views out of range.
+    for (const auto& frame_index : frame_indices) {
+      if (frame_index.first < FLAGS_start_frame ||
+          frame_index.first > FLAGS_end_frame) {
+        const std::string& view_name = frame_index.second;
+        reconstruction_to_align->RemoveView(
+            reconstruction_to_align->ViewIdFromName(view_name));
+      }
+    }
+  }
 
   const std::vector<std::string> common_view_names =
       theia::FindCommonViewsByName(*reference_reconstruction,

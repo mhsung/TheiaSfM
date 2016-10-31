@@ -386,7 +386,7 @@ bool IsImageFileSortedByFrame(const std::vector<std::string>& image_files) {
 // FIXME.
 void ExtractFrameIndicesFromImages(
     const std::vector<std::string>& image_files,
-    std::map<int, std::string>* frame_indices) {
+    std::unordered_map<int, std::string>* frame_indices) {
   CHECK_NOTNULL(frame_indices);
   frame_indices->clear();
 
@@ -451,7 +451,7 @@ void GetConsecutivePairsToMatch(
   CHECK_NOTNULL(pairs_to_match);
   CHECK_GT(frame_range, 0);
 
-  std::map<int, std::string> frame_indices;
+  std::unordered_map<int, std::string> frame_indices;
   ExtractFrameIndicesFromImages(image_files, &frame_indices);
 
   pairs_to_match->clear();
