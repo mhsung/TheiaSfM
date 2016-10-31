@@ -13,6 +13,7 @@ PairwisePositionError::PairwisePositionError(const double weight)
 }
 
 ceres::CostFunction* PairwisePositionError::Create(const double weight) {
+  //return (new ceres::AutoDiffCostFunction<PairwisePositionError, 3, 3, 3, 3>(
   return (new ceres::AutoDiffCostFunction<PairwisePositionError, 3, 3, 3>(
         new PairwisePositionError(weight)));
 }

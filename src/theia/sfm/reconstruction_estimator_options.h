@@ -189,12 +189,6 @@ struct ReconstructionEstimatorOptions {
   // estimator type.
   double position_constraint_weight_multiplier = 1.0;
 
-  // @mhsung
-  int consecutive_camera_range = 10;
-
-  // @mhsung
-  double consecutive_camera_position_constraint_weight = 0.0;
-
 
   // --------------- Global Position Estimation Options --------------- //
   NonlinearPositionEstimator::Options nonlinear_position_estimator_options;

@@ -117,8 +117,10 @@ def draw_bboxes(im, row, pred, class_names):
                   bbox_thickness)
 
     bbox_score = row['score']
-    orientation_score = pred[-1]
-    assert (len(pred) == 4)
+    orientation_score = 0
+    if pred:
+        assert (len(pred) == 4)
+        orientation_score = pred[-1]
 
     if FLAGS.with_object_index:
         label = '[{:d}] {:s} ({:.3f}, {:.3f})'.format(
@@ -180,7 +182,9 @@ def generate_output_images(im_name, df, preds, class_names, num_digits):
     # Draw bounding boxes.
     if FLAGS.draw_bboxes:
         for bbox_idx, row in subset_df.iterrows():
-            pred = preds[bbox_idx, :]
+            pred = []
+            if preds:
+                pred = preds[bbox_idx, :]
             im = draw_bboxes(im, row, pred, class_names)
 
     if FLAGS.half_size_output:
@@ -208,9 +212,11 @@ if __name__ == '__main__':
         FLAGS.with_object_index)
 
     # Read estimated best orientations.
-    preds = cnn_utils.read_orientations(
-        os.path.join(FLAGS.data_dir, FLAGS.orientation_file))
-    assert (len(df.index) == preds.shape[0])
+    preds = []
+    if FLAGS.orientation_file != "":
+        preds = cnn_utils.read_orientations(
+            os.path.join(FLAGS.data_dir, FLAGS.orientation_file))
+        assert (len(df.index) == preds.shape[0])
 
     if not os.path.exists(os.path.join(
             FLAGS.data_dir, FLAGS.out_composite_dir)):

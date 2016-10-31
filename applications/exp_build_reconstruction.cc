@@ -322,14 +322,15 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
       FLAGS_position_constraint_weight_multiplier;
 
   if (FLAGS_use_consecutive_camera_position_constraints) {
-    reconstruction_estimator_options.consecutive_camera_range =
-        FLAGS_consecutive_pair_frame_range;
-    reconstruction_estimator_options
+    reconstruction_estimator_options.nonlinear_position_estimator_options
+        .consecutive_camera_range = FLAGS_consecutive_pair_frame_range;
+    reconstruction_estimator_options.nonlinear_position_estimator_options
         .consecutive_camera_position_constraint_weight =
         FLAGS_consecutive_camera_position_constraint_weight;
   } else {
     // Set zero weight.
     reconstruction_estimator_options
+        .nonlinear_position_estimator_options
         .consecutive_camera_position_constraint_weight = 0.0;
   }
 
@@ -598,7 +599,7 @@ void AddMatchesToReconstructionBuilder(
   // @mhsung
   // Check whether image files are sorted based on frames.
   // This is checked to use consecutive camera constraints.
-	if (FLAGS.use_consecutive_camera_position_constraints) {
+	if (FLAGS_use_consecutive_camera_position_constraints) {
 		CHECK(IsImageFileSortedByFrame(image_files));
 	}
 
@@ -636,7 +637,7 @@ void AddImagesToReconstructionBuilder(
   // @mhsung
   // Check whether image files are sorted based on frames.
   // This is checked to use consecutive camera constraints.
-	if (FLAGS.use_consecutive_camera_position_constraints) {
+	if (FLAGS_use_consecutive_camera_position_constraints) {
 		CHECK(IsImageFileSortedByFrame(image_files));
 	}
 

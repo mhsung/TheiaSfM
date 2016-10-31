@@ -71,6 +71,7 @@ class NonlinearPositionEstimator : public PositionEstimator {
     // camera to camera correspondences.
     double point_to_camera_weight = 0.5;
 
+    // @mhsung
     int consecutive_camera_range = 10;
     double consecutive_camera_position_constraint_weight = 0.0;
   };

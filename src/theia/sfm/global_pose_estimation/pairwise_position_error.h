@@ -13,7 +13,10 @@ struct PairwisePositionError {
 
   // The error is given by the position error described above.
   template <typename T>
-  bool operator()(const T* position1, const T* position2, T* residuals) const;
+  bool operator()(//const T* prev_position,
+                  const T* curr_position,
+                  const T* next_position,
+                  T* residuals) const;
 
   static ceres::CostFunction* Create(const double weight);
 
@@ -21,13 +24,25 @@ struct PairwisePositionError {
 };
 
 template <typename T>
-bool PairwisePositionError::operator() (const T* position1,
-                                        const T* position2,
+bool PairwisePositionError::operator() (//const T* prev_position,
+                                        const T* curr_position,
+                                        const T* next_position,
                                         T* residuals) const {
 
-  residuals[0] = T(weight_) * (position2[0] - position1[0]);
-  residuals[1] = T(weight_) * (position2[1] - position1[1]);
-  residuals[2] = T(weight_) * (position2[2] - position1[2]);
+  // Compute first derivative error.
+  residuals[0] = T(weight_) * (next_position[0] - curr_position[0]);
+  residuals[1] = T(weight_) * (next_position[1] - curr_position[1]);
+  residuals[2] = T(weight_) * (next_position[2] - curr_position[2]);
+
+  /*
+  // Compute second derivative error.
+  residuals[0] = T(weight_) * ((next_position[0] - curr_position[0]) -
+                               (curr_position[0] - prev_position[0]));
+  residuals[1] = T(weight_) * ((next_position[1] - curr_position[1]) -
+                               (curr_position[1] - prev_position[1]));
+  residuals[2] = T(weight_) * ((next_position[2] - curr_position[2]) -
+                               (curr_position[2] - prev_position[2]));
+  */
   return true;
 }
 
