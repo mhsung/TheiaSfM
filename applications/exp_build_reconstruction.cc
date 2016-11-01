@@ -162,6 +162,7 @@ DEFINE_double(bundle_adjustment_robust_loss_width, 10.0,
 // ---- //
 DEFINE_string(initial_bounding_boxes_filepath, "", "");
 DEFINE_string(initial_orientations_filepath, "", "");
+DEFINE_string(initial_reconstruction_filepath, "", "");
 
 DEFINE_bool(exp_global_run_bundle_adjustment, true,
             "Only used when 'EXP_GLOBAL' is chosen for rotation estimator "
@@ -557,9 +558,9 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
       CHECK(view != nullptr);
 
       // Set orientation
-      Eigen::Vector3d angle_axis;
       const Eigen::Matrix3d orientation =
         ComputeTheiaCameraRotationFromCameraParams(bbox->camera_param_);
+      Eigen::Vector3d angle_axis;
       ceres::RotationMatrixToAngleAxis(
         ceres::ColumnMajorAdapter3x3(orientation.data()), angle_axis.data());
       reconstruction_builder->SetInitialObjectViewOrientation(
@@ -579,6 +580,113 @@ void SetInitialOrientationsAndPositions(ReconstructionBuilder*
         reconstruction_builder->SetInitialViewObjectPositionDirectionWeight(
             object_id, view_id, bbox->bbox_score_);
       }
+    }
+  }
+}
+
+void CreateTwoVirtualObjects(
+    const Reconstruction& reconstruction,
+    std::vector<Eigen::Matrix3d>* object_orientations,
+    std::vector<Eigen::Vector3d>* object_positions) {
+  CHECK_NOTNULL(object_orientations)->clear();
+  CHECK_NOTNULL(object_positions)->clear();
+
+  // Set two pivot cameras.
+  // The first camera becomes the first pivot.
+  CHECK_GE(reconstruction.ViewIds().size(), 2);
+  const ViewId pivot1_init_view_id = reconstruction.ViewIds().front();
+  const View* pivot1_init_view = reconstruction.View(pivot1_init_view_id);
+  CHECK (pivot1_init_view != nullptr && pivot1_init_view->IsEstimated());
+  LOG(INFO) << "View " << pivot1_init_view_id << " used as object 1.";
+
+  // Find the second pivot camera, which is the farthest one from pivot 1.
+  ViewId pivot2_init_view_id = kInvalidViewId;
+  double max_distance_from_pivot1 = 0.0;
+
+  for (const ViewId init_view_id : reconstruction.ViewIds()) {
+    const View* init_view = reconstruction.View(init_view_id);
+    CHECK (init_view != nullptr && init_view->IsEstimated());
+
+    const double distance_from_pivot1 =
+        (pivot1_init_view->Camera().GetPosition() -
+         init_view->Camera().GetPosition()).norm();
+    if (distance_from_pivot1 > max_distance_from_pivot1) {
+      max_distance_from_pivot1 = distance_from_pivot1;
+      pivot2_init_view_id = init_view_id;
+    }
+  }
+  CHECK_NE(pivot2_init_view_id, kInvalidViewId);
+  const View* pivot2_init_view = reconstruction.View(pivot2_init_view_id);
+  LOG(INFO) << "View " << pivot2_init_view_id << " used as object 2.";
+
+  // Set orientations.
+  object_orientations->push_back(
+      pivot1_init_view->Camera().GetOrientationAsRotationMatrix());
+  object_orientations->push_back(
+      pivot2_init_view->Camera().GetOrientationAsRotationMatrix());
+
+  // Set positions.
+  // NOTE:
+  // The virtual object positions must not be the same with any camera
+  // position, otherwise translation direction optimization fails.
+  // Thus, we interpolate between two pivot camera positions.
+  object_positions->push_back(
+      (pivot1_init_view->Camera().GetPosition() * 1.0) +
+      (pivot2_init_view->Camera().GetPosition() * 2.0) / 3.0);
+  object_positions->push_back(
+      (pivot1_init_view->Camera().GetPosition() * 2.0) +
+      (pivot2_init_view->Camera().GetPosition() * 1.0) / 3.0);
+}
+
+void SetInitialReconstruction(ReconstructionBuilder* reconstruction_builder) {
+  // Read initial reconstruction.
+  std::unique_ptr<theia::Reconstruction> init_reconstruction(
+      new theia::Reconstruction());
+  CHECK(ReadReconstruction(FLAGS_initial_reconstruction_filepath,
+                           init_reconstruction.get()))
+  << "Could not read reconstruction file.";
+
+  std::vector<Eigen::Matrix3d> object_orientations;
+  std::vector<Eigen::Vector3d> object_positions;
+  CreateTwoVirtualObjects(
+      *init_reconstruction, &object_orientations, &object_positions);
+  CHECK_EQ(object_orientations.size(), object_positions.size());
+  const int num_objects = object_orientations.size();
+
+  // Compute relative orientations and positions with virtual objects.
+  for (const ViewId init_view_id : init_reconstruction->ViewIds()) {
+    const View* init_view = init_reconstruction->View(init_view_id);
+    CHECK (init_view != nullptr && init_view->IsEstimated());
+
+    Reconstruction* reconstruction =
+        reconstruction_builder->GetMutableReconstruction();
+    const theia::ViewId view_id =
+        reconstruction->ViewIdFromName(init_view->Name());
+    if (view_id == kInvalidViewId) {
+      LOG(WARNING) << "View does not exist (View ID = "
+                   << init_view->Name() << ").";
+      continue;
+    }
+
+    for (ObjectId object_id = 0; object_id < num_objects; object_id++) {
+      // Set orientation.
+      const Eigen::Matrix3d orientation =
+          init_view->Camera().GetOrientationAsRotationMatrix() *
+              object_orientations[object_id].transpose();
+      Eigen::Vector3d angle_axis;
+      ceres::RotationMatrixToAngleAxis(
+          ceres::ColumnMajorAdapter3x3(orientation.data()), angle_axis.data());
+      reconstruction_builder->SetInitialObjectViewOrientation(
+          object_id, view_id, angle_axis);
+
+      // Set position.
+      const Eigen::Vector3d cam_to_obj_dir =
+          (object_positions[object_id] -
+              init_view->Camera().GetPosition()).normalized();
+      const Eigen::Vector3d cam_coord_cam_to_obj_dir =
+          init_view->Camera().GetOrientationAsRotationMatrix() * cam_to_obj_dir;
+      reconstruction_builder->SetInitialViewObjectPositionDirection(
+          object_id, view_id, cam_coord_cam_to_obj_dir);
     }
   }
 }
@@ -727,6 +835,8 @@ int main(int argc, char *argv[]) {
   if (FLAGS_initial_orientations_filepath != "" &&
     FLAGS_initial_bounding_boxes_filepath != "") {
     SetInitialOrientationsAndPositions(&reconstruction_builder);
+  } else if (FLAGS_initial_reconstruction_filepath != "") {
+    SetInitialReconstruction(&reconstruction_builder);
   }
 
   std::vector<Reconstruction*> reconstructions;

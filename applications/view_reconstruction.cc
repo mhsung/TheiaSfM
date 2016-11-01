@@ -42,6 +42,7 @@
 #include <theia/image/image.h>
 #include <string>
 #include <vector>
+#include "applications/exp_neural_net_output_reader.h"
 
 #ifdef __APPLE__
 #include <OpenGL/OpenGL.h>
@@ -64,12 +65,18 @@
 #endif  // __APPLE__
 
 DEFINE_string(reconstruction, "", "Reconstruction file to be viewed.");
+// @mhsung
+// Optional.
+DEFINE_string(bounding_boxes_filepath, "", "");
+
 
 // Containers for the data.
 std::vector<theia::Camera> cameras_list;
 std::vector<Eigen::Vector3d> world_points;
 std::vector<Eigen::Vector3f> point_colors;
 std::vector<int> num_views_for_track;
+// @mhsung
+std::vector<bool> is_camera_selected;
 
 // Parameters for OpenGL.
 int width = 1200;
@@ -153,7 +160,7 @@ void DrawAxes(float length) {
   glLineWidth(1.0);
 }
 
-void DrawCamera(const theia::Camera& camera) {
+void DrawCamera(const theia::Camera& camera, bool is_selected = false) {
   glPushMatrix();
   Eigen::Matrix4d transformation_matrix = Eigen::Matrix4d::Zero();
   transformation_matrix.block<3, 3>(0, 0) =
@@ -165,7 +172,11 @@ void DrawCamera(const theia::Camera& camera) {
   glMultMatrixd(reinterpret_cast<GLdouble*>(transformation_matrix.data()));
 
   // Draw Cameras.
-  glColor3f(1.0, 0.0, 0.0);
+  if (is_selected) {
+    glColor3f(1.0, 0.0, 0.0);
+  } else {
+    glColor3f(0.0, 0.0, 1.0);
+  }
 
   // Create the camera wireframe. If intrinsic parameters are not set then use
   // the focal length as a guess.
@@ -281,7 +292,11 @@ void RenderScene() {
   // Draw the cameras.
   if (draw_cameras) {
     for (int i = 0; i < cameras_list.size(); i++) {
-      DrawCamera(cameras_list[i]);
+      if (is_camera_selected.size() == cameras_list.size()) {
+        DrawCamera(cameras_list[i], is_camera_selected[i]);
+      } else {
+        DrawCamera(cameras_list[i]);
+      }
     }
   }
 
@@ -488,6 +503,17 @@ int main(int argc, char* argv[]) {
   // Centers the reconstruction based on the absolute deviation of 3D points.
   reconstruction->Normalize();
 
+
+  // @mhsung
+  std::set<std::string> view_names;
+  if (FLAGS_bounding_boxes_filepath != "") {
+    CHECK(theia::GetObjectRelatedViewNames(
+        FLAGS_bounding_boxes_filepath, &view_names));
+  }
+  is_camera_selected.clear();
+  is_camera_selected.reserve(reconstruction->NumViews());
+
+
   // Set up camera drawing.
   cameras_list.reserve(reconstruction->NumViews());
   for (const theia::ViewId view_id : reconstruction->ViewIds()) {
@@ -496,6 +522,13 @@ int main(int argc, char* argv[]) {
       continue;
     }
     cameras_list.emplace_back(view->Camera());
+
+    // @mhsung
+    if (theia::ContainsKey(view_names, view->Name())) {
+      is_camera_selected.push_back(true);
+    } else {
+      is_camera_selected.push_back(false);
+    }
   }
 
   // Set up world points and colors.

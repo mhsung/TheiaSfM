@@ -38,7 +38,8 @@ else (NOT MSVC)
   set(EXTRA_GL_LIBRARIES ${GLEW_LIBRARIES})
 endif (NOT MSVC)
 
-add_executable(view_reconstruction view_reconstruction.cc)
+add_executable(view_reconstruction view_reconstruction.cc
+  exp_neural_net_output_reader.h exp_neural_net_output_reader.cc)
 target_link_libraries(view_reconstruction theia ${GFLAGS_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${EXTRA_GL_LIBRARIES})

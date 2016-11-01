@@ -5,6 +5,7 @@
 
 #include <list>
 #include <memory>
+#include <string>
 #include <vector>
 #include <unordered_map>
 
@@ -30,10 +31,16 @@ struct DetectedBBox {
 typedef std::unique_ptr<DetectedBBox> DetectedBBoxPtr;
 typedef std::list<DetectedBBoxPtr> DetectedBBoxPtrList;
 
+// NOTE:
+// Do not read orientations if orientation_filepath == "".
 bool ReadNeuralNetBBoxesAndOrientations(
   const std::string& bbox_info_filepath,
   const std::string& orientation_filepath,
   std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes);
+
+bool GetObjectRelatedViewNames(
+    const std::string& bbox_info_filepath,
+    std::set<std::string>* view_names);
 
 void SortByBBoxIds(
   const std::unordered_map<ObjectId, DetectedBBoxPtrList>& object_bboxes,

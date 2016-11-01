@@ -13,6 +13,8 @@
 
 namespace theia {
 
+// NOTE:
+// Do not read orientations if orientation_filepath == "".
 bool ReadNeuralNetBBoxesAndOrientations(
   const std::string& bbox_info_filepath,
   const std::string& orientation_filepath,
@@ -52,6 +54,9 @@ bool ReadNeuralNetBBoxesAndOrientations(
     CHECK(std::getline(sstr, token, ','));
     bbox->object_id_ = std::stoi(token);
 
+    bbox->camera_param_.setZero();
+    bbox->orientation_score_ = 0.0;
+
     // Add bbox.
     bboxes.push_back(std::move(bbox));
   }
@@ -61,17 +66,25 @@ bool ReadNeuralNetBBoxesAndOrientations(
   const int num_bboxes = bboxes.size();
   LOG(INFO) << "Loaded " << num_bboxes << " bounding box information.";
 
-  // Read orientations.
-  Eigen::MatrixXd orientation_matrix(num_bboxes, 4);
-  CHECK(ReadEigenMatrixFromCSV(orientation_filepath, &orientation_matrix));
 
-  int bbox_id = 0;
-  for (auto it = bboxes.begin(); it != bboxes.end(); ++it, ++bbox_id) {
-    (*it)->camera_param_ =
-        orientation_matrix.block<1, 3>(bbox_id, 0).transpose();
-    (*it)->orientation_score_ = orientation_matrix(bbox_id, 3);
+  // Read orientations.
+  // NOTE:
+  // Do not read orientations if orientation_filepath == "".
+  if (orientation_filepath == "") {
+    LOG(INFO) << "Skip reading orientations since the file is not given.";
+  } else {
+    Eigen::MatrixXd orientation_matrix(num_bboxes, 4);
+    CHECK(ReadEigenMatrixFromCSV(orientation_filepath, &orientation_matrix));
+
+    int bbox_id = 0;
+    for (auto it = bboxes.begin(); it != bboxes.end(); ++it, ++bbox_id) {
+      (*it)->camera_param_ =
+          orientation_matrix.block<1, 3>(bbox_id, 0).transpose();
+      (*it)->orientation_score_ = orientation_matrix(bbox_id, 3);
+    }
+    LOG(INFO) << "Loaded " << num_bboxes << " bounding box orientation.";
   }
-  LOG(INFO) << "Loaded " << num_bboxes << " bounding box orientation.";
+
 
   // Collect object bounding boxes.
   for (auto& bbox : bboxes) {
@@ -79,6 +92,27 @@ bool ReadNeuralNetBBoxesAndOrientations(
   }
   const int num_object = object_bboxes->size();
   LOG(INFO) << "Loaded " << num_object << " objects.";
+
+  return true;
+}
+
+bool GetObjectRelatedViewNames(
+    const std::string& bbox_info_filepath,
+    std::set<std::string>* view_names) {
+  CHECK_NOTNULL(view_names);
+
+  std::unordered_map<ObjectId, DetectedBBoxPtrList> object_bboxes;
+  if (!ReadNeuralNetBBoxesAndOrientations(
+      bbox_info_filepath, "", &object_bboxes)) {
+    return false;
+  }
+
+  view_names->clear();
+  for (const auto& bboxes : object_bboxes) {
+    for (const auto& bbox : bboxes.second) {
+      view_names->insert(bbox->view_name_);
+    }
+  }
 
   return true;
 }
