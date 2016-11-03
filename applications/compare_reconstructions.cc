@@ -63,6 +63,8 @@ DEFINE_double(robust_alignment_threshold, 0.0,
 DEFINE_string(out_json_file, "", "");
 DEFINE_int32(start_frame, -1, "");
 DEFINE_int32(end_frame, -1, "");
+DEFINE_string(out_reference_csv, "", "");
+DEFINE_string(out_to_align_csv, "", "");
 
 using theia::Reconstruction;
 using theia::TrackId;
@@ -154,6 +156,19 @@ void ExtractFrameIndicesFromImages(
   }
 }
 
+// @mhsung
+void ComputeMeanMedian(
+    const std::vector<double>& sorted_errors,
+    double* mean_error, double* median_error) {
+  CHECK_NOTNULL(mean_error);
+  CHECK_NOTNULL(median_error);
+
+  (*mean_error) = std::accumulate(
+      sorted_errors.begin(), sorted_errors.end(), 0.0) /
+      static_cast<double>(sorted_errors.size());
+  (*median_error) = sorted_errors[sorted_errors.size() / 2];
+}
+
 std::string PrintMeanMedianHistogram(
     const std::vector<double>& sorted_errors,
     const std::vector<double>& histogram_bins) {
@@ -187,7 +202,11 @@ double AngularDifference(const Eigen::Vector3d& rotation1,
 // the difference in orientations after alignment.
 void EvaluateRotations(const Reconstruction& reference_reconstruction,
                        const Reconstruction& reconstruction_to_align,
-                       const std::vector<std::string>& common_view_names) {
+                       const std::vector<std::string>& common_view_names,
+                       // @mhsung
+                       JsonFile* out_file) {
+  CHECK_NOTNULL(out_file);
+
   // Gather all the rotations in common with both views.
   std::vector<Eigen::Vector3d> rotations1, rotations2;
   rotations1.reserve(common_view_names.size());
@@ -218,16 +237,25 @@ void EvaluateRotations(const Reconstruction& reference_reconstruction,
       PrintMeanMedianHistogram(rotation_error_degrees, histogram_bins);
   LOG(INFO) << "Rotation difference when aligning orientations:\n"
             << rotation_error_msg;
+
+  // @mhsung
+  if (out_file->IsOpen()) {
+    double mean_rotation_error = 0.0, median_rotation_error = 0.0;
+    ComputeMeanMedian(rotation_error_degrees,
+        &mean_rotation_error, &median_rotation_error);
+    out_file->WriteElement("mean_rotation_error", mean_rotation_error);
+    out_file->WriteElement("median_rotation_error", median_rotation_error);
+  }
 }
 
 // Align the reconstructions then evaluate the pose errors.
-void EvaluateAlignedPoseError(
-    const std::vector<std::string>& common_view_names,
-    const Reconstruction& reference_reconstruction,
-    Reconstruction* reconstruction_to_align,
-    // @mhsung
-    JsonFile* out_file) {
+void EvaluateAlignedPoseError(const std::vector<std::string>& common_view_names,
+                              const Reconstruction& reference_reconstruction,
+                              Reconstruction* reconstruction_to_align,
+                              // @mhsung
+                              JsonFile* out_file) {
   CHECK_NOTNULL(out_file);
+
   if (FLAGS_robust_alignment_threshold > 0.0) {
     AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
                                reference_reconstruction,
@@ -280,10 +308,12 @@ void EvaluateAlignedPoseError(
     pose_error.ComputeMeanMedian(
         &mean_rotation_error, &median_rotation_error,
         &mean_position_error, &median_position_error);
-    out_file->WriteElement("mean_rotation_error", mean_rotation_error);
-    out_file->WriteElement("median_rotation_error", median_rotation_error);
-    out_file->WriteElement("mean_position_error", mean_position_error);
-    out_file->WriteElement("median_position_error", median_position_error);
+    out_file->WriteElement("mean_aligned_rotation_error", mean_rotation_error);
+    out_file->WriteElement("median_aligned_rotation_error",
+                           median_rotation_error);
+    out_file->WriteElement("mean_aligned_position_error", mean_position_error);
+    out_file->WriteElement("median_aligned_position_error",
+                           median_position_error);
   }
 }
 
@@ -297,6 +327,27 @@ void ComputeTrackLengthHistogram(const Reconstruction& reconstruction) {
   }
   const std::string hist_msg = histogram.PrintString();
   LOG(INFO) << "Track lengths = \n" << hist_msg;
+}
+
+// @mhsung
+bool SaveCameraPositionCSVFile(const std::vector<std::string>& view_names,
+                               const Reconstruction& reconstruction,
+                               const std::string& filename) {
+  std::ofstream file(filename);
+  if (!file.good()) return false;
+
+  const Eigen::IOFormat csv_format(
+      Eigen::FullPrecision, Eigen::DontAlignCols, ",");
+
+  for (const auto& view_name : view_names) {
+    const theia::View* view = reconstruction.View(
+        reconstruction.ViewIdFromName(view_name));
+    const Eigen::Vector3d camera_position = view->Camera().GetPosition();
+    file << camera_position.transpose().format(csv_format) << std::endl;
+  }
+
+  file.close();
+  return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -366,6 +417,14 @@ int main(int argc, char* argv[]) {
             << "\n\tReconstruction 2: " << reconstruction_to_align->NumTracks();
 
   // @mhsung
+  if (FLAGS_out_reference_csv != "" && FLAGS_out_to_align_csv != "") {
+    CHECK(SaveCameraPositionCSVFile(
+        common_view_names, *reference_reconstruction, FLAGS_out_reference_csv));
+    CHECK(SaveCameraPositionCSVFile(
+        common_view_names, *reconstruction_to_align, FLAGS_out_to_align_csv));
+  }
+
+  // @mhsung
   JsonFile out_file;
   if (FLAGS_out_json_file != "") {
     CHECK(out_file.Open(FLAGS_out_json_file))
@@ -378,12 +437,14 @@ int main(int argc, char* argv[]) {
   // Evaluate rotation independent of positions.
   EvaluateRotations(*reference_reconstruction,
                     *reconstruction_to_align,
-                    common_view_names);
+                    common_view_names,
+                    &out_file);
 
   // Align models and evaluate position and rotation errors.
   EvaluateAlignedPoseError(common_view_names,
                            *reference_reconstruction,
-                           reconstruction_to_align.get(), &out_file);
+                           reconstruction_to_align.get(),
+                           &out_file);
 
   // @mhsung
   out_file.Close();

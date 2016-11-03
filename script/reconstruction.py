@@ -69,6 +69,7 @@ def run(FLAGS, PATHS):
     cmd += '--min_triangulation_angle_degrees=0.0' + ' \\\n'
     cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
     cmd += '--bundle_adjust_tracks=true' + ' \\\n'
+    cmd += '--exp_global_run_bundle_adjustment=true' + ' \\\n'
 
     # if FLAGS.less_num_inliers:
     #     cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'

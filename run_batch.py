@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Author: Minhyuk Sung (mhsung@cs.stanford.edu)
 
 import gflags
@@ -13,8 +13,10 @@ FLAGS = gflags.FLAGS
 gflags.DEFINE_string('dataset_dir', '', '')
 gflags.DEFINE_string('image_wildcard', '', '')
 
-gflags.DEFINE_bool('run_convnet', True, '')
-gflags.DEFINE_bool('run_sfm', True, '')
+gflags.DEFINE_bool('run_convnet', False, '')
+gflags.DEFINE_bool('run_sfm', False, '')
+gflags.DEFINE_bool('run_sfm_uio', False, '')
+gflags.DEFINE_bool('run_sfm_gt', False, '')
 
 
 if __name__ == '__main__':
@@ -56,6 +58,8 @@ if __name__ == '__main__':
             os.system(cmd)
             # cmd_list.append((data_name, cmd))
 
+
+        if FLAGS.run_sfm_uio:
             cmd = ''
             cmd += os.path.normpath(os.path.join(
                 sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
@@ -65,6 +69,8 @@ if __name__ == '__main__':
             os.system(cmd)
             # cmd_list.append((data_name, cmd))
 
+
+        if FLAGS.run_sfm_gt:
             cmd = ''
             cmd += os.path.normpath(os.path.join(
                 sys.path[0], 'script', 'run_exp.py')) + ' \\\n'
@@ -74,6 +80,8 @@ if __name__ == '__main__':
             os.system(cmd)
             # cmd_list.append((data_name, cmd))
 
-            # parallel_exec.run_parallel('TheiaSfM', cmd_list)
-            print ('================')
-            print ('\n')
+        print ('================')
+        print ('\n')
+
+    # parallel_exec.run_parallel('TheiaSfM', cmd_list)
+

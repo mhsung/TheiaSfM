@@ -23,9 +23,11 @@ gflags.DEFINE_string('out_file', '', '')
 attr_names = ['Name', 'Trajectory_Image',
               'Num_Views', 'Num_Estimated_Views',
               'Mean_Rotation_Error', 'Median_Rotation_Error',
-              'Mean_Position_Error', 'Median_Position_Error']
+              'Mean_Aligned_Rotation_Error', 'Median_Aligned_Rotation_Error',
+              'Mean_Aligned_Position_Error', 'Median_Aligned_Position_Error']
 
 attr_types = [librr.AttrType.text, librr.AttrType.image,
+              librr.AttrType.number, librr.AttrType.number,
               librr.AttrType.number, librr.AttrType.number,
               librr.AttrType.number, librr.AttrType.number,
               librr.AttrType.number, librr.AttrType.number]
@@ -44,6 +46,8 @@ def load_instances():
         prefix = os.path.basename(dirname)
         if not prefix.startswith('sfm'):
             continue
+        if prefix != "sfm_track" and prefix != "sfm_track_uio":
+            continue
         print (prefix)
 
         trajectory_image_filepath = os.path.join(dirname, 'snapshot.png')
@@ -55,13 +59,20 @@ def load_instances():
         num_estimated_views = int(eval["num_estimated_views"])
         mean_rotation_error = float(eval["mean_rotation_error"])
         median_rotation_error = float(eval["median_rotation_error"])
-        mean_position_error = float(eval["mean_position_error"])
-        median_position_error = float(eval["median_position_error"])
+        mean_aligned_rotation_error = float(eval["mean_aligned_rotation_error"])
+        median_aligned_rotation_error =\
+            float(eval["median_aligned_rotation_error"])
+        mean_aligned_position_error = float(eval["mean_aligned_position_error"])
+        median_aligned_position_error =\
+            float(eval["median_aligned_position_error"])
 
         instance = OutputInstance(prefix, trajectory_image_filepath,
                                   num_views, num_estimated_views,
                                   mean_rotation_error, median_rotation_error,
-                                  mean_position_error, median_position_error)
+                                  mean_aligned_rotation_error,
+                                  median_aligned_rotation_error,
+                                  mean_aligned_position_error,
+                                  median_aligned_position_error)
         instances.append(instance)
 
     return instances

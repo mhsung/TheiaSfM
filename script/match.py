@@ -35,5 +35,6 @@ def run(FLAGS, PATHS):
     # if FLAGS.no_only_symmetric:
     #     cmd += '--keep_only_symmetric_matches=false' + ' \\\n'
 
-    cmd += '--log_dir=' + PATHS.log_path
+    cmd += '--log_dir=' + PATHS.log_path + ' \\\n'
+    cmd += '--alsologtostderr'
     run_cmd.save_and_run_cmd(cmd, os.path.join(PATHS.script_path, 'match.sh'))

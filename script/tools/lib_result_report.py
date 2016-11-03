@@ -303,6 +303,7 @@ def write_latex_header(file):
     file.write('\\usepackage{graphicx}\n')
     # file.write('\\usepackage[margin=0.10in]{geometry}\n')
     file.write('\\usepackage[landscape, margin=0.10in]{geometry}\n')
+    file.write('\\usepackage{makecell}\n')
     file.write('\\usepackage{tabu}\n')
     file.write('\n')
 
@@ -355,8 +356,9 @@ def write_latex_table(file, instances, attr_names, attr_types):
     file.write('\\toprule\n')
 
     for i in range(num_attrs):
+        file.write('\\makecell{ ')
         attr_name = attr_names[i]
-        attr_name = attr_name.replace('_', ' ')
+        attr_name = attr_name.replace('_', ' \\\\ ')
         attr_name = attr_name.replace('0', '.')
         attr_name = attr_name.replace('1', '(')
         attr_name = attr_name.replace('2', ')')
@@ -364,9 +366,9 @@ def write_latex_table(file, instances, attr_names, attr_types):
         # file.write('\\Large{'+attr_name+'}')
         file.write(attr_name)
         if i < num_attrs - 1:
-            file.write(' &\n')
+            file.write('} &\n')
         else:
-            file.write('\\\\\n')
+            file.write('}\\\\\n')
 
     file.write('\\toprule\n')
 

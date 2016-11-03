@@ -61,6 +61,10 @@ void CreateMatchesFromCorrespondences(
   int num_passed_with_failed_without_inits = 0;
   int num_failed_with_failed_without_inits = 0;
 
+  int num_all_image_pairs = image_pair_correspondences.size();
+  int count_image_pairs = 0;
+  int processed_percentage = 0;
+
   for (const auto& image_pair : image_pair_correspondences) {
     const ViewId view1_idx = image_pair.first.first;
     const ViewId view2_idx = image_pair.first.second;
@@ -155,6 +159,16 @@ void CreateMatchesFromCorrespondences(
             << " homography matches out of " << putative_matches.size()
             << " putative matches.";
     matches->push_back(image_pair_match);
+
+    ++count_image_pairs;
+    const int percentage = (int)(
+        ((double)count_image_pairs) / num_all_image_pairs * 100.0);
+    if (percentage >= (processed_percentage + 5)) {
+      processed_percentage += 5;
+      LOG(INFO) << processed_percentage << "% image pairs ("
+                << count_image_pairs << "/" << num_all_image_pairs << ") are "
+                << " processed.";
+    }
   }
 
   VLOG(2) << "# tested pairs: " << num_tested_pairs;
