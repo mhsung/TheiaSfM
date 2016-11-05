@@ -4,6 +4,9 @@
 import run_cmd
 import os
 
+kNNPriorWeight = 10
+kGTPriorWeight = 10000
+
 
 def clean(FLAGS, PATHS):
     if os.path.exists(PATHS.reconstruction_file + '-0'):
@@ -69,12 +72,16 @@ def run(FLAGS, PATHS):
     cmd += '--min_triangulation_angle_degrees=0.0' + ' \\\n'
     cmd += '--triangulation_reprojection_error_pixels=100000.0' + ' \\\n'
     cmd += '--bundle_adjust_tracks=true' + ' \\\n'
-    cmd += '--exp_global_run_bundle_adjustment=true' + ' \\\n'
 
     # if FLAGS.less_num_inliers:
     #     cmd += '--min_num_inliers_for_valid_match=10' + ' \\\n'
     # if FLAGS.less_sampson_error:
     #     cmd += '--max_sampson_error_for_verified_match=10.0' + ' \\\n'
+
+    if FLAGS.no_bundle:
+        cmd += '--exp_global_run_bundle_adjustment=false' + ' \\\n'
+    else:
+        cmd += '--exp_global_run_bundle_adjustment=true' + ' \\\n'
 
     if FLAGS.use_initial_orientations:
         cmd += '--initial_bounding_boxes_filepath=' + \
@@ -82,23 +89,30 @@ def run(FLAGS, PATHS):
         cmd += '--initial_orientations_filepath=' + \
                PATHS.init_orientation_path + ' \\\n'
     if FLAGS.use_gt_orientations:
-        cmd += '--initial_bounding_boxes_filepath=' + \
-               PATHS.ground_truth_bbox_path + ' \\\n'
-        cmd += '--initial_orientations_filepath=' + \
-               PATHS.ground_truth_orientation_path + ' \\\n'
+        cmd += '--initial_reconstruction_filepath=' + \
+               PATHS.ground_truth_reconstruction_path + ' \\\n'
 
     # FIXME:
     # Make the weights as options.
-    if FLAGS.use_initial_orientations or FLAGS.use_gt_orientations:
+    if FLAGS.use_initial_orientations:
         if FLAGS.use_score_based_weights:
             assert (FLAGS.use_initial_orientations)
             assert (not FLAGS.use_gt_orientations)
             cmd += '--use_per_object_view_pair_weights=true' + ' \\\n'
-            cmd += '--rotation_constraint_weight_multiplier=100.0' + ' \\\n'
-            cmd += '--position_constraint_weight_multiplier=50.0' + ' \\\n'
+            cmd += '--rotation_constraint_weight_multiplier=' + \
+                    str(2 * kNNPriorWeight) + ' \\\n'
+            cmd += '--position_constraint_weight_multiplier=' + \
+                    str(kNNPriorWeight) + ' \\\n'
         else:
-            cmd += '--rotation_constraint_weight_multiplier=50.0' + ' \\\n'
-            cmd += '--position_constraint_weight_multiplier=50.0' + ' \\\n'
+            cmd += '--rotation_constraint_weight_multiplier=' + \
+                    str(kNNPriorWeight) + ' \\\n'
+            cmd += '--position_constraint_weight_multiplier=' + \
+                    str(kNNPriorWeight) + ' \\\n'
+    elif FLAGS.use_gt_orientations:
+        cmd += '--rotation_constraint_weight_multiplier=' + \
+               str(kGTPriorWeight) + ' \\\n'
+        cmd += '--position_constraint_weight_multiplier=' + \
+               str(kGTPriorWeight) + ' \\\n'
 
     if FLAGS.use_consecutive_camera_constraints:
         cmd += '--use_consecutive_camera_position_constraints=true' + ' \\\n'

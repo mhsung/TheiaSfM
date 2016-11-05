@@ -83,6 +83,9 @@ def set_output_name():
     if FLAGS.use_consecutive_camera_constraints:
         output_name += '_ccc'
 
+    if FLAGS.no_bundle:
+        output_name += '_nb'
+
     return output_name
 
 
@@ -282,4 +285,3 @@ if __name__ == '__main__':
     # Compare with ground truth if exists.
     if os.path.exists(PATHS.ground_truth_pose_path):
         evaluation.run(FLAGS, PATHS)
-

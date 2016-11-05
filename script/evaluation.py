@@ -95,4 +95,4 @@ def run(FLAGS, PATHS):
 
         cmd += '--logtostderr'
         os.system(cmd)
-        
+

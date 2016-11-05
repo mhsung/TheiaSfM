@@ -43,6 +43,7 @@ def run(FLAGS, PATHS):
         run_cmd.save_and_run_cmd(cmd, os.path.join(
             PATHS.script_path, 'create_ground_truth_reconstruction.sh'))
 
+    '''
     # Evaluate neural network outputs and compute ground truth object
     # information.
     cmd = ''
@@ -62,3 +63,4 @@ def run(FLAGS, PATHS):
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
         PATHS.script_path, 'create_ground_truth_objects.sh'))
+    '''
