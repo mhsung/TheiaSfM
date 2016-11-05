@@ -304,7 +304,6 @@ def write_latex_header(file):
     # file.write('\\usepackage[margin=0.10in]{geometry}\n')
     file.write('\\usepackage[landscape, margin=0.10in]{geometry}\n')
     file.write('\\usepackage{makecell}\n')
-    file.write('\\usepackage{tabu}\n')
     file.write('\n')
 
 

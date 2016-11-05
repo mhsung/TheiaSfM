@@ -61,9 +61,11 @@ void CreateMatchesFromCorrespondences(
   int num_passed_with_failed_without_inits = 0;
   int num_failed_with_failed_without_inits = 0;
 
+  theia::Timer timer;
   int num_all_image_pairs = image_pair_correspondences.size();
   int count_image_pairs = 0;
-  int processed_percentage = 0;
+  int processed_image_pairs = 0;
+  const int kProcessLogUnit = 1000;
 
   for (const auto& image_pair : image_pair_correspondences) {
     const ViewId view1_idx = image_pair.first.first;
@@ -152,7 +154,7 @@ void CreateMatchesFromCorrespondences(
     }
 
     // Log information about the matching results.
-    VLOG(1) << "Images " << image1_name << " and " << image2_name
+    VLOG(2) << "Images " << image1_name << " and " << image2_name
             << " were matched with " << image_pair_match.correspondences.size()
             << " verified matches and "
             << image_pair_match.twoview_info.num_homography_inliers
@@ -161,13 +163,24 @@ void CreateMatchesFromCorrespondences(
     matches->push_back(image_pair_match);
 
     ++count_image_pairs;
-    const int percentage = (int)(
-        ((double)count_image_pairs) / num_all_image_pairs * 100.0);
-    if (percentage >= (processed_percentage + 5)) {
-      processed_percentage += 5;
-      LOG(INFO) << processed_percentage << "% image pairs ("
+    if (count_image_pairs >= processed_image_pairs + kProcessLogUnit) {
+      processed_image_pairs += kProcessLogUnit;
+
+      const double percentage =
+        (double)count_image_pairs / num_all_image_pairs * 100.0;
+      const double elapsed_time = timer.ElapsedTimeInSeconds();
+      const double remaining_time =
+        elapsed_time / percentage * (100.0 - percentage);
+
+      // FIXME:
+      // Use glog.
+      std::cout << percentage << "% image pairs ("
                 << count_image_pairs << "/" << num_all_image_pairs << ") are "
-                << " processed.";
+                << "processed." << std::endl
+                << "Elapsed time: " << (elapsed_time / 60.0) << " mins."
+                << std::endl
+                << "Remaining time: " << (remaining_time / 60.0) << " mins."
+                << std::endl;
     }
   }
 

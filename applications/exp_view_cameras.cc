@@ -79,6 +79,10 @@ float normalized_focal_length = 1.0;
 int min_num_views_for_track = 3;
 double anti_aliasing_blend = 0.01;
 
+// @mhsung
+int count_idle = 0;
+
+
 void GetPerspectiveParams(double* aspect_ratio, double* fovy) {
   double focal_length = 800.0;
   *aspect_ratio = static_cast<double>(width) / static_cast<double>(height);
@@ -408,11 +412,16 @@ void ResetViewpoint() {
 // @mhsung
 void Idle() {
   RenderScene();
-
-  // If snapshot file name is given, save a snapshot and close application.
-  if (FLAGS_snapshot_file != "") {
-    Snapshot(FLAGS_snapshot_file);
-    exit(-1);
+  // HACK: Assume that it starts to render the scene after calling idle
+  // at most twice.
+  if (count_idle > 0) {
+    // If snapshot file name is given, save a snapshot and close application.
+    if (FLAGS_snapshot_file != "") {
+      Snapshot(FLAGS_snapshot_file);
+      exit(-1);
+    }
+  } else {
+    ++count_idle;
   }
 }
 
