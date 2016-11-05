@@ -38,12 +38,14 @@ int main(int argc, char* argv[]) {
   for (const auto& image_file : image_files) {
     const std::string filename = stlplus::filename_part(image_file);
     const std::string basename = stlplus::basename_part(filename);
-    const Eigen::Affine3d modelview =
-      theia::FindOrDie(modelviews_without_ext, basename);
-    modelviews.emplace(filename, modelview);
+    const Eigen::Affine3d* modelview =
+      theia::FindOrNull(modelviews_without_ext, basename);
+    if (modelview == nullptr) {
+      LOG(WARNING) << "Image " << image_file << " does not have modelview.";
+    } else {
+      modelviews.emplace(filename, *modelview);
+    }
   }
-  CHECK_EQ(modelviews_without_ext.size(), modelviews.size())
-  << "Images are missing.";
 
 
   // Load calibration file if it is provided.
