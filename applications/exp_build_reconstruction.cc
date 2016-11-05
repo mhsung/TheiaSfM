@@ -663,7 +663,7 @@ void SetInitialReconstruction(ReconstructionBuilder* reconstruction_builder) {
     const theia::ViewId view_id =
         reconstruction->ViewIdFromName(init_view->Name());
     if (view_id == kInvalidViewId) {
-      LOG(WARNING) << "View does not exist (View ID = "
+      LOG(WARNING) << "View does not exist (View name = "
                    << init_view->Name() << ").";
       continue;
     }

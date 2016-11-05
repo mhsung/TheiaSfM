@@ -15,6 +15,7 @@
 #include "applications/exp_camera_param_io.h"
 #include "applications/exp_camera_param_utils.h"
 #include "exp_bounding_box_utils.h"
+#include "exp_json_utils.h"
 #include "exp_matrix_utils.h"
 #include "applications/exp_neural_net_output_reader.h"
 
@@ -29,11 +30,27 @@ DEFINE_string(ground_truth_filepath, "ground_truth.bin", "");
 DEFINE_string(bounding_boxes_filepath, "convnet/object_bboxes.csv", "");
 DEFINE_string(orientations_filepath,
               "convnet/object_orientations_fitted.csv", "");
-DEFINE_string(out_fitted_bounding_boxes_filepath,
-              "convnet/object_bboxes_gt.csv", "");
-DEFINE_string(out_fitted_orientations_filepath,
-              "convnet/object_orientations_gt.csv", "");
+DEFINE_string(out_fitted_bounding_boxes_filepath, "", "");
+DEFINE_string(out_fitted_orientations_filepath, "", "");
+DEFINE_string(out_json_file, "", "");
+DEFINE_bool(test_rotation_optimization, false, "");
+DEFINE_bool(test_position_optimization, false, "");
 
+
+const std::vector<double> kAngleHistogramBins = {
+    15.0, 30.0, 45.0, 60.0, 90.0, 135.0, 180.0};
+
+void ComputeMeanMedian(
+    const std::vector<double>& sorted_errors,
+    double* mean_error, double* median_error) {
+  CHECK_NOTNULL(mean_error);
+  CHECK_NOTNULL(median_error);
+
+  (*mean_error) = std::accumulate(
+      sorted_errors.begin(), sorted_errors.end(), 0.0) /
+                  static_cast<double>(sorted_errors.size());
+  (*median_error) = sorted_errors[sorted_errors.size() / 2];
+}
 
 std::string PrintMeanMedianHistogram(
   const std::vector<double>& sorted_errors,
@@ -268,14 +285,23 @@ void EvaluateRotations(
   const std::unordered_map<std::string, Eigen::Affine3d>& modelviews,
   std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes,
   std::unordered_map<ObjectId, Eigen::Matrix3d>* object_orientations =
-  nullptr) {
+  nullptr,
+  JsonFile* out_file = nullptr) {
   CHECK_NOTNULL(object_bboxes);
   // @object_bboxes will be updated.
   // FIXME: Make a copy of @object_bboxes and update it.
 
+  int all_num_bboxes = 0;
+  for (const auto& object : *object_bboxes) {
+    all_num_bboxes += object.second.size();
+  }
+  std::vector<double> all_angle_errors;
+  all_angle_errors.reserve(all_num_bboxes);
+
+
   for (const auto& object : *object_bboxes) {
     const theia::ObjectId object_id = object.first;
-    LOG(INFO) << "Object ID: " << object_id << std::endl;
+    VLOG(1) << "Object ID: " << object_id << std::endl;
 
     const int num_bboxes = object.second.size();
     std::vector<Eigen::Matrix3d> world_to_object_Rs;
@@ -294,8 +320,8 @@ void EvaluateRotations(
       ComputeAverageRotation(world_to_object_Rs);
 
     // Compute errors.
-    std::vector<double> angle_errors;
-    angle_errors.reserve(num_bboxes);
+    std::vector<double> object_angle_errors;
+    object_angle_errors.reserve(num_bboxes);
 
     for (const auto& bbox : object.second) {
       Eigen::Matrix3d world_to_camera_R;
@@ -311,7 +337,8 @@ void EvaluateRotations(
       const Eigen::AngleAxisd diff_R(
         fitted_object_to_camera_R.transpose() * object_to_camera_R);
       const double angle = diff_R.angle() / M_PI * 180.0;
-      angle_errors.push_back(angle);
+      object_angle_errors.push_back(angle);
+      all_angle_errors.push_back(angle);
 
       // Update camera parameters.
       // FIXME: Make a copy of @object_bboxes and update it.
@@ -324,12 +351,25 @@ void EvaluateRotations(
       object_orientations->emplace(object_id, avg_world_to_object_R);
     }
 
-    std::sort(angle_errors.begin(), angle_errors.end());
-    std::vector<double> histogram_bins = {
-      15.0, 30.0, 45.0, 60.0, 90.0, 135.0, 180.0};
+    std::sort(object_angle_errors.begin(), object_angle_errors.end());
     const std::string angle_error_msg =
-      PrintMeanMedianHistogram(angle_errors, histogram_bins);
-    LOG(INFO) << "Orientation angle errors: \n" << angle_error_msg;
+      PrintMeanMedianHistogram(object_angle_errors, kAngleHistogramBins);
+    VLOG(1) << "Object orientation angle errors: \n" << angle_error_msg;
+  }
+
+
+  std::sort(all_angle_errors.begin(), all_angle_errors.end());
+  const std::string angle_error_msg =
+      PrintMeanMedianHistogram(all_angle_errors, kAngleHistogramBins);
+  LOG(INFO) << "All orientation angle errors: \n" << angle_error_msg;
+
+  if (out_file && out_file->IsOpen()) {
+    double all_angle_mean_error, all_angle_median_error;
+    ComputeMeanMedian(
+        all_angle_errors, &all_angle_mean_error, &all_angle_median_error);
+    out_file->WriteElement("mean_convnet_rotation_error", all_angle_mean_error);
+    out_file->WriteElement(
+        "median_convnet_rotation_error", all_angle_median_error);
   }
 }
 
@@ -339,14 +379,23 @@ void EvaluatePositions(
   const std::unordered_map<std::string, Eigen::Affine3d>& modelviews,
   std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes,
   std::unordered_map<ObjectId, Eigen::Vector3d>* object_positions = nullptr,
-  std::unordered_map<uint32_t, double>* camera_to_object_distances = nullptr) {
+  std::unordered_map<uint32_t, double>* camera_to_object_distances = nullptr,
+  JsonFile* out_file = nullptr) {
   CHECK_NOTNULL(object_bboxes);
   // @object_bboxes will be updated.
   // FIXME: Make a copy of @object_bboxes and update it.
 
+  int all_num_bboxes = 0;
+  for (const auto& object : *object_bboxes) {
+    all_num_bboxes += object.second.size();
+  }
+  std::vector<double> all_angle_errors;
+  all_angle_errors.reserve(all_num_bboxes);
+
+
   for (auto& object : *object_bboxes) {
     const theia::ObjectId object_id = object.first;
-    LOG(INFO) << "Object ID: " << object_id << std::endl;
+    VLOG(1) << "Object ID: " << object_id << std::endl;
 
     const int num_bboxes = object.second.size();
     std::vector<Eigen::Matrix3d> world_to_object_R_list;
@@ -373,8 +422,8 @@ void EvaluatePositions(
     const Eigen::Vector3d object_position = triangulated_point.hnormalized();
 
     // Compute errors.
-    std::vector<double> angle_errors;
-    angle_errors.reserve(num_bboxes);
+    std::vector<double> object_angle_errors;
+    object_angle_errors.reserve(num_bboxes);
 
     for (auto bbox_it = object.second.begin();
          bbox_it != object.second.end(); ) {
@@ -393,6 +442,7 @@ void EvaluatePositions(
       const double kErrorTol = 1.0 - 1.0E-4;
       CHECK_GT(std::abs(fitted_ray.dot(test_fitted_ray)), kErrorTol);
 
+      /*
       // NOTE:
       // Remove the bounding box if the object is behind the camera.
       if (fitted_ray.dot(test_fitted_ray) < 0) {
@@ -403,13 +453,15 @@ void EvaluatePositions(
         bbox_it = object.second.erase(bbox_it);
         continue;
       }
+      */
 
       // Compute angle error.
       const Eigen::Vector3d ray =
         camera->PixelToUnitDepthRay(bbox->bbox_center()).normalized();
       const double angle =
         std::abs(std::acos(ray.dot(fitted_ray))) / M_PI * 180.0;
-      angle_errors.push_back(angle);
+      object_angle_errors.push_back(angle);
+      all_angle_errors.push_back(angle);
 
       // Update camera parameters.
       // FIXME: Make a copy of @object_bboxes and update it.
@@ -439,12 +491,25 @@ void EvaluatePositions(
       object_positions->emplace(object_id, object_position);
     }
 
-    std::sort(angle_errors.begin(), angle_errors.end());
-    std::vector<double> histogram_bins = {
-      15.0, 30.0, 45.0, 60.0, 90.0, 135.0, 180.0};
+    std::sort(object_angle_errors.begin(), object_angle_errors.end());
     const std::string angle_error_msg =
-      PrintMeanMedianHistogram(angle_errors, histogram_bins);
-    LOG(INFO) << "Position ray angle errors: \n" << angle_error_msg;
+      PrintMeanMedianHistogram(object_angle_errors, kAngleHistogramBins);
+    VLOG(1) << "Object position ray angle errors: \n" << angle_error_msg;
+  }
+
+
+  std::sort(all_angle_errors.begin(), all_angle_errors.end());
+  const std::string angle_error_msg =
+      PrintMeanMedianHistogram(all_angle_errors, kAngleHistogramBins);
+  LOG(INFO) << "All position angle errors: \n" << angle_error_msg;
+
+  if (out_file && out_file->IsOpen()) {
+    double all_angle_mean_error, all_angle_median_error;
+    ComputeMeanMedian(
+        all_angle_errors, &all_angle_mean_error, &all_angle_median_error);
+    out_file->WriteElement("mean_convnet_position_error", all_angle_mean_error);
+    out_file->WriteElement(
+        "median_convnet_position_error", all_angle_median_error);
   }
 }
 
@@ -627,6 +692,42 @@ bool TestPositionOptimization(
   return true;
 }
 
+void RemoveBBoxesWithNoCameraModelview(
+    const std::unordered_map<std::string, Eigen::Affine3d>& modelviews,
+    std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes) {
+  CHECK_NOTNULL(object_bboxes);
+
+  uint32_t new_bbox_id = 0;
+
+  for (auto object_it = object_bboxes->begin();
+       object_it != object_bboxes->end(); ) {
+    auto& object = *object_it;
+
+    for (auto bbox_it = object.second.begin();
+         bbox_it != object.second.end(); ) {
+      const auto& bbox = *bbox_it;
+      const std::string basename = stlplus::basename_part(bbox->view_name_);
+      if (!ContainsKey(modelviews, basename)) {
+        LOG(WARNING) << "View " << basename << " does not exist.";
+        bbox_it = object.second.erase(bbox_it);
+      } else {
+        ++bbox_it;
+      }
+    }
+
+    if (object.second.empty()) {
+      object_it = object_bboxes->erase(object_it);
+    } else {
+      // Reassign bounding box IDs.
+      for (auto& bbox : object.second) {
+        bbox->bbox_id_ = new_bbox_id;
+        ++new_bbox_id;
+      }
+      ++object_it;
+    }
+  }
+}
+
 void RemoveObjectsWithNoBBoxes(
   std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes,
   std::unordered_map<ObjectId, Eigen::Matrix3d>* object_orientations,
@@ -685,9 +786,9 @@ int main(int argc, char *argv[]) {
 
   // Read calibration file.
   std::unordered_map<std::string, theia::CameraIntrinsicsPrior>
-    camera_intrinsics_priors;
+      camera_intrinsics_priors;
   CHECK(theia::ReadCalibration(
-    FLAGS_calibration_file, &camera_intrinsics_priors));
+      FLAGS_calibration_file, &camera_intrinsics_priors));
 
   // Read ground truth modelview matrices.
   std::unordered_map<std::string, Eigen::Affine3d> modelviews;
@@ -700,40 +801,76 @@ int main(int argc, char *argv[]) {
                                      FLAGS_orientations_filepath,
                                      &object_bboxes);
 
+  // Remove bounding boxes if the ground truth modelview of the view does not
+  // exist.
+  RemoveBBoxesWithNoCameraModelview(modelviews, &object_bboxes);
+
+
+  // Statistics.
+  const int num_objects = object_bboxes.size();
+  CHECK_GT(num_objects, 0);
+  int num_bboxes = 0;
+  for (const auto& object : object_bboxes) {
+    num_bboxes += object.second.size();
+  }
+  const double mean_num_bboxes_per_object =
+      static_cast<double>(num_bboxes) / num_objects;
+
+  // Save json statistics file.
+  JsonFile out_file;
+  if (FLAGS_out_json_file != "") {
+    CHECK(out_file.Open(FLAGS_out_json_file))
+    << "Can't open file '" + FLAGS_out_json_file + "'.";
+    out_file.WriteElement("num_objects", num_objects);
+    out_file.WriteElement("num_bboxes", num_bboxes);
+    out_file.WriteElement(
+        "mean_num_bboxes_per_object", mean_num_bboxes_per_object);
+  }
+
 
   LOG(INFO) << "== Evaluate Rotations ==";
   std::unordered_map<ObjectId, Eigen::Matrix3d> object_orientations;
   EvaluateRotations(modelviews, &object_bboxes,
-                    &object_orientations);
+                    &object_orientations, &out_file);
 
   LOG(INFO) << "== Evaluate Positions ==";
   std::unordered_map<ObjectId, Eigen::Vector3d> object_positions;
   std::unordered_map<uint32_t, double> camera_to_object_distances;
   EvaluatePositions(camera_intrinsics_priors, modelviews, &object_bboxes,
-                    &object_positions, &camera_to_object_distances);
+                    &object_positions, &camera_to_object_distances,
+                    &out_file);
+
+  out_file.Close();
 
   // NOTE:
   // Object are removed in position evaluation if they are located behind the
   // cameras.
   RemoveObjectsWithNoBBoxes(
-    &object_bboxes, &object_orientations, &object_positions);
+      &object_bboxes, &object_orientations, &object_positions);
 
 
-  LOG(INFO) << "== Test Rotation Optimization ==";
-  CHECK(TestRotationOptimization(
-    modelviews, object_orientations, object_bboxes));
+  if (FLAGS_test_rotation_optimization) {
+    LOG(INFO) << "== Test Rotation Optimization ==";
+    CHECK(TestRotationOptimization(
+        modelviews, object_orientations, object_bboxes));
+  }
 
-  LOG(INFO) << "== Test Position Optimization ==";
-  CHECK(TestPositionOptimization(
-    camera_intrinsics_priors, modelviews, object_positions, object_bboxes));
+  if (FLAGS_test_position_optimization) {
+    LOG(INFO) << "== Test Position Optimization ==";
+    CHECK(TestPositionOptimization(
+        camera_intrinsics_priors, modelviews, object_positions, object_bboxes));
+  }
 
 
+  if (FLAGS_out_fitted_bounding_boxes_filepath != "") {
+    CHECK(WriteNeuralNetBBoxes(
+        FLAGS_out_fitted_bounding_boxes_filepath, object_bboxes));
+  }
 
-  CHECK(WriteNeuralNetBBoxes(
-    FLAGS_out_fitted_bounding_boxes_filepath, object_bboxes));
-
-  CHECK(WriteNeuralNetOrientations(
-    FLAGS_out_fitted_orientations_filepath, object_bboxes));
+  if (FLAGS_out_fitted_orientations_filepath != "") {
+    CHECK(WriteNeuralNetOrientations(
+        FLAGS_out_fitted_orientations_filepath, object_bboxes));
+  }
 
   return 0;
 }

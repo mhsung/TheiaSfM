@@ -51,7 +51,7 @@ target_link_libraries(compute_reconstruction_statistics theia ${GFLAGS_LIBRARIES
 add_executable(colorize_reconstruction colorize_reconstruction.cc)
 target_link_libraries(colorize_reconstruction theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(compare_reconstructions compare_reconstructions.cc)
+add_executable(compare_reconstructions compare_reconstructions.cc exp_json_utils.h)
 target_link_libraries(compare_reconstructions theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(compute_matching_relative_pose_errors compute_matching_relative_pose_errors.cc)
@@ -165,7 +165,7 @@ target_link_libraries(exp_create_reconstruction_from_modelviews theia ${GFLAGS_L
 add_executable(exp_evaluate_neural_net_outputs exp_evaluate_neural_net_outputs.cc
   exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc exp_matrix_utils.h
   exp_bounding_box_utils.h exp_bounding_box_utils.cc
-  exp_neural_net_output_reader.h exp_neural_net_output_reader.cc)
+  exp_neural_net_output_reader.h exp_neural_net_output_reader.cc exp_json_utils.h)
 target_link_libraries(exp_evaluate_neural_net_outputs theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(exp_view_cameras exp_view_cameras.cc
