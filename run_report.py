@@ -25,6 +25,11 @@ if __name__ == '__main__':
     if not os.path.exists(tex_dir):
         os.makedirs(tex_dir)
 
+    csv_file = os.path.join(FLAGS.out_dir, dataset_name + '.csv')
+    if os.path.exists(csv_file):
+        os.remove(csv_file)
+    print(csv_file)
+
     cwd = os.getcwd()
 
     print('Run batch jobs...')
@@ -46,6 +51,17 @@ if __name__ == '__main__':
         cmd += '--out_file=' + os.path.join(tex_dir, tex_file)
         print(cmd)
         os.system(cmd)
+
+        cmd = ''
+        cmd += './script/run_csv_report.py ' + ' \\\n'
+        cmd += '--data_dir=' + data_dir + ' \\\n'
+        cmd += '--out_file=' + csv_file
+        print(cmd)
+        os.system(cmd)
+
+        if not os.path.exists(os.path.join(tex_dir, tex_file)):
+            print('Warning: generating tex file failed.')
+            continue
 
         os.chdir(tex_dir)
         cmd = ''

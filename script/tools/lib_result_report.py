@@ -404,6 +404,50 @@ def close_latex_table(file):
     file.write('\\end{document}\n')
 
 
+def write_csv_file(filename, data_name,
+        instances, attr_names, attr_types):
+    is_out_file_empty = not os.path.exists(filename)
+
+    with open(filename, 'a') as file:
+        assert len(attr_names) == len(attr_types)
+        num_attrs = len(attr_names)
+        num_instances = len(instances)
+
+        # Write attribute names if the out file was empty.
+        if is_out_file_empty:
+            # The first column is dataset name.
+            file.write('Dataset,')
+            for i in range(num_attrs):
+                if attr_types[i] == AttrType.image:
+                    continue
+                attr_name = attr_names[i]
+                attr_name = attr_name.replace('0', '.')
+                attr_name = attr_name.replace('1', '(')
+                attr_name = attr_name.replace('2', ')')
+                file.write(attr_name)
+                file.write(',')
+            file.write('\n')
+
+        # Write attribute values.
+        for instance_id in range(num_instances):
+            instance = instances[instance_id]
+
+            # The first column is dataset name.
+            file.write(data_name + ',')
+            for i in range(num_attrs):
+                if attr_types[i] == AttrType.image:
+                    continue
+                elif attr_types[i] == AttrType.number:
+                    if type(instance[i]) == int:
+                        file.write('{:d}'.format(instance[i]))
+                    else:
+                        file.write('{:.3f}'.format(instance[i]))
+                elif attr_types[i] == AttrType.text:
+                    file.write(instance[i])
+                file.write(',')
+            file.write('\n')
+
+
 def parse_arguments(input_path_postfix, output_path_root, output_dir_prefix):
     dataset_name = ''
     symmetry_part_names = ''
