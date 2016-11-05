@@ -42,6 +42,7 @@ PATHS = namedtuple('PATHS', [
     'init_orientation_path',
     'ground_truth_bbox_path',
     'ground_truth_orientation_path',
+    'convnet_eval_json_file',
     'feature_track_path',
     'image_filenames_path',
     'feature_track_info_path',
@@ -140,6 +141,8 @@ def set_paths():
         FLAGS.data_dir, 'convnet', 'object_bboxes_gt.csv')
     PATHS.ground_truth_orientation_path = os.path.join(
         FLAGS.data_dir, 'convnet', 'object_orientations_gt.csv')
+    PATHS.convnet_eval_json_file = os.path.join(
+        FLAGS.data_dir, 'convnet', 'convnet_evaluation.json')
 
     if not os.path.exists(PATHS.init_bbox_path) or \
         not os.path.exists(PATHS.init_orientation_path):

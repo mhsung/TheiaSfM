@@ -53,6 +53,11 @@ def run(FLAGS, PATHS):
     # FIXME:
     # Make the parameter as an option.
     cmd += '--robust_alignment_threshold=' + str(kAlignTol) + ' \\\n'
+    # REMOVE
+    # cmd += '--out_reference_csv=' + \
+    #        os.path.join(PATHS.output_path, 'ground_truth.csv') + ' \\\n'
+    # cmd += '--out_to_align_csv=' + \
+    #        os.path.join(PATHS.output_path, 'output.csv') + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
@@ -74,3 +79,20 @@ def run(FLAGS, PATHS):
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
         PATHS.script_path, 'visualize.sh'))
+
+    # Evaluate convnet outputs.
+    if not os.path.exists(PATHS.convnet_eval_json_file):
+        cmd = ''
+        cmd += FLAGS.bin_dir + '/exp_evaluate_neural_net_outputs' + ' \\\n'
+
+        cmd += '--calibration_file=' + PATHS.calibration_file + ' \\\n'
+        cmd += '--ground_truth_data_type=reconstruction' + ' \\\n'
+        cmd += '--ground_truth_filepath=' + \
+               PATHS.ground_truth_reconstruction_path +' \\\n'
+        cmd += '--bounding_boxes_filepath=' + PATHS.init_bbox_path +' \\\n'
+        cmd += '--orientations_filepath=' + PATHS.init_orientation_path +' \\\n'
+        cmd += '--out_json_file=' + PATHS.convnet_eval_json_file +' \\\n'
+
+        cmd += '--logtostderr'
+        os.system(cmd)
+        
