@@ -783,6 +783,28 @@ void RemoveObjectsWithNoBBoxes(
   temp_object_positions.clear();
 }
 
+void RemoveModelviewNotInReconstruction(
+    const theia::Reconstruction& reconstruction,
+    std::unordered_map<std::string, Eigen::Affine3d>* modelviews) {
+  CHECK_NOTNULL(modelviews);
+
+  std::unordered_map<std::string, Eigen::Affine3d> subset_modelviews;
+
+  for (const auto& view_id : reconstruction.ViewIds()) {
+    const View* view = reconstruction.View(view_id);
+    if (view == nullptr || !view->IsEstimated()) {
+      continue;
+    }
+    const std::string basename = stlplus::basename_part(view->Name());
+    const auto* modelview = FindOrNull(*modelviews, basename);
+    if (modelview != nullptr) {
+      subset_modelviews.emplace(basename, *modelview);
+    }
+  }
+
+  modelviews->swap(subset_modelviews);
+}
+
 int main(int argc, char *argv[]) {
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
@@ -807,22 +829,7 @@ int main(int argc, char *argv[]) {
     CHECK(ReadReconstruction(FLAGS_reconstruction_for_image_list,
                              reconstruction.get()))
     << "Could not read reconstruction file.";
-
-    std::unordered_map<std::string, Eigen::Affine3d> subset_modelviews;
-
-    for (const auto& view_id : reconstruction->ViewIds()) {
-      const View* view = reconstruction->View(view_id);
-      if (view == nullptr || !view->IsEstimated()) {
-        continue;
-      }
-      const std::string basename = stlplus::basename_part(view->Name());
-      const auto* modelview = FindOrNull(modelviews, basename);
-      if (modelview != nullptr) {
-        subset_modelviews.emplace(basename, *modelview);
-      }
-    }
-
-    modelviews.swap(subset_modelviews);
+    RemoveModelviewNotInReconstruction(*reconstruction, &modelviews);
   }
 
 
@@ -841,12 +848,20 @@ int main(int argc, char *argv[]) {
   const int num_views = modelviews.size();
   const int num_objects = object_bboxes.size();
   CHECK_GT(num_objects, 0);
+
+  std::set<std::string> view_names_with_bboxes;
   int num_bboxes = 0;
   for (const auto& object : object_bboxes) {
     num_bboxes += object.second.size();
+    for (const auto& bbox : object.second) {
+      view_names_with_bboxes.insert(bbox->view_name_);
+    }
   }
+  const int num_views_with_bboxes = view_names_with_bboxes.size();
   const double mean_num_bboxes_per_object =
       static_cast<double>(num_bboxes) / num_objects;
+  const double view_proportion_with_bboxes =
+      static_cast<double>(num_views_with_bboxes) / num_views;
 
   // Save json statistics file.
   JsonFile out_file;
@@ -858,6 +873,8 @@ int main(int argc, char *argv[]) {
     out_file.WriteElement("num_bboxes", num_bboxes);
     out_file.WriteElement(
         "mean_num_bboxes_per_object", mean_num_bboxes_per_object);
+    out_file.WriteElement(
+        "view_proportion_with_bboxes", view_proportion_with_bboxes);
   }
 
 

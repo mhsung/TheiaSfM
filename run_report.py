@@ -30,6 +30,11 @@ if __name__ == '__main__':
         os.remove(csv_file)
     print(csv_file)
 
+    convnet_file = os.path.join(FLAGS.out_dir, dataset_name + '_convnet.csv')
+    if os.path.exists(convnet_file):
+        os.remove(convnet_file)
+    print(convnet_file)
+
     cwd = os.getcwd()
 
     print('Run batch jobs...')
@@ -56,6 +61,13 @@ if __name__ == '__main__':
         cmd += './script/run_csv_report.py ' + ' \\\n'
         cmd += '--data_dir=' + data_dir + ' \\\n'
         cmd += '--out_file=' + csv_file
+        print(cmd)
+        os.system(cmd)
+
+        cmd = ''
+        cmd += './script/run_convnet_report.py ' + ' \\\n'
+        cmd += '--data_dir=' + data_dir + ' \\\n'
+        cmd += '--out_file=' + convnet_file
         print(cmd)
         os.system(cmd)
 
