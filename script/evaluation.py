@@ -91,6 +91,8 @@ def run(FLAGS, PATHS):
                PATHS.ground_truth_reconstruction_path +' \\\n'
         cmd += '--bounding_boxes_filepath=' + PATHS.init_bbox_path +' \\\n'
         cmd += '--orientations_filepath=' + PATHS.init_orientation_path +' \\\n'
+        cmd += '--reconstruction_for_image_list=' + PATHS.reconstruction_file \
+               + '-0' + ' \\\n'
         cmd += '--out_json_file=' + PATHS.convnet_eval_json_file +' \\\n'
 
         cmd += '--logtostderr'

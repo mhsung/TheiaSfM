@@ -35,6 +35,9 @@ DEFINE_string(out_fitted_orientations_filepath, "", "");
 DEFINE_string(out_json_file, "", "");
 DEFINE_bool(test_rotation_optimization, false, "");
 DEFINE_bool(test_position_optimization, false, "");
+DEFINE_string(reconstruction_for_image_list, "",
+              "Optional. Use bounding boxes in the images included in the "
+                  "reconstruction.");
 
 
 const std::vector<double> kAngleHistogramBins = {
@@ -795,6 +798,34 @@ int main(int argc, char *argv[]) {
   CHECK(ReadModelviews(FLAGS_ground_truth_data_type,
                        FLAGS_ground_truth_filepath, &modelviews));
 
+
+  // Remove modelview matrices if the view is not included in the given
+  // reconstruction.
+  if (FLAGS_reconstruction_for_image_list != "") {
+    std::unique_ptr<theia::Reconstruction> reconstruction(
+        new theia::Reconstruction());
+    CHECK(ReadReconstruction(FLAGS_reconstruction_for_image_list,
+                             reconstruction.get()))
+    << "Could not read reconstruction file.";
+
+    std::unordered_map<std::string, Eigen::Affine3d> subset_modelviews;
+
+    for (const auto& view_id : reconstruction->ViewIds()) {
+      const View* view = reconstruction->View(view_id);
+      if (view == nullptr || !view->IsEstimated()) {
+        continue;
+      }
+      const std::string basename = stlplus::basename_part(view->Name());
+      const auto* modelview = FindOrNull(modelviews, basename);
+      if (modelview != nullptr) {
+        subset_modelviews.emplace(basename, *modelview);
+      }
+    }
+
+    modelviews.swap(subset_modelviews);
+  }
+
+
   // Read bounding box information.
   std::unordered_map<ObjectId, DetectedBBoxPtrList> object_bboxes;
   ReadNeuralNetBBoxesAndOrientations(FLAGS_bounding_boxes_filepath,
@@ -807,6 +838,7 @@ int main(int argc, char *argv[]) {
 
 
   // Statistics.
+  const int num_views = modelviews.size();
   const int num_objects = object_bboxes.size();
   CHECK_GT(num_objects, 0);
   int num_bboxes = 0;
@@ -821,6 +853,7 @@ int main(int argc, char *argv[]) {
   if (FLAGS_out_json_file != "") {
     CHECK(out_file.Open(FLAGS_out_json_file))
     << "Can't open file '" + FLAGS_out_json_file + "'.";
+    out_file.WriteElement("num_views", num_views);
     out_file.WriteElement("num_objects", num_objects);
     out_file.WriteElement("num_bboxes", num_bboxes);
     out_file.WriteElement(

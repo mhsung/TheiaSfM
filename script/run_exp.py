@@ -145,7 +145,7 @@ def set_paths():
     PATHS.ground_truth_orientation_path = os.path.join(
         FLAGS.data_dir, 'convnet', 'object_orientations_gt.csv')
     PATHS.convnet_eval_json_file = os.path.join(
-        FLAGS.data_dir, 'convnet', 'convnet_evaluation.json')
+        PATHS.output_path, 'convnet_stats.json')
 
     if not os.path.exists(PATHS.init_bbox_path) or \
         not os.path.exists(PATHS.init_orientation_path):
