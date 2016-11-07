@@ -87,12 +87,12 @@ class GlobalReconstructionEstimator : public ReconstructionEstimator {
   void OptimizePairwiseTranslations();
   void FilterRelativeTranslation();
   void EstimateStructure();
-  bool BundleAdjustment();
 
   // @mhsung
   // Changed to virtual function.
   virtual bool EstimateGlobalRotations();
   virtual bool EstimatePosition();
+  virtual bool BundleAdjustment();
 
   ViewGraph* view_graph_;
   Reconstruction* reconstruction_;

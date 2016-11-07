@@ -179,12 +179,12 @@ DEFINE_bool(use_per_object_view_pair_weights, false,
 
 DEFINE_double(rotation_constraint_weight_multiplier, 50.0,
               "Multiplied by per object-view weights, or used as a constant "
-                  "weight if 'use_use_per_object_view_pair_weights' is set to"
+                  "weight if 'use_per_object_view_pair_weights' is set to"
                   " false. Only used when 'CONSTRAINED_ROBUST_L1L2' is chosen"
                   " for global rotation estimator type.");
 DEFINE_double(position_constraint_weight_multiplier, 50.0,
               "Multiplied by per object-view weights, or used as a constant "
-                  "weight if 'use_use_per_object_view_pair_weights' is set to"
+                  "weight if 'use_per_object_view_pair_weights' is set to"
                   " false. Only used when 'CONSTRAINED_NONLINEAR' is chosen "
                   "for global position estimator type.");
 
@@ -315,7 +315,7 @@ ReconstructionBuilderOptions SetReconstructionBuilderOptions() {
   // @mhsung
   reconstruction_estimator_options.exp_global_run_bundle_adjustment =
       FLAGS_exp_global_run_bundle_adjustment;
-  reconstruction_estimator_options.use_use_per_object_view_pair_weights =
+  reconstruction_estimator_options.use_per_object_view_pair_weights =
       FLAGS_use_per_object_view_pair_weights;
   reconstruction_estimator_options.rotation_constraint_weight_multiplier =
       FLAGS_rotation_constraint_weight_multiplier;

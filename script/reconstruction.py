@@ -5,7 +5,7 @@ import run_cmd
 import os
 
 kNNPriorWeight = 10
-kGTPriorWeight = 10000
+kGTPriorWeight = 1.0E6
 
 
 def clean(FLAGS, PATHS):

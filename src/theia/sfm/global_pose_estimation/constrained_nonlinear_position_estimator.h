@@ -73,7 +73,7 @@ class ConstrainedNonlinearPositionEstimator
   const double constraint_weight_multiplier_;
 
   std::unordered_map<ObjectId, ViewObjectPositionDirections>
-      object_view_constraints_;
+      view_object_constraints_;
 
   std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>
       view_object_constraint_weights_;

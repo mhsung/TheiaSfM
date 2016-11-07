@@ -20,6 +20,8 @@
 #include "theia/sfm/estimators/estimate_constrained_relative_pose.h"
 #include "theia/sfm/global_pose_estimation/constrained_robust_rotation_estimator.h"
 #include "theia/sfm/global_pose_estimation/constrained_nonlinear_position_estimator.h"
+#include "theia/sfm/bundle_adjustment/constrained_bundle_adjustment.h"
+
 
 namespace theia {
 
@@ -367,9 +369,10 @@ bool ExpGlobalReconstructionEstimator::EstimateGlobalRotations() {
       options_.rotation_constraint_weight_multiplier));
 
   const auto& view_pairs = view_graph_->GetAllEdges();
+  CHECK_NOTNULL(object_view_orientations_);
 
   bool ret = false;
-  if (options_.use_use_per_object_view_pair_weights) {
+  if (options_.use_per_object_view_pair_weights) {
     ret = constrained_rotation_estimator->EstimateRotations(
         view_pairs, *object_view_orientations_,
         &view_orientations_, &object_orientations_,
@@ -397,9 +400,10 @@ bool ExpGlobalReconstructionEstimator::EstimatePosition() {
         options_.position_constraint_weight_multiplier));
 
   const auto& view_pairs = view_graph_->GetAllEdges();
+  CHECK_NOTNULL(view_object_position_directions_);
 
   bool ret = false;
-  if (options_.use_use_per_object_view_pair_weights) {
+  if (options_.use_per_object_view_pair_weights) {
     ret = constrained_position_estimator->EstimatePositions(
         view_pairs, view_orientations_, *view_object_position_directions_,
         &view_positions_, &object_positions_,
@@ -518,6 +522,36 @@ void ExpGlobalReconstructionEstimator::ComputePositionEstimationStatistics() {
   LOG(INFO) << "Object view translation difference with constraint ("
             << "Min: " << min_direction_angle_error << ", "
             << "Max: " << max_direction_angle_error << ")";
+}
+
+bool ExpGlobalReconstructionEstimator::BundleAdjustment() {
+  // Bundle adjustment.
+  bundle_adjustment_options_ =
+      SetBundleAdjustmentOptions(options_, view_positions_.size());
+
+  if (options_.global_rotation_estimator_type !=
+      GlobalRotationEstimatorType::CONSTRAINED_ROBUST_L1L2 ||
+      options_.global_position_estimator_type !=
+      GlobalPositionEstimatorType::CONSTRAINED_NONLINEAR) {
+    const auto& bundle_adjustment_summary =
+        BundleAdjustReconstruction(bundle_adjustment_options_, reconstruction_);
+    return bundle_adjustment_summary.success;
+  }
+
+  LOG(INFO) << "Run constrained bundle adjustment with object priors.";
+  CHECK_NOTNULL(object_view_orientations_);
+  CHECK_NOTNULL(view_object_position_directions_);
+
+  BundleObjectConstraints object_constraints(
+      *object_view_orientations_, *view_object_position_directions_,
+      &object_orientations_, &object_positions_,
+      options_.rotation_constraint_weight_multiplier,
+      options_.position_constraint_weight_multiplier);
+
+  const auto& bundle_adjustment_summary =
+      ConstrainedBundleAdjustReconstruction(
+          bundle_adjustment_options_, reconstruction_, &object_constraints);
+  return bundle_adjustment_summary.success;
 }
 
 /*

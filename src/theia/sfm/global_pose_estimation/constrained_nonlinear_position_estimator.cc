@@ -35,7 +35,7 @@ bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
     const std::unordered_map<ObjectId, ViewObjectPositionDirectionWeights>*
     view_object_constraint_weights) {
   int num_object_view_pairs = 0;
-  object_view_constraints_.clear();
+  view_object_constraints_.clear();
   view_object_constraint_weights_.clear();
 
   bool use_per_constraint_weights = true;
@@ -55,7 +55,7 @@ bool ConstrainedNonlinearPositionEstimator::SetObjectViewConstraints(
       const ViewId view_id = constraint.first;
 
       if (ContainsKey(view_orientations, constraint.first)) {
-        object_view_constraints_[object_id].emplace(constraint);
+        view_object_constraints_[object_id].emplace(constraint);
 
         // Set weights.
         if (use_per_constraint_weights) {
@@ -197,11 +197,11 @@ void ConstrainedNonlinearPositionEstimator::InitializeRandomPositions(
   NonlinearPositionEstimator::InitializeRandomPositions(
       view_orientations, view_positions);
 
-  object_positions->reserve(object_view_constraints_.size());
+  object_positions->reserve(view_object_constraints_.size());
 
   // Random seed is set in
   // 'NonlinearPositionEstimator::InitializeRandomPositions()'.
-  for (const auto& object : object_view_constraints_) {
+  for (const auto& object : view_object_constraints_) {
     (*object_positions)[object.first] = 100.0 * RandVector3d();
   }
 }
@@ -212,7 +212,7 @@ void ConstrainedNonlinearPositionEstimator::AddCameraToObjectConstraints(
   std::unordered_map<ViewId, Vector3d>* object_positions) {
   int num_object_to_camera_constraints = 0;
 
-  for (const auto& object : object_view_constraints_) {
+  for (const auto& object : view_object_constraints_) {
     const ObjectId object_id = object.first;
     Vector3d* object_position = FindOrNull(*object_positions, object_id);
     CHECK(object_position);

@@ -173,18 +173,18 @@ struct ReconstructionEstimatorOptions {
   // Only used when 'CONSTRAINED_ROBUST_L1L2' is chosen for global rotation
   // estimator type, and when 'CONSTRAINED_NONLINEAR' is
   // chosen for global position estimator type.
-  bool use_use_per_object_view_pair_weights = false;
+  bool use_per_object_view_pair_weights = false;
 
   // @mhsung
   // Multiplied by per object-view weights, or used as a constant weight if
-  // 'use_use_per_object_view_pair_weights' is set to false.
+  // 'use_per_object_view_pair_weights' is set to false.
   // Only used when 'CONSTRAINED_ROBUST_L1L2' is chosen for global rotation
   // estimator type.
   double rotation_constraint_weight_multiplier = 1.0;
 
   // @mhsung
   // Multiplied by per object-view weights, or used as a constant weight if
-  // 'use_use_per_object_view_pair_weights' is set to false.
+  // 'use_per_object_view_pair_weights' is set to false.
   // Only used when 'CONSTRAINED_NONLINEAR' is chosen for global position
   // estimator type.
   double position_constraint_weight_multiplier = 1.0;

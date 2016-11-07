@@ -72,6 +72,8 @@ set(THEIA_SRC
   math/polynomial.cc
   math/probability/sequential_probability_ratio.cc
   math/qp_solver.cc
+  # @mhsung
+  sfm/bundle_adjustment/constrained_bundle_adjustment.cc
   sfm/bundle_adjustment/bundle_adjust_two_views.cc
   sfm/bundle_adjustment/bundle_adjustment.cc
   sfm/bundle_adjustment/create_loss_function.cc
