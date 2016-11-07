@@ -27,13 +27,17 @@ struct BundleObjectConstraints {
       std::unordered_map<ViewId, Eigen::Vector3d>* object_orientations,
       std::unordered_map<ViewId, Eigen::Vector3d>* object_positions,
       const double orientation_weight,
-      const double position_weight)
+      const double position_weight,
+      const double consecutive_camera_weight = 0.0,
+      const int consecutive_camera_range = 10)
   : object_view_orientations_(object_view_orientations),
     view_object_position_directions_(view_object_position_directions),
     object_orientations_(object_orientations),
     object_positions_(object_positions),
     orientation_weight_(orientation_weight),
-    position_weight_(position_weight) {
+    position_weight_(position_weight),
+    consecutive_camera_weight_(consecutive_camera_weight),
+    consecutive_camera_range_(consecutive_camera_range) {
     CHECK_NOTNULL(object_orientations_);
     CHECK_NOTNULL(object_positions_);
   }
@@ -49,6 +53,9 @@ struct BundleObjectConstraints {
   // Allow to use per object-view pair weight.
   const double orientation_weight_;
   const double position_weight_;
+
+  const double consecutive_camera_weight_;
+  const int consecutive_camera_range_;
 };
 
 // Bundle adjust all views and tracks in the reconstruction.

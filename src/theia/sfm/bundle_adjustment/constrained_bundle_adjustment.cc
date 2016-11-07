@@ -23,6 +23,7 @@
 // @mhsung
 #include "theia/sfm/bundle_adjustment/bundle_object_rotation_error.h"
 #include "theia/sfm/bundle_adjustment/bundle_object_position_error.h"
+#include "theia/sfm/bundle_adjustment/bundle_consecutive_camera_error.h"
 
 
 namespace theia {
@@ -342,6 +343,54 @@ BundleAdjustmentSummary ConstrainedBundleAdjustPartialReconstruction(
     problem.AddParameterBlock(object_position->data(), 3);
     parameter_ordering->AddElementToGroup(object_position->data(), 3);
   }
+
+  // @mhsung
+  // Consecutive camera constraints.
+  if (object_constraints->consecutive_camera_weight_ > 0.0) {
+    // Sort View IDs.
+    std::vector<ViewId> sorted_view_ids;
+    sorted_view_ids.reserve(reconstruction->NumViews());
+    for (const auto& view_id : reconstruction->ViewIds()) {
+      sorted_view_ids.push_back(view_id);
+    }
+    std::sort(sorted_view_ids.begin(), sorted_view_ids.end());
+
+    for (int i = 1; i < sorted_view_ids.size() - 1; i++) {
+      const ViewId prev_view_id = sorted_view_ids[i - 1];
+      const ViewId curr_view_id = sorted_view_ids[i];
+      const ViewId next_view_id = sorted_view_ids[i + 1];
+
+      // IMPORTANT NOTE:
+      // Consider view IDs as frames.
+      if (curr_view_id - prev_view_id >
+          object_constraints->consecutive_camera_range_ ||
+          next_view_id - curr_view_id >
+          object_constraints->consecutive_camera_range_) {
+        continue;
+      }
+
+      View* prev_view = reconstruction->MutableView(prev_view_id);
+      View* curr_view = reconstruction->MutableView(curr_view_id);
+      View* next_view = reconstruction->MutableView(next_view_id);
+      if (prev_view == nullptr || !prev_view->IsEstimated() ||
+          curr_view == nullptr || !curr_view->IsEstimated() ||
+          next_view == nullptr || !next_view->IsEstimated()) {
+        continue;
+      }
+
+      Camera* prev_camera = prev_view->MutableCamera();
+      Camera* curr_camera = curr_view->MutableCamera();
+      Camera* next_camera = next_view->MutableCamera();
+      problem.AddResidualBlock(
+          BundleConsecutiveCameraError::Create(
+              object_constraints->consecutive_camera_weight_),
+          loss_function.get(),
+          prev_camera->mutable_extrinsics(),
+          curr_camera->mutable_extrinsics(),
+          next_camera->mutable_extrinsics());
+    }
+  }
+
 
   // The previous loop gives us residuals for all tracks in all the views that
   // we want to optimize. However, the tracks should still be constrained by

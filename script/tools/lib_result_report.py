@@ -301,8 +301,7 @@ def write_latex_header(file):
     file.write('\\documentclass[]{article}\n')
     file.write('\\usepackage{booktabs}\n')
     file.write('\\usepackage{graphicx}\n')
-    # file.write('\\usepackage[margin=0.10in]{geometry}\n')
-    file.write('\\usepackage[landscape, margin=0.10in]{geometry}\n')
+    file.write('\\usepackage[margin=0.10in]{geometry}\n')
     file.write('\\usepackage{makecell}\n')
     file.write('\n')
 

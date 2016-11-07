@@ -417,18 +417,18 @@ void NonlinearPositionEstimator::AddConsecutiveCameraConstraints(
   std::sort(sorted_view_ids.begin(), sorted_view_ids.end());
 
   for (int i = 1; i < sorted_view_ids.size() - 1; i++) {
-    //const ViewId prev_view_id = sorted_view_ids[i - 1];
+    const ViewId prev_view_id = sorted_view_ids[i - 1];
     const ViewId curr_view_id = sorted_view_ids[i];
     const ViewId next_view_id = sorted_view_ids[i + 1];
 
     // IMPORTANT NOTE:
     // Consider view IDs as frames.
-    if (//curr_view_id - prev_view_id > options_.consecutive_camera_range ||
+    if (curr_view_id - prev_view_id > options_.consecutive_camera_range ||
         next_view_id - curr_view_id > options_.consecutive_camera_range) {
       continue;
     }
 
-    //Eigen::Vector3d* prev_position = &FindOrDie(*positions, prev_view_id);
+    Eigen::Vector3d* prev_position = &FindOrDie(*positions, prev_view_id);
     Eigen::Vector3d* curr_position = &FindOrDie(*positions, curr_view_id);
     Eigen::Vector3d* next_position = &FindOrDie(*positions, next_view_id);
 
@@ -436,14 +436,13 @@ void NonlinearPositionEstimator::AddConsecutiveCameraConstraints(
         options_.consecutive_camera_position_constraint_weight);
 
     problem_->AddResidualBlock(cost_function,
-                               //new ceres::HuberLoss(options_.robust_loss_width),
-                               new ceres::TrivialLoss(),
-                               //prev_position->data(),
+                               new ceres::HuberLoss(options_.robust_loss_width),
+                               prev_position->data(),
                                curr_position->data(),
                                next_position->data());
 
     VLOG(2) << "Added consecutive camera constraint for views ("
-            //<< prev_view_id << ", " << curr_view_id << ", " << next_view_id
+            << prev_view_id << ", " << curr_view_id << ", " << next_view_id
             << curr_view_id << ", " << next_view_id
             << ").";
   }

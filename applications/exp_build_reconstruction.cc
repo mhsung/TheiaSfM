@@ -200,7 +200,7 @@ DEFINE_int32(consecutive_pair_frame_range, 10,
 
 DEFINE_bool(use_consecutive_camera_position_constraints, false, "");
 
-DEFINE_double(consecutive_camera_position_constraint_weight, 0.01, "");
+DEFINE_double(consecutive_camera_position_constraint_weight, 1.0E3, "");
 // ---- //
 
 

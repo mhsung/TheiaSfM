@@ -13,7 +13,7 @@ struct PairwisePositionError {
 
   // The error is given by the position error described above.
   template <typename T>
-  bool operator()(//const T* prev_position,
+  bool operator()(const T* prev_position,
                   const T* curr_position,
                   const T* next_position,
                   T* residuals) const;
@@ -24,17 +24,16 @@ struct PairwisePositionError {
 };
 
 template <typename T>
-bool PairwisePositionError::operator() (//const T* prev_position,
+bool PairwisePositionError::operator() (const T* prev_position,
                                         const T* curr_position,
                                         const T* next_position,
                                         T* residuals) const {
 
   // Compute first derivative error.
-  residuals[0] = T(weight_) * (next_position[0] - curr_position[0]);
-  residuals[1] = T(weight_) * (next_position[1] - curr_position[1]);
-  residuals[2] = T(weight_) * (next_position[2] - curr_position[2]);
+  // residuals[0] = T(weight_) * (next_position[0] - curr_position[0]);
+  // residuals[1] = T(weight_) * (next_position[1] - curr_position[1]);
+  // residuals[2] = T(weight_) * (next_position[2] - curr_position[2]);
 
-  /*
   // Compute second derivative error.
   residuals[0] = T(weight_) * ((next_position[0] - curr_position[0]) -
                                (curr_position[0] - prev_position[0]));
@@ -42,7 +41,6 @@ bool PairwisePositionError::operator() (//const T* prev_position,
                                (curr_position[1] - prev_position[1]));
   residuals[2] = T(weight_) * ((next_position[2] - curr_position[2]) -
                                (curr_position[2] - prev_position[2]));
-  */
   return true;
 }
 

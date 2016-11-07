@@ -4,8 +4,9 @@
 import run_cmd
 import os
 
-kNNPriorWeight = 10
-kGTPriorWeight = 1.0E6
+kNNPriorWeight = 50
+kGTPriorWeight = 1.0E4
+kCCPriorWeight = 1.0E4
 
 
 def clean(FLAGS, PATHS):
@@ -116,6 +117,8 @@ def run(FLAGS, PATHS):
 
     if FLAGS.use_consecutive_camera_constraints:
         cmd += '--use_consecutive_camera_position_constraints=true' + ' \\\n'
+        cmd += '--consecutive_camera_position_constraint_weight=' + \
+               str(kCCPriorWeight) + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path + ' \\\n'
     cmd += '--alsologtostderr'
