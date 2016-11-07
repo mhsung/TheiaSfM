@@ -275,9 +275,15 @@ BundleAdjustmentSummary ConstrainedBundleAdjustPartialReconstruction(
   // Object-view orientations.
   for (const auto& object : object_constraints->object_view_orientations_) {
     const ObjectId object_id = object.first;
+    // FIXME:
+    // Why does this happen?
+    if (!ContainsKey(*object_constraints->object_orientations_, object_id)) {
+      (*object_constraints->object_orientations_)[object_id] =
+          Eigen::Vector3d::Zero();
+    }
     Eigen::Vector3d* object_orientation = FindOrNull(
         *object_constraints->object_orientations_, object_id);
-    CHECK(object_orientation);
+    CHECK(object_orientation != nullptr);
 
     for (const auto& orientation : object.second) {
       const ViewId view_id = orientation.first;
@@ -303,12 +309,19 @@ BundleAdjustmentSummary ConstrainedBundleAdjustPartialReconstruction(
 
   // @mhsung
   // Object-view positions.
+  object_constraints->object_positions_->clear();
   for (const auto& object :
       object_constraints->view_object_position_directions_) {
     const ObjectId object_id = object.first;
+    // FIXME:
+    // Why does this happen?
+    if (!ContainsKey(*object_constraints->object_positions_, object_id)) {
+      (*object_constraints->object_positions_)[object_id] =
+          Eigen::Vector3d::Zero();
+    }
     Eigen::Vector3d* object_position = FindOrNull(
         *object_constraints->object_positions_, object_id);
-    CHECK(object_position);
+    CHECK(object_position != nullptr);
 
     for (const auto& position_direction : object.second) {
       const ViewId view_id = position_direction.first;
