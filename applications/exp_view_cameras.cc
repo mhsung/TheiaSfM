@@ -61,7 +61,7 @@ int height = 800;
 
 // OpenGL camera parameters.
 Eigen::Vector3f viewer_position(0.0, 0.0, 0.0);
-float zoom = -50.0;
+float zoom = -120.0;
 float delta_zoom = 1.1;
 
 // Rotation values for the navigation
@@ -538,9 +538,6 @@ void NormalizeCameraPosesToDisplay(
     theia::Reconstruction* reconstruction) {
   CHECK_NOTNULL(reconstruction);
 
-  // Compute the marginal median of the 3D points.
-  //std::vector<std::vector<double> > points(3);
-  //Eigen::Vector3d median;
   std::vector<Eigen::Vector3d> points;
   points.reserve(reconstruction->NumViews());
   for (const theia::ViewId view_id : reconstruction->ViewIds()) {
@@ -556,30 +553,15 @@ void NormalizeCameraPosesToDisplay(
   const Eigen::Vector3d farthest_1 = FarthestPoint(points[0], points);
   const Eigen::Vector3d farthest_2 = FarthestPoint(farthest_1, points);
   const Eigen::Vector3d center = 0.5 * (farthest_1 + farthest_2);
+  const double size = (farthest_2 - farthest_1).norm();
+  CHECK_GT(size, 1.0E-8);
 
   // Apply position transformation.
   TransformReconstruction(
     Eigen::Matrix3d::Identity(), -center, 1.0, reconstruction);
-
-  // Find the median absolute deviation of the points from the median.
-  std::vector<double> distance_to_median;
-  distance_to_median.reserve(reconstruction->NumViews());
-  for (const theia::ViewId view_id : reconstruction->ViewIds()) {
-    const auto* view = reconstruction->View(view_id);
-    if (view == nullptr || !view->IsEstimated()) {
-      continue;
-    }
-    const Eigen::Vector3d point = view->Camera().GetPosition();
-    distance_to_median.emplace_back((point - center).lpNorm<1>());
-  }
-  // This will scale the reconstruction so that the median absolute deviation of
-  // the points is 100.
-  const double scale = 100.0 / Median(&distance_to_median);
-
-  TransformReconstruction(Eigen::Matrix3d::Identity(),
-                          Eigen::Vector3d::Zero(),
-                          scale,
-                          reconstruction);
+  TransformReconstruction(
+      Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero(), 100.0 / size,
+      reconstruction);
 
   // Compute a rotation such that the x-y plane is aligned to the dominating
   // plane of the cameras.
