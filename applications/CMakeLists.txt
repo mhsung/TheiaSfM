@@ -3,7 +3,7 @@ add_executable(match_features match_features.cc)
 target_link_libraries(match_features theia ${GFLAGS_LIBRARIES})
 
 add_executable(extract_features extract_features.cc)
-target_link_libraries(extract_features theia ${GFLAGS_LIBRARIES})
+target_link_libraries(extract_features theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(compute_two_view_geometry compute_two_view_geometry.cc)
 target_link_libraries(compute_two_view_geometry theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})

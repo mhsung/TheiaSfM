@@ -46,8 +46,8 @@ def load_instances():
         prefix = os.path.basename(dirname)
         if not prefix.startswith('sfm'):
             continue
-        if prefix != "sfm_track" and prefix != "sfm_track_uio":
-            continue
+        #if prefix != "sfm_track" and prefix != "sfm_track_uio":
+        #    continue
         print (prefix)
 
         trajectory_image_filepath = os.path.join(dirname, 'snapshot.png')

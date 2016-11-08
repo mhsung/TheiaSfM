@@ -95,6 +95,7 @@ def run(FLAGS, PATHS):
                + '-0' + ' \\\n'
         cmd += '--out_json_file=' + PATHS.convnet_eval_json_file +' \\\n'
 
-        cmd += '--logtostderr'
-        os.system(cmd)
+        cmd += '--log_dir=' + PATHS.log_path
+        run_cmd.save_and_run_cmd(cmd, os.path.join(
+            PATHS.script_path, 'convnet_stats.sh'))
 

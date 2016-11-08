@@ -82,9 +82,15 @@ if __name__ == '__main__':
         os.system(cmd)
         os.chdir(cwd)
 
+    # Merge PDF files.
     os.chdir(tex_dir)
     cmd = 'pdfunite *.pdf ../' +  dataset_name + '.pdf'
     print(cmd)
     os.system(cmd)
     os.chdir(cwd)
+
+    # Get stats.
+    cmd = './script/run_csv_stats.py --csv_file=' + csv_file
+    print(cmd)
+    os.system(cmd)
 
