@@ -61,6 +61,8 @@ DEFINE_double(robust_alignment_threshold, 0.0,
               "If greater than 0.0, this threshold sets determines inliers for "
               "RANSAC alignment of reconstructions. The inliers are then used "
               "for a least squares alignment.");
+DEFINE_bool(normalize_with_common_views, true, "");
+
 // @mhsung
 DEFINE_string(out_json_file, "", "");
 DEFINE_int32(start_frame, -1, "");
@@ -315,6 +317,52 @@ bool SaveCameraPositionCSVFile(const std::vector<std::string>& view_names,
   return true;
 }
 
+// @mhsung
+Eigen::Vector3d FarthestPoint(const Eigen::Vector3d& query,
+                              const std::vector<Eigen::Vector3d>& points) {
+  CHECK(!points.empty());
+  double max_dist = 0;
+  Eigen::Vector3d farthest_point = points[0];
+
+  for (const auto& point : points) {
+    const double dist = (query - point).norm();
+    if (dist > max_dist) {
+      max_dist = dist;
+      farthest_point = point;
+    }
+  }
+
+  return farthest_point;
+}
+
+// @mhsung
+void NormalizeCameraPositions(
+    const std::vector<std::string>& view_names,
+    Reconstruction* reconstruction) {
+  CHECK_NOTNULL(reconstruction);
+
+  std::vector<Eigen::Vector3d> points;
+  points.reserve(view_names.size());
+  for (const auto& view_name : view_names) {
+    const theia::ViewId view_id =
+        reconstruction->ViewIdFromName(view_name);
+    CHECK_NE(view_id, theia::kInvalidViewId);
+    const theia::View* view = CHECK_NOTNULL(reconstruction->View(view_id));
+    points.push_back(view->Camera().GetPosition());
+  }
+  const Eigen::Vector3d farthest_1 = FarthestPoint(points[0], points);
+  const Eigen::Vector3d farthest_2 = FarthestPoint(farthest_1, points);
+  const Eigen::Vector3d center = 0.5 * (farthest_1 + farthest_2);
+  const double size = (farthest_2 - farthest_1).norm();
+  CHECK_GT(size, 1.0E-8);
+
+  theia::TransformReconstruction(
+      Eigen::Matrix3d::Identity(), -center, 1.0, reconstruction);
+  theia::TransformReconstruction(
+      Eigen::Matrix3d::Identity(), Eigen::Vector3d::Zero(), 1.0 / size,
+      reconstruction);
+}
+
 int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
@@ -397,6 +445,11 @@ int main(int argc, char* argv[]) {
     out_file.WriteElement("num_views", reference_reconstruction->NumViews());
     out_file.WriteElement(
         "num_estimated_views", reconstruction_to_align->NumViews());
+  }
+
+  if (FLAGS_normalize_with_common_views) {
+    NormalizeCameraPositions(common_view_names, reference_reconstruction.get());
+    NormalizeCameraPositions(common_view_names, reconstruction_to_align.get());
   }
 
   // Evaluate rotation independent of positions.

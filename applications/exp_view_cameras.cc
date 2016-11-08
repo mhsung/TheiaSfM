@@ -45,6 +45,7 @@ DEFINE_double(robust_alignment_threshold, 0.0,
               "If greater than 0.0, this threshold sets determines inliers for "
                 "RANSAC alignment of reconstructions. The inliers are then used "
                 "for a least squares alignment.");
+DEFINE_bool(draw_common_views_only, true, "");
 DEFINE_int32(start_frame, -1, "");
 DEFINE_int32(end_frame, -1, "");
 
@@ -60,7 +61,7 @@ int height = 800;
 
 // OpenGL camera parameters.
 Eigen::Vector3f viewer_position(0.0, 0.0, 0.0);
-float zoom = -150.0;
+float zoom = -50.0;
 float delta_zoom = 1.1;
 
 // Rotation values for the navigation
@@ -516,30 +517,49 @@ double Median(std::vector<double>* data) {
   return *mid_point;
 }
 
-void NormalizeCameraPoses(
-  theia::Reconstruction* reconstruction) {
+Eigen::Vector3d FarthestPoint(const Eigen::Vector3d& query,
+                              const std::vector<Eigen::Vector3d>& points) {
+  CHECK(!points.empty());
+  double max_dist = 0;
+  Eigen::Vector3d farthest_point = points[0];
+
+  for (const auto& point : points) {
+    const double dist = (query - point).norm();
+    if (dist > max_dist) {
+      max_dist = dist;
+      farthest_point = point;
+    }
+  }
+
+  return farthest_point;
+}
+
+void NormalizeCameraPosesToDisplay(
+    theia::Reconstruction* reconstruction) {
   CHECK_NOTNULL(reconstruction);
 
   // Compute the marginal median of the 3D points.
-  std::vector<std::vector<double> > points(3);
-  Eigen::Vector3d median;
+  //std::vector<std::vector<double> > points(3);
+  //Eigen::Vector3d median;
+  std::vector<Eigen::Vector3d> points;
+  points.reserve(reconstruction->NumViews());
   for (const theia::ViewId view_id : reconstruction->ViewIds()) {
     const auto* view = reconstruction->View(view_id);
     if (view == nullptr || !view->IsEstimated()) {
       continue;
     }
-    const Eigen::Vector3d point = view->Camera().GetPosition();
-    points[0].push_back(point[0]);
-    points[1].push_back(point[1]);
-    points[2].push_back(point[2]);
+    points.push_back(view->Camera().GetPosition());
   }
-  median(0) = Median(&points[0]);
-  median(1) = Median(&points[1]);
-  median(2) = Median(&points[2]);
+
+  // @mhsung
+  // Find two farthest points.
+  const Eigen::Vector3d farthest_1 = FarthestPoint(points[0], points);
+  const Eigen::Vector3d farthest_2 = FarthestPoint(farthest_1, points);
+  const Eigen::Vector3d center = 0.5 * (farthest_1 + farthest_2);
 
   // Apply position transformation.
   TransformReconstruction(
-    Eigen::Matrix3d::Identity(), -median, 1.0, reconstruction);
+    Eigen::Matrix3d::Identity(), -center, 1.0, reconstruction);
 
   // Find the median absolute deviation of the points from the median.
   std::vector<double> distance_to_median;
@@ -550,7 +570,7 @@ void NormalizeCameraPoses(
       continue;
     }
     const Eigen::Vector3d point = view->Camera().GetPosition();
-    distance_to_median.emplace_back((point - median).lpNorm<1>());
+    distance_to_median.emplace_back((point - center).lpNorm<1>());
   }
   // This will scale the reconstruction so that the median absolute deviation of
   // the points is 100.
@@ -662,7 +682,7 @@ void ExtractFrameIndicesFromImages(
   }
 }
 
-std::unique_ptr<Reconstruction> AddCameraList(
+std::unique_ptr<Reconstruction> ReadModelviewsAndCreateReconstruction(
   const std::string& data_type, const std::string filepath,
   const std::unordered_map<std::string, theia::CameraIntrinsicsPrior>*
   camera_intrinsics_priors,
@@ -674,65 +694,36 @@ std::unique_ptr<Reconstruction> AddCameraList(
 
   // Create reconstruction.
   std::unique_ptr<theia::Reconstruction> reconstruction =
-    CreateTheiaReconstructionFromModelviews(
-      modelviews, camera_intrinsics_priors);
+      CreateTheiaReconstructionFromModelviews(
+          modelviews, camera_intrinsics_priors);
 
-  // @mhsung
-  // Use a subset of cameras if the frame range is given.
-  if (reference_reconstruction &&
-      FLAGS_start_frame >= 0 && FLAGS_end_frame >= 0) {
-    CHECK_LT(FLAGS_start_frame, FLAGS_end_frame - 1);
+  return std::move(reconstruction);
+}
 
-    // Get view names.
-    std::vector<std::string> view_names;
-    view_names.reserve(reconstruction->ViewIds().size());
-    for (const auto& view_id : reconstruction->ViewIds()) {
-      view_names.push_back(reconstruction->View(view_id)->Name());
-    }
-
-    // Extract frame indices.
-    std::unordered_map<int, std::string> frame_indices;
-    ExtractFrameIndicesFromImages(view_names, &frame_indices);
-
-    // Remove views out of range.
-    for (const auto& frame_index : frame_indices) {
-      if (frame_index.first < FLAGS_start_frame ||
-          frame_index.first > FLAGS_end_frame) {
-        const std::string& view_name = frame_index.second;
-        reconstruction->RemoveView(reconstruction->ViewIdFromName(view_name));
-      }
+void RemoveViewOutOfList(theia::Reconstruction* reconstruction,
+                         const std::set<std::string>& view_names) {
+  CHECK_NOTNULL(reconstruction);
+  for (const theia::ViewId view_id : reconstruction->ViewIds()) {
+    const theia::View* view = reconstruction->View(view_id);
+    if (!ContainsKey(view_names, view->Name())) {
+      reconstruction->RemoveView(view_id);
     }
   }
+}
 
-  if (reference_reconstruction) {
-    if (FLAGS_robust_alignment_threshold > 0.0) {
-      // Align the reconstruction to ground truth.
-      AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
-                                 *reference_reconstruction,
-                                 reconstruction.get());
-    } else {
-      AlignReconstructions(*reference_reconstruction, reconstruction.get());
-    }
-  } else {
-    // Centers the reconstruction based on the absolute deviation of 3D points.
-    //reconstruction->Normalize();
-    NormalizeCameraPoses(reconstruction.get());
-  }
-
+void AddCameraList(const theia::Reconstruction& reconstruction) {
   // Set up camera drawing.
   cameras_list.emplace_back();
   std::vector<theia::Camera>& cameras = cameras_list.back();
 
-  cameras.reserve(reconstruction->NumViews());
-  for (const theia::ViewId view_id : reconstruction->ViewIds()) {
-    const auto* view = reconstruction->View(view_id);
+  cameras.reserve(reconstruction.NumViews());
+  for (const theia::ViewId view_id : reconstruction.ViewIds()) {
+    const auto* view = reconstruction.View(view_id);
     if (view == nullptr || !view->IsEstimated()) {
       continue;
     }
     cameras.emplace_back(view->Camera());
   }
-
-  return std::move(reconstruction);
 }
 
 void SplitString(const std::string& str, const char delimiter,
@@ -763,6 +754,9 @@ int main(int argc, char* argv[]) {
   SplitString(FLAGS_filepath_list, ',', &filepath_list);
   CHECK_EQ(data_type_list.size(), filepath_list.size());
   const int num_reconstructions = filepath_list.size();
+  // FIXME:
+  // Now we consider only two reconstructions.
+  CHECK_EQ(num_reconstructions, 2);
 
   // Read camera intrinsics if provided.
   std::unordered_map<std::string, theia::CameraIntrinsicsPrior>
@@ -771,20 +765,44 @@ int main(int argc, char* argv[]) {
     ReadCalibrationFiles(FLAGS_calibration_file, &camera_intrinsics_priors);
   }
 
-  std::unique_ptr<theia::Reconstruction> reference_reconstruction(nullptr);
-  for (int i = 0; i < num_reconstructions; i++) {
-    LOG(INFO) << "Load '" << filepath_list[i] << "'.";
-    std::unique_ptr<theia::Reconstruction> reconstruction =
-      AddCameraList(data_type_list[i], filepath_list[i],
-                    &camera_intrinsics_priors, reference_reconstruction.get());
+  LOG(INFO) << "Load '" << filepath_list[0] << "'.";
+  std::unique_ptr<theia::Reconstruction> reference_reconstruction =
+      ReadModelviewsAndCreateReconstruction(
+          data_type_list[0], filepath_list[0],
+          &camera_intrinsics_priors, nullptr);
 
-    // Consider the first one as reference.
-    if (i == 0) {
-      reference_reconstruction = std::move(reconstruction);
-    } else {
-      reconstruction.release();
-    }
+  LOG(INFO) << "Load '" << filepath_list[1] << "'.";
+  std::unique_ptr<theia::Reconstruction> reconstruction_to_align =
+      ReadModelviewsAndCreateReconstruction(
+          data_type_list[1], filepath_list[1],
+          &camera_intrinsics_priors, reference_reconstruction.get());
+
+  if (FLAGS_draw_common_views_only) {
+    const std::vector<std::string> common_view_names =
+        theia::FindCommonViewsByName(*reference_reconstruction,
+                                     *reconstruction_to_align);
+    std::set<std::string> common_view_name_set(
+        common_view_names.begin(), common_view_names.end());
+    RemoveViewOutOfList(reference_reconstruction.get(), common_view_name_set);
+    RemoveViewOutOfList(reconstruction_to_align.get(), common_view_name_set);
   }
+
+  // Centers the reconstruction based on the absolute deviation of 3D points.
+  //reconstruction->Normalize();
+  NormalizeCameraPosesToDisplay(reference_reconstruction.get());
+
+  if (FLAGS_robust_alignment_threshold > 0.0) {
+    // Align the reconstruction to ground truth.
+    AlignReconstructionsRobust(FLAGS_robust_alignment_threshold,
+                               *reference_reconstruction,
+                               reconstruction_to_align.get());
+  } else {
+    AlignReconstructions(*reference_reconstruction,
+                         reconstruction_to_align.get());
+  }
+
+  AddCameraList(*reference_reconstruction);
+  AddCameraList(*reconstruction_to_align);
 
 
   // Set up opengl and glut.
