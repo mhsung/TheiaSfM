@@ -684,19 +684,6 @@ std::unique_ptr<Reconstruction> ReadModelviewsAndCreateReconstruction(
   return std::move(reconstruction);
 }
 
-void RemoveNaNPositionCameras(theia::Reconstruction* reconstruction) {
-  CHECK_NOTNULL(reconstruction);
-  for (const theia::ViewId view_id : reconstruction->ViewIds()) {
-    const theia::View* view = reconstruction->View(view_id);
-    if (view == nullptr || !view->IsEstimated()) {
-      const Eigen::Vector3d point = view->Camera().GetPosition();
-      if ((point.array() != point.array()).any()) {
-        reconstruction->RemoveView(view_id);
-      }
-    }
-  }
-}
-
 void RemoveViewOutOfList(theia::Reconstruction* reconstruction,
                          const std::set<std::string>& view_names) {
   CHECK_NOTNULL(reconstruction);
@@ -912,11 +899,6 @@ int main(int argc, char* argv[]) {
       ReadModelviewsAndCreateReconstruction(
           data_type_list[1], filepath_list[1],
           &camera_intrinsics_priors, reference_reconstruction.get());
-
-  // FIXME:
-  // Why do we get NaN camera positions?
-  RemoveNaNPositionCameras(reference_reconstruction.get());
-  RemoveNaNPositionCameras(reconstruction_to_align.get());
 
   const std::vector<std::string> common_view_names =
       theia::FindCommonViewsByName(*reference_reconstruction,
