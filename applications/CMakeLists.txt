@@ -169,7 +169,8 @@ add_executable(exp_evaluate_neural_net_outputs exp_evaluate_neural_net_outputs.c
 target_link_libraries(exp_evaluate_neural_net_outputs theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(exp_view_cameras exp_view_cameras.cc
-  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc exp_matrix_utils.h)
+  exp_camera_param_utils.h exp_camera_param_utils.cc exp_camera_param_io.h exp_camera_param_io.cc exp_matrix_utils.h
+  exp_json_utils.h)
 target_link_libraries(exp_view_cameras theia ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${EXTRA_GL_LIBRARIES})

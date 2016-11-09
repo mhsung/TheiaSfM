@@ -162,7 +162,8 @@ double AngularDifference(const Eigen::Vector3d& rotation1,
   Eigen::Matrix3d rotation2_mat(
       Eigen::AngleAxisd(rotation2.norm(), rotation2.normalized()));
   Eigen::Matrix3d rotation_loop = rotation1_mat.transpose() * rotation2_mat;
-  return Eigen::AngleAxisd(rotation_loop).angle();
+  const double angle_rad = Eigen::AngleAxisd(rotation_loop).angle();
+  return (angle_rad / M_PI * 180.0);
 }
 
 // Aligns the orientations of the models (ignoring the positions) and reports

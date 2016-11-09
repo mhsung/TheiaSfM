@@ -35,6 +35,7 @@
 
 #include "exp_camera_param_utils.h"
 #include "exp_camera_param_io.h"
+#include "exp_json_utils.h"
 
 DEFINE_string(data_type_list, "", "comma-seperated.");
 DEFINE_string(filepath_list, "", "comma-seperated.");
@@ -46,6 +47,7 @@ DEFINE_double(robust_alignment_threshold, 0.0,
                 "RANSAC alignment of reconstructions. The inliers are then used "
                 "for a least squares alignment.");
 DEFINE_bool(draw_common_views_only, true, "");
+DEFINE_string(out_json_file, "", "");
 DEFINE_int32(start_frame, -1, "");
 DEFINE_int32(end_frame, -1, "");
 
@@ -720,6 +722,145 @@ void SplitString(const std::string& str, const char delimiter,
   }
 }
 
+// @mhsung
+void ComputeMeanMedian(
+    const std::vector<double>& sorted_errors,
+    double* mean_error, double* median_error) {
+  CHECK_NOTNULL(mean_error);
+  CHECK_NOTNULL(median_error);
+
+  (*mean_error) = std::accumulate(
+      sorted_errors.begin(), sorted_errors.end(), 0.0) /
+                  static_cast<double>(sorted_errors.size());
+  (*median_error) = sorted_errors[sorted_errors.size() / 2];
+}
+
+std::string PrintMeanMedianHistogram(
+    const std::vector<double>& sorted_errors,
+    const std::vector<double>& histogram_bins) {
+  double mean = 0;
+  theia::Histogram<double> histogram(histogram_bins);
+  for (const auto& error : sorted_errors) {
+    histogram.Add(error);
+    mean += error;
+  }
+
+  mean /= static_cast<double>(sorted_errors.size());
+  const std::string error_msg = theia::StringPrintf(
+      "Mean = %lf\nMedian = %lf\nHistogram:\n%s",
+      mean,
+      sorted_errors[sorted_errors.size() / 2],
+      histogram.PrintString().c_str());
+  return error_msg;
+}
+
+double AngularDifference(const Eigen::Vector3d& rotation1,
+                         const Eigen::Vector3d& rotation2) {
+  Eigen::Matrix3d rotation1_mat(
+      Eigen::AngleAxisd(rotation1.norm(), rotation1.normalized()));
+  Eigen::Matrix3d rotation2_mat(
+      Eigen::AngleAxisd(rotation2.norm(), rotation2.normalized()));
+  Eigen::Matrix3d rotation_loop = rotation1_mat.transpose() * rotation2_mat;
+  const double angle_rad = Eigen::AngleAxisd(rotation_loop).angle();
+  return (angle_rad / M_PI * 180.0);
+}
+
+// Aligns the orientations of the models (ignoring the positions) and reports
+// the difference in orientations after alignment.
+void EvaluateRotations(const std::vector<std::string>& common_view_names,
+                       const Reconstruction& reference_reconstruction,
+                       const Reconstruction& reconstruction_to_align,
+                       JsonFile* out_file) {
+  CHECK_NOTNULL(out_file);
+
+  // Gather all the rotations in common with both views.
+  std::vector<Eigen::Vector3d> rotations1, rotations2;
+  rotations1.reserve(common_view_names.size());
+  rotations2.reserve(common_view_names.size());
+  for (const std::string& view_name : common_view_names) {
+    const ViewId view_id1 = reference_reconstruction.ViewIdFromName(view_name);
+    const ViewId view_id2 = reconstruction_to_align.ViewIdFromName(view_name);
+    rotations1.push_back(reference_reconstruction.View(view_id1)
+                             ->Camera()
+                             .GetOrientationAsAngleAxis());
+    rotations2.push_back(reconstruction_to_align.View(view_id2)
+                             ->Camera()
+                             .GetOrientationAsAngleAxis());
+  }
+
+  // Align the rotation estimations.
+  theia::AlignRotations(rotations1, &rotations2);
+
+  // Measure the difference in rotations.
+  std::vector<double> rotation_error_degrees(rotations1.size());
+  for (int i = 0; i < rotations1.size(); i++) {
+    rotation_error_degrees[i] = AngularDifference(rotations1[i], rotations2[i]);
+  }
+  std::sort(rotation_error_degrees.begin(), rotation_error_degrees.end());
+
+  std::vector<double> histogram_bins = {1, 5, 10, 20, 45, 90};
+  const std::string rotation_error_msg =
+      PrintMeanMedianHistogram(rotation_error_degrees, histogram_bins);
+  LOG(INFO) << "Rotation difference when aligning orientations:\n"
+            << rotation_error_msg;
+
+  // @mhsung
+  if (out_file->IsOpen()) {
+    double mean_rotation_error = 0.0, median_rotation_error = 0.0;
+    ComputeMeanMedian(rotation_error_degrees,
+                      &mean_rotation_error, &median_rotation_error);
+    out_file->WriteElement("mean_rotation_error", mean_rotation_error);
+    out_file->WriteElement("median_rotation_error", median_rotation_error);
+  }
+}
+
+// Align the reconstructions then evaluate the pose errors.
+void EvaluateAlignedPoseError(const std::vector<std::string>& common_view_names,
+                              const Reconstruction& reference_reconstruction,
+                              const Reconstruction& reconstruction_to_align,
+                              JsonFile* out_file) {
+  CHECK_NOTNULL(out_file);
+
+  std::vector<double> rotation_bins = {1, 5, 10, 20, 45, 90};
+  std::vector<double> position_bins = {1, 5, 10, 50, 100, 1000 };
+  theia::PoseError pose_error(rotation_bins, position_bins);
+  for (int i = 0; i < common_view_names.size(); i++) {
+    const ViewId view_id1 =
+        reference_reconstruction.ViewIdFromName(common_view_names[i]);
+    const ViewId view_id2 =
+        reconstruction_to_align.ViewIdFromName(common_view_names[i]);
+    const theia::Camera& camera1 =
+        reference_reconstruction.View(view_id1)->Camera();
+    const theia::Camera& camera2 =
+        reconstruction_to_align.View(view_id2)->Camera();
+
+    // Rotation error.
+    const double rotation_error =
+        AngularDifference(camera1.GetOrientationAsAngleAxis(),
+                          camera2.GetOrientationAsAngleAxis());
+
+    // Position error.
+    const double position_error =
+        (camera1.GetPosition() - camera2.GetPosition()).norm();
+    pose_error.AddError(rotation_error, position_error);
+  }
+  LOG(INFO) << "Pose error:\n" << pose_error.PrintMeanMedianHistogram();
+
+  if (out_file->IsOpen()) {
+    double mean_rotation_error = 0.0, median_rotation_error = 0.0;
+    double mean_position_error = 0.0, median_position_error = 0.0;
+    pose_error.ComputeMeanMedian(
+        &mean_rotation_error, &median_rotation_error,
+        &mean_position_error, &median_position_error);
+    out_file->WriteElement("mean_aligned_rotation_error", mean_rotation_error);
+    out_file->WriteElement("median_aligned_rotation_error",
+                           median_rotation_error);
+    out_file->WriteElement("mean_aligned_position_error", mean_position_error);
+    out_file->WriteElement("median_aligned_position_error",
+                           median_position_error);
+  }
+}
+
 int main(int argc, char* argv[]) {
   THEIA_GFLAGS_NAMESPACE::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
@@ -759,10 +900,11 @@ int main(int argc, char* argv[]) {
           data_type_list[1], filepath_list[1],
           &camera_intrinsics_priors, reference_reconstruction.get());
 
+  const std::vector<std::string> common_view_names =
+      theia::FindCommonViewsByName(*reference_reconstruction,
+                                   *reconstruction_to_align);
+
   if (FLAGS_draw_common_views_only) {
-    const std::vector<std::string> common_view_names =
-        theia::FindCommonViewsByName(*reference_reconstruction,
-                                     *reconstruction_to_align);
     std::set<std::string> common_view_name_set(
         common_view_names.begin(), common_view_names.end());
     RemoveViewOutOfList(reference_reconstruction.get(), common_view_name_set);
@@ -783,9 +925,26 @@ int main(int argc, char* argv[]) {
                          reconstruction_to_align.get());
   }
 
+  // Compare reconstructions.
+  JsonFile out_file;
+  if (FLAGS_out_json_file != "") {
+    CHECK(out_file.Open(FLAGS_out_json_file))
+    << "Can't open file '" + FLAGS_out_json_file + "'.";
+    out_file.WriteElement("num_views", reference_reconstruction->NumViews());
+    out_file.WriteElement(
+        "num_estimated_views", reconstruction_to_align->NumViews());
+  }
+  EvaluateRotations(
+      common_view_names, *reference_reconstruction, *reconstruction_to_align,
+      &out_file);
+  EvaluateAlignedPoseError(
+      common_view_names, *reference_reconstruction, *reconstruction_to_align,
+      &out_file);
+  out_file.Close();
+
+  // Add cameras to draw.
   AddCameraList(*reference_reconstruction);
   AddCameraList(*reconstruction_to_align);
-
 
   // Set up opengl and glut.
   glutInit(&argc, argv);

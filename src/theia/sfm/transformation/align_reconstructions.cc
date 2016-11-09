@@ -153,7 +153,7 @@ void AlignReconstructionsRobust(
 
   // Estimate with RANSAC.
   RansacParameters params;
-  params.max_iterations = 1000;
+  params.max_iterations = 10000;
   params.use_mle = true;
   params.error_thresh = robust_error_threshold * robust_error_threshold;
   params.failure_probability = 1e-4;

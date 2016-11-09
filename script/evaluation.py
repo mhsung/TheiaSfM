@@ -4,7 +4,7 @@
 import run_cmd
 import os
 
-kAlignTol = 0.8
+kAlignTol = 0.9
 
 def clean(FLAGS, PATHS):
     if os.path.exists(PATHS.ground_truth_reconstruction_path):
@@ -42,26 +42,21 @@ def run(FLAGS, PATHS):
             PATHS.script_path, 'create_ground_truth_reconstruction.sh'))
 
     # Compare with ground truth reconstruction.
-    cmd = ''
-    cmd += FLAGS.bin_dir + '/compare_reconstructions' + ' \\\n'
-
-    cmd += '--reference_reconstruction='\
-           + PATHS.ground_truth_reconstruction_path + ' \\\n'
-    cmd += '--reconstruction_to_align=' + PATHS.reconstruction_file\
-        + '-0' + ' \\\n'
-    cmd += '--out_json_file=' + PATHS.eval_json_file + ' \\\n'
-    # FIXME:
-    # Make the parameter as an option.
-    cmd += '--robust_alignment_threshold=' + str(kAlignTol) + ' \\\n'
-    # REMOVE
-    # cmd += '--out_reference_csv=' + \
-    #        os.path.join(PATHS.output_path, 'ground_truth.csv') + ' \\\n'
-    # cmd += '--out_to_align_csv=' + \
-    #        os.path.join(PATHS.output_path, 'output.csv') + ' \\\n'
-
-    cmd += '--log_dir=' + PATHS.log_path
-    run_cmd.save_and_run_cmd(cmd, os.path.join(
-        PATHS.script_path, 'evaluate.sh'))
+    # cmd = ''
+    # cmd += FLAGS.bin_dir + '/compare_reconstructions' + ' \\\n'
+    #
+    # cmd += '--reference_reconstruction='\
+    #        + PATHS.ground_truth_reconstruction_path + ' \\\n'
+    # cmd += '--reconstruction_to_align=' + PATHS.reconstruction_file\
+    #     + '-0' + ' \\\n'
+    # cmd += '--out_json_file=' + PATHS.eval_json_file + ' \\\n'
+    # # FIXME:
+    # # Make the parameter as an option.
+    # cmd += '--robust_alignment_threshold=' + str(kAlignTol) + ' \\\n'
+    #
+    # cmd += '--log_dir=' + PATHS.log_path
+    # run_cmd.save_and_run_cmd(cmd, os.path.join(
+    #     PATHS.script_path, 'evaluate.sh'))
 
     # Visualize reconstruction.
     cmd = ''
@@ -75,6 +70,7 @@ def run(FLAGS, PATHS):
     # Make the parameter as an option.
     cmd += '--robust_alignment_threshold='+ str(kAlignTol) + ' \\\n'
     cmd += '--snapshot_file=' + PATHS.snapshot_file + ' \\\n'
+    cmd += '--out_json_file=' + PATHS.eval_json_file + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(cmd, os.path.join(
