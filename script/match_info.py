@@ -22,8 +22,8 @@ def run(FLAGS, PATHS):
     cmd += '--images_dir=' + PATHS.image_path + ' \\\n'
     cmd += '--matches_file=' + PATHS.matches_file + ' \\\n'
     cmd += '--output_dir=' + PATHS.matches_info_path + ' \\\n'
-    cmd += '--ground_truth_data_type=' + FLAGS.ground_truth_type + ' \\\n'
-    cmd += '--ground_truth_filepath=' + PATHS.ground_truth_path + ' \\\n'
+    cmd += '--ground_truth_data_type=reconstruction \\\n'
+    cmd += '--ground_truth_filepath=' + PATHS.ground_truth_reconstruction_path + ' \\\n'
 
     cmd += '--log_dir=' + PATHS.log_path
     run_cmd.save_and_run_cmd(

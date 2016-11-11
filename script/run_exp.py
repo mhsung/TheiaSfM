@@ -12,7 +12,7 @@ import evaluation
 import feature
 import ground_truth
 import match
-# import match_info
+import match_info
 import options
 # import orientation
 import reconstruction
@@ -155,10 +155,9 @@ def set_paths():
         PATHS.init_bbox_path = ''
         PATHS.init_orientation_path = ''
 
+    PATHS.matches_info_path = os.path.join(PATHS.output_path, 'matches')
     # PATHS.ground_truth_camera_param_path = \
     #     os.path.join(FLAGS.data_dir, 'camera_params')
-    # PATHS.matches_info_path = \
-    #     os.path.join(PATHS.output_path, 'matches')
     # PATHS.orientation_path = \
     #     os.path.join(PATHS.output_path, 'orientation')
 
@@ -285,3 +284,5 @@ if __name__ == '__main__':
     # Compare with ground truth if exists.
     if os.path.exists(PATHS.ground_truth_pose_path):
         evaluation.run(FLAGS, PATHS)
+        if PATHS.output_path == os.path.join(FLAGS.data_dir, 'sfm_track'):
+            match_info.run(FLAGS, PATHS)

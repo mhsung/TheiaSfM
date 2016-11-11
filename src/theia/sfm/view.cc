@@ -48,7 +48,7 @@ namespace theia {
 
 View::View() : name_(""), is_estimated_(false) {}
 
-View::View(const std::string& name) {}
+View::View(const std::string& name) : name_(name), is_estimated_(false) {}
 
 const std::string& View::Name() const {
   return name_;

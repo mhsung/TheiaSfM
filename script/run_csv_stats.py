@@ -19,10 +19,6 @@ if __name__ == '__main__':
             axis=1, inplace=True)
     df.drop('Dataset', axis=1, inplace=True)
 
-    for col in df.columns:
-        if 'Rotation' in col:
-            df[col] *= (180.0 / math.pi)
-
     # Get count data frame.
     df_count = pd.DataFrame(df.groupby('Name').size().rename('Counts'))
     print(df_count)
