@@ -84,7 +84,7 @@ void Arrange(const std::vector<T>& values,
              std::vector<T>* arranged_values) {
   CHECK_EQ(values.size(), indices.size());
   CHECK_NOTNULL(arranged_values)->clear();
-  arranged_values->reserve(values.size());
+  arranged_values->resize(values.size());
 
   for (size_t i = 0; i < indices.size(); i++) {
     const size_t index = indices[i];
@@ -793,11 +793,9 @@ void RemoveBBoxesWithNoCameraModelview(
 
 void RemoveObjectsWithNoBBoxes(
   std::unordered_map<ObjectId, DetectedBBoxPtrList>* object_bboxes,
-  std::unordered_map<ObjectId, Eigen::Matrix3d>* object_orientations,
-  std::unordered_map<ObjectId, Eigen::Vector3d>* object_positions) {
+  std::unordered_map<ObjectId, Eigen::Matrix3d>* object_orientations = nullptr,
+  std::unordered_map<ObjectId, Eigen::Vector3d>* object_positions = nullptr) {
   CHECK_NOTNULL(object_bboxes);
-  CHECK_NOTNULL(object_orientations);
-  CHECK_NOTNULL(object_positions);
 
   uint32_t new_bbox_id = 0;
 
@@ -824,23 +822,27 @@ void RemoveObjectsWithNoBBoxes(
     ++object_it;
   }
 
-  std::unordered_map<ObjectId, Eigen::Matrix3d> temp_object_orientations;
-  for (auto& object : *object_orientations) {
-    if (ContainsKey(*object_bboxes, object.first)) {
-      temp_object_orientations.emplace(object);
+  if (object_orientations != nullptr) {
+    std::unordered_map<ObjectId, Eigen::Matrix3d> temp_object_orientations;
+    for (auto& object : *object_orientations) {
+      if (ContainsKey(*object_bboxes, object.first)) {
+        temp_object_orientations.emplace(object);
+      }
     }
+    object_orientations->swap(temp_object_orientations);
+    temp_object_orientations.clear();
   }
-  object_orientations->swap(temp_object_orientations);
-  temp_object_orientations.clear();
 
-  std::unordered_map<ObjectId, Eigen::Vector3d> temp_object_positions;
-  for (const auto& object : *object_positions) {
-    if (ContainsKey(*object_bboxes, object.first)) {
-      temp_object_positions.emplace(object);
+  if (object_positions != nullptr) {
+    std::unordered_map<ObjectId, Eigen::Vector3d> temp_object_positions;
+    for (const auto& object : *object_positions) {
+      if (ContainsKey(*object_bboxes, object.first)) {
+        temp_object_positions.emplace(object);
+      }
     }
+    object_positions->swap(temp_object_positions);
+    temp_object_positions.clear();
   }
-  object_positions->swap(temp_object_positions);
-  temp_object_positions.clear();
 }
 
 void RemoveModelviewNotInReconstruction(
@@ -879,9 +881,9 @@ void SaveTopAccuracyBBoxes(
   const std::unordered_map<uint32_t, double> position_errors =
       CreateUnorderedMap(sorted_position_bbox_ids, sorted_position_errors);
   const double sum_rotation_error = std::accumulate(
-      sorted_rotation_errors .begin(), sorted_rotation_errors.end(), 0);
+      sorted_rotation_errors.begin(), sorted_rotation_errors.end(), 0.0);
   const double sum_position_error = std::accumulate(
-      sorted_position_errors.begin(), sorted_position_errors.end(), 0);
+      sorted_position_errors.begin(), sorted_position_errors.end(), 0.0);
   CHECK_GT(sum_rotation_error, 0.0);
   CHECK_GT(sum_position_error, 0.0);
 
@@ -930,6 +932,8 @@ void SaveTopAccuracyBBoxes(
       }
     }
   }
+
+  RemoveObjectsWithNoBBoxes(&subset_object_bboxes);
 
   CHECK(WriteNeuralNetBBoxes(
       FLAGS_out_top_accuracy_bounding_boxes_filepath, subset_object_bboxes));
