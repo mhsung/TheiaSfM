@@ -46,19 +46,9 @@
 
 namespace theia {
 
-// @mhsung
-View::View() : name_(""), is_estimated_(false),
-               is_orientation_initialized_(false),
-               init_orientation_(Eigen::Vector3d::Zero()),
-               is_position_dir_initialized_(false),
-               init_position_dir_(Eigen::Vector3d::Zero()) {}
+View::View() : name_(""), is_estimated_(false) {}
 
-// @mhsung
-View::View(const std::string& name)
-    : name_(name), is_estimated_(false),
-      is_orientation_initialized_(false),
-      is_position_dir_initialized_(false),
-      init_position_dir_(Eigen::Vector3d::Zero()) {}
+View::View(const std::string& name) {}
 
 const std::string& View::Name() const {
   return name_;

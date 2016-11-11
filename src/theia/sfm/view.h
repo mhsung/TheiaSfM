@@ -98,16 +98,6 @@ class View {
   class Camera camera_;
   struct CameraIntrinsicsPrior camera_intrinsics_prior_;
   std::unordered_map<TrackId, Feature> features_;
-
-  // @mhsung
-  // Initial orientation given from external methods.
-  bool is_orientation_initialized_;
-  Eigen::Vector3d init_orientation_;
-
-  // @mhsung
-  // Initial position direction given from external methods.
-  bool is_position_dir_initialized_;
-  Eigen::Vector3d init_position_dir_;
 };
 
 }  // namespace theia

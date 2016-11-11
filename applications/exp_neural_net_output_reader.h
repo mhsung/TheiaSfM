@@ -22,6 +22,28 @@ struct DetectedBBox {
   Eigen::Vector3d camera_param_;
   double orientation_score_;
 
+  DetectedBBox()
+      : category_id_(0),
+        object_id_(0),
+        bbox_id_(0),
+        view_name_(""),
+        bbox_(Eigen::Vector4d::Zero()),
+        bbox_score_(0.0),
+        camera_param_(Eigen::Vector3d::Zero()),
+        orientation_score_(0.0) {
+  }
+
+  DetectedBBox(const DetectedBBox& other)
+      : category_id_(other.category_id_),
+        object_id_(other.object_id_),
+        bbox_id_(other.bbox_id_),
+        view_name_(other.view_name_),
+        bbox_(other.bbox_),
+        bbox_score_(other.bbox_score_),
+        camera_param_(other.camera_param_),
+        orientation_score_(other.orientation_score_) {
+  }
+
   Eigen::Vector2d bbox_center() const {
     return Eigen::Vector2d (
       0.5 * (bbox_[0] + bbox_[2]), 0.5 * (bbox_[1] + bbox_[3]));
