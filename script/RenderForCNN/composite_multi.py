@@ -118,7 +118,7 @@ def draw_bboxes(im, row, pred, class_names):
 
     bbox_score = row['score']
     orientation_score = 0
-    if pred:
+    if len(pred) > 0:
         assert (len(pred) == 4)
         orientation_score = pred[-1]
 
@@ -183,7 +183,7 @@ def generate_output_images(im_name, df, preds, class_names, num_digits):
     if FLAGS.draw_bboxes:
         for bbox_idx, row in subset_df.iterrows():
             pred = []
-            if preds:
+            if len(preds) > 0:
                 pred = preds[bbox_idx, :]
             im = draw_bboxes(im, row, pred, class_names)
 

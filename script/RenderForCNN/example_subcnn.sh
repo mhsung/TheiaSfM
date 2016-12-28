@@ -1,18 +1,47 @@
 #!/usr/bin/env bash
 
 #### Set Paths ####
-DATA_DIR=$HOME/Developer/data/ICL-NUIM/lr_kt2
+DATA_DIR=$HOME/Developer/data/7-scenes/office_test/seq-01
 echo ${DATA_DIR}
 
-IMAGE_WILDCARD=scene_00_%04d.png
+IMAGE_WILDCARD=frame-%06d.png
 
 # Add caffe python path
 export PYTHONPATH=$HOME/Developer/external/caffe/python:$PYTHONPATH
 
 # Add OSMesaViewer
 export PATH=$HOME/Developer/app/mesh-viewer/build/OSMesaViewer/build/Build/bin:$PATH
+
+SUBCNN_PATH=$HOME/Developer/external/SubCNN/fast-rcnn
+
+SELECTIVE_SEARCH_PATH=$HOME/Developer/external/selective_search_py
 #### --------- ####
 
+if [! -d "$SUBCNN_PATH/data/ObjectNet3D/" ]; then
+	mkdir $SUBCNN_PATH/data/ObjectNet3D/
+fi
+rm -rf $SUBCNN_PATH/data/ObjectNet3D/Images
+ln -s $DATA_DIR/images $SUBCNN_PATH/data/ObjectNet3D/Images
+
+rm -rf $SUBCNN_PATH/data/ObjectNet3D/Image_sets
+mkdir $SUBCNN_PATH/data/ObjectNet3D/Image_sets
+find $DATA_DIR/images -name "*.png" -printf "%f\n" \
+	> $SUBCNN_PATH/data/ObjectNet3D/Image_sets/test.txt
+
+# Run selective search.
+$SELECTIVE_SEARCH_PATH/batch_selective_search.py \
+	--image_dir=$DATA_DIR/images --out_dir=$DATA_DIR/subcnn/selective_search
+if [! -d "$SUBCNN_PATH/data/ObjectNet3D/region_proposals" ]; then
+	mkdir $SUBCNN_PATH/data/ObjectNet3D/region_proposals
+fi
+rm -rf $SUBCNN_PATH/data/ObjectNet3D/region_proposals/selective_search
+ln -s $DATA_DIR/subcnn/selective_search $SUBCNN_PATH/data/ObjectNet3D/region_proposals/selective_search
+
+# Run SubCNN
+CWD=$(pwd)
+cd $SUBCNN_PATH
+./experiments/scripts/test_subcnn_models_custom.sh
+cd $CWD
 
 # Detect objects.
 # ../py-faster-rcnn/detect_multi.py --data_dir=${DATA_DIR}
@@ -45,13 +74,4 @@ export PATH=$HOME/Developer/app/mesh-viewer/build/OSMesaViewer/build/Build/bin:$
 #	--render_dir=convnet/object_render_raw \
 #	--out_composite_dir=convnet/object_composite_raw \
 #	--with_object_index=false
-
-# Create video.
-ffmpeg -i ${DATA_DIR}/convnet/object_composite_raw/${IMAGE_WILDCARD} \
-	-pix_fmt yuv420p -r 24 -b:v 8000k \
-	${DATA_DIR}/convnet/composite_raw.mp4
-
-# ffmpeg -i ${DATA_DIR}/convnet/object_composite_fitted/${IMAGE_WILDCARD} \
-# 	-pix_fmt yuv420p -r 24 -b:v 8000k -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" \
-# 	${DATA_DIR}/convnet/composite_raw.mp4
 

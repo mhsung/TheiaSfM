@@ -22,13 +22,15 @@ if __name__ == '__main__':
 
     # Detect objects.
     python_file = os.path.join(BASE_DIR, 'py-faster-rcnn', 'detect_multi.py')
-    cmd = python_file + ' --data_dir=' + FLAGS.data_dir
+    cmd = python_file + ' --data_dir=' + FLAGS.data_dir +\
+            ' --ignore_bbox_on_boundary=false'
     print(cmd)
     os.system(cmd)
 
     # Track objects.
     python_file = os.path.join(BASE_DIR, 'SORT', 'sort_multi.py')
-    cmd = python_file + ' --data_dir=' + FLAGS.data_dir
+    cmd = python_file + ' --data_dir=' + FLAGS.data_dir +\
+            ' --ignore_bbox_on_boundary=false'
     print(cmd)
     os.system(cmd)
 
